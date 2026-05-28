@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { estimateMacros } from "@/lib/ai-mock";
-import { getMealLogs, saveMealLogs } from "@/lib/storage";
+import { generateId, getMealLogs, saveMealLogs } from "@/lib/storage";
 import type { MealLog } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
@@ -13,6 +13,74 @@ const VEGGIE_OPTIONS = ["有", "無"];
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("READ_FILE_FAILED"));
+    };
+    reader.onerror = () => reject(new Error("READ_FILE_FAILED"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressDataUrl(
+  dataUrl: string,
+  maxWidth: number,
+  quality: number
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+      const width = Math.max(1, Math.round(img.width * ratio));
+      const height = Math.max(1, Math.round(img.height * ratio));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("CANVAS_CONTEXT_FAILED"));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(canvas.toDataURL("image/jpeg", quality));
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result);
+              return;
+            }
+            reject(new Error("READ_COMPRESSED_FAILED"));
+          };
+          reader.onerror = () => reject(new Error("READ_COMPRESSED_FAILED"));
+          reader.readAsDataURL(blob);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error("IMAGE_DECODE_FAILED"));
+    img.src = dataUrl;
+  });
+}
+
+async function compressFileImage(file: File): Promise<string> {
+  const raw = await fileToDataUrl(file);
+  return compressDataUrl(raw, 1280, 0.78);
+}
 
 export default function AddMealPage() {
   const router = useRouter();
@@ -29,6 +97,7 @@ export default function AddMealPage() {
   const [carbs, setCarbs] = useState(0);
   const [fats, setFats] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackPerPiece, setSnackPerPiece] = useState(80);
   const [snackQty, setSnackQty] = useState(1);
@@ -37,16 +106,15 @@ export default function AddMealPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setImageBase64(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressFileImage(file);
+      setImageBase64(compressed);
+    } catch {
+      alert("相片處理失敗，請再試一次。");
+    }
     e.target.value = "";
   };
 
@@ -79,13 +147,16 @@ export default function AddMealPage() {
     setFats(Math.round(total * 0.04));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!description.trim()) {
       alert("請填寫食物描述！");
       return;
     }
+    if (saveLoading) return;
+    setSaveLoading(true);
+
     const log: MealLog = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       date: new Date().toISOString(),
       mealType,
       description: description.trim(),
@@ -96,9 +167,41 @@ export default function AddMealPage() {
       fats: Number(fats) || 0,
       createdAt: new Date().toISOString(),
     };
-    const logs = getMealLogs();
-    saveMealLogs([log, ...logs]);
-    router.push("/");
+
+    try {
+      const logs = getMealLogs();
+      saveMealLogs([log, ...logs]);
+      router.push("/");
+    } catch (error) {
+      const isQuotaError =
+        error instanceof DOMException &&
+        (error.name === "QuotaExceededError" || error.code === 22);
+
+      if (isQuotaError && log.imageBase64) {
+        try {
+          const compressedAgain = await compressDataUrl(log.imageBase64, 960, 0.58);
+          saveMealLogs([{ ...log, imageBase64: compressedAgain }, ...getMealLogs()]);
+          alert("相片太大，已自動壓縮後儲存。");
+          router.push("/");
+          return;
+        } catch {
+          try {
+            const compressedHard = await compressDataUrl(log.imageBase64, 720, 0.42);
+            saveMealLogs([{ ...log, imageBase64: compressedHard }, ...getMealLogs()]);
+            alert("相片已大幅壓縮後儲存。");
+            router.push("/");
+            return;
+          } catch {
+            alert("儲存失敗，本地空間已滿，請先清理部分舊記錄。");
+            return;
+          }
+        }
+      }
+
+      alert("儲存失敗，請再試一次。");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   return (
@@ -311,9 +414,10 @@ export default function AddMealPage() {
         <button
           type="button"
           onClick={handleSave}
-          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg ${btnClass}`}
+          disabled={saveLoading}
+          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
-          儲存記錄
+          {saveLoading ? "儲存中..." : "儲存記錄"}
         </button>
       </main>
     </div>

@@ -14,6 +14,31 @@ import {
 import type { CoachBranding, MealLog, UserProfile } from "@/lib/types";
 
 const MOCK_WEIGHTS = [72.4, 72.1, 71.9, 71.6, 71.4, 71.2, 71.0];
+type ActiveTab = "dashboard" | "settings";
+
+interface UserSession {
+  role: "student" | "coach";
+  name: string;
+  gym?: string;
+}
+
+interface PersonalSettings {
+  nickname: string;
+  job: string;
+  mealSchedule: string;
+  trainingType: string;
+  weeklyFrequency: string;
+  waterReminder: string;
+}
+
+const DEFAULT_SETTINGS: PersonalSettings = {
+  nickname: "",
+  job: "文職 (長坐)",
+  mealSchedule: "一日三餐 (正常)",
+  trainingType: "重訓 (Weight Training)",
+  weeklyFrequency: "3次",
+  waterReminder: "每2小時提示",
+};
 
 function WeightTrendChart() {
   const min = Math.min(...MOCK_WEIGHTS) - 0.5;
@@ -89,12 +114,58 @@ export default function StudentDashboard() {
   const [branding, setBranding] = useState<CoachBranding | null>(null);
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
+  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const [session, setSession] = useState<UserSession>({
+    role: "student",
+    name: "體驗學員",
+    gym: "未綁定分店",
+  });
+  const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     setProfile(getUserProfile());
     setBranding(getCoachBranding());
     setBroadcast(getCoachBroadcast());
     setLogs(getMealLogs());
+
+    const rawSession = localStorage.getItem("current_session");
+    if (rawSession) {
+      try {
+        const parsed = JSON.parse(rawSession) as Partial<UserSession>;
+        setSession({
+          role: parsed.role === "coach" ? "coach" : "student",
+          name: parsed.name || "體驗學員",
+          gym: parsed.gym || "未綁定分店",
+        });
+      } catch {
+        // Keep fallback session when parse fails
+      }
+    }
+
+    const rawSettings = localStorage.getItem("student_settings");
+    if (rawSettings) {
+      try {
+        const parsed = JSON.parse(rawSettings) as Partial<PersonalSettings>;
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+        });
+      } catch {
+        // Keep default settings when parse fails
+      }
+    }
+
+    const timerA = setTimeout(() => {
+      setActiveNotification("⏰ 到時間記錄上一餐啦，唔好漏打卡！");
+    }, 4000);
+    const timerB = setTimeout(() => {
+      setActiveNotification("💧 補水提示：依家飲一大杯水先！");
+    }, 12000);
+    return () => {
+      clearTimeout(timerA);
+      clearTimeout(timerB);
+    };
   }, []);
 
   const todayLogs = useMemo(
@@ -128,103 +199,253 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
+      {activeNotification && (
+        <div className="fixed top-4 left-4 right-4 bg-zinc-900/95 text-white p-4 rounded-2xl z-50 shadow-2xl border border-zinc-700">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold leading-relaxed">{activeNotification}</p>
+            <button
+              type="button"
+              onClick={() => setActiveNotification(null)}
+              className="bg-white/10 text-zinc-300 w-6 h-6 rounded-full active:scale-95 active:opacity-80 transition-all cursor-pointer"
+            >
+              ×
+            </button>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveNotification(null)}
+              className="px-3 py-1.5 text-xs rounded-lg bg-zinc-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
+            >
+              稍後
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const note = activeNotification;
+                setActiveNotification(null);
+                if (note?.includes("記錄")) {
+                  router.push("/add-meal");
+                }
+              }}
+              className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 active:scale-95 active:opacity-80 transition-all cursor-pointer"
+            >
+              即刻做
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className={`${theme.header} text-white px-4 pt-10 pb-6 rounded-b-3xl shadow-lg`}>
-        <p className="text-white/80 text-sm">學員主頁</p>
+        <p className="text-white/80 text-sm">
+          {session.role === "coach" ? "教練主頁" : "學員主頁"}
+        </p>
         <h1 className="text-2xl font-bold mt-1">{title}</h1>
         <p className="text-white/90 text-sm mt-2">
-          今日已記錄 {todayLogs.length} 餐
+          {settings.nickname || session.name} · 今日已記錄 {todayLogs.length} 餐
         </p>
       </header>
 
       <main className="px-4 -mt-4 space-y-4">
-        {broadcast.trim() && (
+        {activeTab === "dashboard" && broadcast.trim() && (
           <div className="bg-red-600 text-white px-4 py-3 rounded-xl shadow-md animate-pulse text-sm font-medium">
             📣 教練突發警告: {broadcast}
           </div>
         )}
 
-        <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
-          <h2 className={`text-sm font-semibold ${theme.accent} mb-2`}>
-            🤖 AI 教練吐槽
-          </h2>
-          <p className="text-zinc-800 leading-relaxed">{roast}</p>
-        </section>
+        {activeTab === "dashboard" ? (
+          <>
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+              <h2 className={`text-sm font-semibold ${theme.accent} mb-2`}>
+                🤖 AI 教練吐槽
+              </h2>
+              <p className="text-zinc-800 leading-relaxed">{roast}</p>
+              <p className="text-xs text-zinc-500 mt-3">
+                你而家設定：{settings.trainingType} · 每星期 {settings.weeklyFrequency}
+              </p>
+            </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
-          <h2 className="font-semibold text-zinc-800">今日進度</h2>
-          <ProgressBar
-            label="熱量"
-            current={todayCalories}
-            target={targetCalories}
-            unit=""
-            barClass={theme.bar}
-          />
-          <ProgressBar
-            label="蛋白質"
-            current={todayProtein}
-            target={targetProtein}
-            unit="g"
-            barClass={theme.bar}
-          />
-        </section>
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
+              <h2 className="font-semibold text-zinc-800">今日進度</h2>
+              <ProgressBar
+                label="熱量"
+                current={todayCalories}
+                target={targetCalories}
+                unit=""
+                barClass={theme.bar}
+              />
+              <ProgressBar
+                label="蛋白質"
+                current={todayProtein}
+                target={targetProtein}
+                unit="g"
+                barClass={theme.bar}
+              />
+            </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-semibold text-zinc-800">體重趨勢（模擬）</h2>
-            <span className="text-xs text-zinc-400">過去 7 日</span>
-          </div>
-          <WeightTrendChart />
-          <p className="text-xs text-zinc-400 mt-2 text-center">
-            最新: {MOCK_WEIGHTS[MOCK_WEIGHTS.length - 1]} kg
-          </p>
-        </section>
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="font-semibold text-zinc-800">體重趨勢（模擬）</h2>
+                <span className="text-xs text-zinc-400">過去 7 日</span>
+              </div>
+              <WeightTrendChart />
+              <p className="text-xs text-zinc-400 mt-2 text-center">
+                最新: {MOCK_WEIGHTS[MOCK_WEIGHTS.length - 1]} kg
+              </p>
+            </section>
 
-        {todayLogs.length > 0 && (
-          <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
-            <h2 className="font-semibold text-zinc-800 mb-3">今日餐單</h2>
-            <ul className="space-y-2">
-              {todayLogs.map((log) => (
-                <li
-                  key={log.id}
-                  className="flex gap-3 p-2 rounded-xl bg-zinc-50 border border-zinc-100"
+            {todayLogs.length > 0 && (
+              <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+                <h2 className="font-semibold text-zinc-800 mb-3">今日餐單</h2>
+                <ul className="space-y-2">
+                  {todayLogs.map((log) => (
+                    <li
+                      key={log.id}
+                      className="flex gap-3 p-2 rounded-xl bg-zinc-50 border border-zinc-100"
+                    >
+                      {log.imageBase64 && (
+                        <img
+                          src={log.imageBase64}
+                          alt=""
+                          className="w-14 h-14 rounded-lg object-cover shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">
+                          {log.mealType} · {log.description}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {log.calories} kcal · 蛋白 {log.protein}g
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        ) : (
+          <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
+            <h2 className="font-semibold text-zinc-800">⚙️ 個人化設定</h2>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">暱稱</label>
+              <input
+                value={settings.nickname}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, nickname: e.target.value }))
+                }
+                placeholder="你想教練點叫你"
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-500">工作型態</label>
+                <select
+                  value={settings.job}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, job: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
                 >
-                  {log.imageBase64 && (
-                    <img
-                      src={log.imageBase64}
-                      alt=""
-                      className="w-14 h-14 rounded-lg object-cover shrink-0"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">
-                      {log.mealType} · {log.description}
-                    </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {log.calories} kcal · 蛋白 {log.protein}g
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  <option value="文職 (長坐)">文職 (長坐)</option>
+                  <option value="外勤 / 零售">外勤 / 零售</option>
+                  <option value="高體力勞動">高體力勞動</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-500">每星期訓練次數</label>
+                <select
+                  value={settings.weeklyFrequency}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, weeklyFrequency: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+                >
+                  <option value="1-2次">1-2次</option>
+                  <option value="3次">3次</option>
+                  <option value="4-5次">4-5次</option>
+                  <option value="日日操">日日操</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">飲食安排</label>
+              <select
+                value={settings.mealSchedule}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, mealSchedule: e.target.value }))
+                }
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              >
+                <option value="一日三餐 (正常)">一日三餐 (正常)</option>
+                <option value="一日四餐 / 多餐">一日四餐 / 多餐</option>
+                <option value="168斷食 (兩餐)">168斷食 (兩餐)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">飲水提醒</label>
+              <select
+                value={settings.waterReminder}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, waterReminder: e.target.value }))
+                }
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              >
+                <option value="每1小時提示">每1小時提示</option>
+                <option value="每2小時提示">每2小時提示</option>
+                <option value="每4小時提示">每4小時提示</option>
+                <option value="關閉提示">關閉提示</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem("student_settings", JSON.stringify(settings));
+                alert("設定已儲存，下次打開都會記住。");
+                setActiveTab("dashboard");
+              }}
+              className={`w-full ${theme.btn} text-white font-semibold py-3.5 rounded-xl active:scale-95 active:opacity-80 transition-all cursor-pointer`}
+            >
+              儲存設定
+            </button>
           </section>
         )}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 py-4 pb-safe">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("dashboard")}
+            className={`${
+              activeTab === "dashboard" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
+            } font-semibold py-3 rounded-xl shadow-sm active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
+          >
+            🏠 主頁
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("settings")}
+            className={`${
+              activeTab === "settings" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
+            } font-semibold py-3 rounded-xl shadow-sm active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
+          >
+            ⚙️ 設定
+          </button>
           <button
             type="button"
             onClick={() => router.push("/add-meal")}
-            className={`${theme.btn} text-white font-semibold py-4 rounded-2xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer`}
+            className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
           >
-            ➕ 記錄飲食
+            ➕ 飲食
           </button>
           <button
             type="button"
             onClick={() => router.push("/coach")}
-            className="bg-zinc-800 text-white font-semibold py-4 rounded-2xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer"
+            className="bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm"
           >
-            👨‍🏫 教練後台
+            👨‍🏫 教練
           </button>
         </div>
       </nav>
