@@ -270,6 +270,8 @@ export async function fetchTodayLogsForEmail(email: string): Promise<MealLog[]> 
     date: String(row.created_at),
     mealType: String(row.meal_type),
     description: String(row.description),
+    imageUrl: row.image_url ? String(row.image_url) : undefined,
+    imageBase64: row.image_base64 ? String(row.image_base64) : undefined,
     calories: Number(row.calories),
     protein: Number(row.protein),
     carbs: Number(row.carbs),

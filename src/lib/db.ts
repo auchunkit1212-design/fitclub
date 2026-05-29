@@ -40,6 +40,7 @@ type MealRow = {
   carbs: number;
   fats: number;
   image_base64: string | null;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -72,6 +73,7 @@ function mapMeal(row: MealRow): MealLog {
     mealType: row.meal_type,
     description: row.description,
     imageBase64: row.image_base64 ?? undefined,
+    imageUrl: row.image_url ?? undefined,
     calories: row.calories,
     protein: row.protein,
     carbs: row.carbs,
@@ -253,9 +255,14 @@ export async function fetchMealLogs(options?: {
 }
 
 export async function insertMealLog(
-  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string }
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string },
+  options?: { useServiceRole?: boolean }
 ): Promise<MealLog> {
-  const { data, error } = await supabase
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { data, error } = await client
     .from("meal_logs")
     .insert({
       email: log.email.trim().toLowerCase(),
@@ -265,7 +272,8 @@ export async function insertMealLog(
       protein: log.protein,
       carbs: log.carbs,
       fats: log.fats,
-      image_base64: log.imageBase64 ?? null,
+      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+      image_url: log.imageUrl ?? null,
     })
     .select("*")
     .single();

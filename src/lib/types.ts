@@ -72,6 +72,8 @@ export interface MealLog {
   mealType: string;
   description: string;
   imageBase64?: string;
+  /** Supabase Storage 公開 URL（bucket: food-images） */
+  imageUrl?: string;
   calories: number;
   protein: number;
   carbs: number;
