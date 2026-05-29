@@ -2,18 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { buildLogSummary, generateCoachReport } from "@/lib/ai-mock";
+import { generateCoachReport } from "@/lib/ai-mock";
+import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
+import { useBranding } from "@/components/BrandingProvider";
 import {
-  fetchAllUsers,
   fetchMealLogsForSession,
+  fetchUsersForSession,
   resolveBranding,
   updateCoachBranding,
   updateCoachLogo,
 } from "@/lib/db";
+import { applyBrandToSession } from "@/lib/branding";
+import { saveSession } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/session";
-import type { CoachBranding, MealLog, ThemeColor, UserSession } from "@/lib/types";
+import type {
+  CoachBranding,
+  MealLog,
+  RegistryUser,
+  ThemeColor,
+  UserSession,
+} from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
 const btnClass =
@@ -25,14 +35,9 @@ const THEME_OPTIONS: { value: ThemeColor; label: string }[] = [
   { value: "black", label: "黑色 (Black)" },
 ];
 
-function mealStatus(log: MealLog): "優良" | "危險" {
-  if (log.calories >= 700) return "危險";
-  if (log.calories <= 500 && log.protein >= 20) return "優良";
-  return "危險";
-}
-
 export default function CoachPage() {
   const router = useRouter();
+  const brand = useBranding();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<UserSession | null>(null);
   const [appTitle, setAppTitle] = useState("");
@@ -40,7 +45,7 @@ export default function CoachPage() {
   const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
-  const [copyId, setCopyId] = useState<string | null>(null);
+  const [students, setStudents] = useState<RegistryUser[]>([]);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,9 +62,14 @@ export default function CoachPage() {
       setSession(current);
 
       try {
-        const registry = await fetchAllUsers();
+        const registry = await fetchUsersForSession(current);
         const mealLogs = await fetchMealLogsForSession(current, registry);
         setLogs(mealLogs);
+        setStudents(
+          registry.filter(
+            (u) => u.role === "student" && u.addedBy === current.email
+          )
+        );
 
         if (current.role === "coach") {
           const resolved = await resolveBranding(current, registry);
@@ -94,8 +104,16 @@ export default function CoachPage() {
         themeColor,
         logo,
         broadcast: broadcast.trim(),
+        tenantId: session.tenantId,
       });
-      alert("已同步到 Supabase 雲端！");
+      const updated = applyBrandToSession(session, {
+        gymName: appTitle.trim(),
+        branding: { appTitle: appTitle.trim(), themeColor, logo },
+        broadcast: broadcast.trim(),
+        tenantSlug: session.tenantSlug,
+      });
+      saveSession(updated);
+      alert("品牌已同步到雲端！");
     } catch {
       alert("雲端發布失敗，請稍後再試。");
     } finally {
@@ -112,7 +130,7 @@ export default function CoachPage() {
     try {
       const compressed = await compressFileImage(file);
       setLogo(compressed);
-      await updateCoachLogo(session.email, compressed);
+      await updateCoachLogo(session.email, compressed, session.tenantId);
       alert("Logo 已上傳到 Supabase 雲端！");
     } catch {
       alert("Logo 處理或上傳失敗。");
@@ -125,7 +143,7 @@ export default function CoachPage() {
     setIsGenerating(true);
     setAiReport(null);
     try {
-      const registry = await fetchAllUsers();
+      const registry = await fetchUsersForSession(session);
       const freshLogs = await fetchMealLogsForSession(session, registry);
       setLogs(freshLogs);
       setAiReport(generateCoachReport(freshLogs));
@@ -133,17 +151,6 @@ export default function CoachPage() {
       alert("無法從 Supabase 拉取學員飲食記錄。");
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const handleCopy = async (log: MealLog) => {
-    const text = buildLogSummary(log);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyId(log.id);
-      setTimeout(() => setCopyId(null), 2000);
-    } catch {
-      alert("複製失敗，請檢查瀏覽器權限。");
     }
   };
 
@@ -158,8 +165,8 @@ export default function CoachPage() {
   return (
     <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
       <PageHeader
-        title="教練白標後台"
-        subtitle="Supabase 雲端同步"
+        title={`${brand.gymName} · 教練後台`}
+        subtitle="白標品牌 · 雲端同步"
         variant="dark"
         backLabel="← 返回主頁"
         onBack={() => router.push("/")}
@@ -272,66 +279,11 @@ export default function CoachPage() {
           </section>
         )}
 
-        <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-          <h2 className="font-semibold text-zinc-800 mb-3">
-            學員飲食記錄 ({logs.length})
-          </h2>
-
-          {logs.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-6">
-              暫時未有記錄，等學員記低第一餐先！
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {logs.map((log) => {
-                const status = mealStatus(log);
-                return (
-                  <li
-                    key={log.id}
-                    className="border border-zinc-100 rounded-xl p-3 bg-zinc-50"
-                  >
-                    <div className="flex gap-3 justify-between">
-                      <div className="flex gap-3 min-w-0 flex-1">
-                        {log.imageBase64 && (
-                          <img
-                            src={log.imageBase64}
-                            alt=""
-                            className="w-12 h-12 rounded-lg object-cover shrink-0"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {log.mealType} · {log.description}
-                          </p>
-                          <p className="text-xs text-zinc-500 mt-1">
-                            {log.email} · {new Date(log.date).toLocaleString("zh-HK")} ·{" "}
-                            {log.calories} kcal
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold ${
-                          status === "優良"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {status}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(log)}
-                      className={`mt-2 w-full text-sm font-medium py-2 rounded-lg border border-zinc-200 bg-white text-zinc-700 ${btnClass}`}
-                    >
-                      {copyId === log.id ? "✅ 已複製！" : "📋 一鍵複製"}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        <CoachMealHistoryPanel
+          logs={logs}
+          students={students}
+          gymName={brand.gymName}
+        />
       </main>
     </div>
   );

@@ -11,6 +11,15 @@ export interface CoachBranding {
   logo?: string;
 }
 
+export interface Tenant {
+  id: string;
+  slug: string;
+  gymName: string;
+  logoUrl?: string;
+  ownerEmail: string;
+  plan: string;
+}
+
 export interface RegistryUser {
   email: string;
   name: string;
@@ -18,10 +27,14 @@ export interface RegistryUser {
   gym: string;
   coach?: string;
   addedBy?: string;
+  tenantId?: string;
   logo?: string;
   appTitle?: string;
   themeColor?: ThemeColor;
   broadcast?: string;
+  hasPassword?: boolean;
+  /** 僅伺服器登入驗證用，切勿傳去前端 */
+  passwordHash?: string;
 }
 
 export interface UserSession {
@@ -31,6 +44,10 @@ export interface UserSession {
   gym: string;
   coach?: string;
   addedBy?: string;
+  tenantId?: string;
+  tenantSlug?: string;
+  brandName?: string;
+  brandLogo?: string;
   isLoggedIn: boolean;
 }
 
@@ -54,6 +71,8 @@ export const DEFAULT_PROFILE: UserProfile = {
 };
 
 export const DEFAULT_BRANDING: CoachBranding = {
-  appTitle: "健身飲食追蹤",
+  appTitle: "健康管理",
   themeColor: "emerald",
 };
+
+export const DEFAULT_GYM_NAME = "您的健身房";

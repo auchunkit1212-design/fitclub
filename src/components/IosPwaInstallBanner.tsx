@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBranding } from "@/components/BrandingProvider";
 import { isIosSafariBrowser } from "@/lib/ios-pwa";
 import { isStandaloneDisplay } from "@/lib/session";
 
@@ -8,6 +9,7 @@ const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 export function IosPwaInstallBanner() {
+  const brand = useBranding();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function IosPwaInstallBanner() {
               ×
             </button>
 
-            <p className="text-sm font-bold tracking-tight">📲 安裝 FitClub 專屬 App</p>
+            <p className="text-sm font-bold tracking-tight">📲 安裝 {brand.gymName} 專屬 App</p>
             <p className="mt-2 text-[13px] leading-relaxed text-emerald-50/95">
               為了獲得專屬健康管理體驗，請點擊瀏覽器底部的
               <span className="mx-1 inline-flex items-center rounded-md bg-white/20 px-1.5 py-0.5 font-semibold text-white">

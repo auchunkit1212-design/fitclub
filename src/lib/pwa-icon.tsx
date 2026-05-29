@@ -25,7 +25,7 @@ export function createFitClubIcon(size: number) {
         >
           <span style={{ fontSize: size * 0.28 }}>FC</span>
           <span style={{ fontSize: size * 0.1, marginTop: size * 0.02 }}>
-            FitClub
+            Gym
           </span>
         </div>
       </div>

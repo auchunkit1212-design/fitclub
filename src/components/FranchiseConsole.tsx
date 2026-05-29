@@ -30,7 +30,7 @@ export function FranchiseConsole({
 }: FranchiseConsoleProps) {
   const [newStaffEmail, setNewStaffEmail] = useState("");
   const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffGym, setNewStaffGym] = useState("FitClub 銅鑼灣店");
+  const [newStaffGym, setNewStaffGym] = useState("銅鑼灣分店");
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
   const [aiReport, setAiReport] = useState<string | null>(null);
@@ -163,9 +163,9 @@ export function FranchiseConsole({
                 onChange={(e) => setNewStaffGym(e.target.value)}
                 className="rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                <option>FitClub 銅鑼灣店</option>
-                <option>FitClub 旺角店</option>
-                <option>FitClub 荃灣店</option>
+                <option>銅鑼灣分店</option>
+                <option>旺角分店</option>
+                <option>荃灣分店</option>
               </select>
             </div>
             <input

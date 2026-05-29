@@ -5,6 +5,7 @@ export {
   ensureSeedData as initUserRegistry,
   fetchAllUsers,
   fetchAllUsers as getUserRegistry,
+  fetchUsersForSession,
   fetchUserByEmail,
   insertUser,
   registryUserToSession,

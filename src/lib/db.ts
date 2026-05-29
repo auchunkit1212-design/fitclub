@@ -1,3 +1,5 @@
+import { resolveBrandForUser } from "@/lib/branding";
+import { syncTenantBranding } from "@/lib/tenant";
 import { supabase } from "@/lib/supabase";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
 import type {
@@ -21,6 +23,8 @@ type UserRow = {
   app_title: string | null;
   theme_color: string | null;
   broadcast: string | null;
+  tenant_id: string | null;
+  password_hash: string | null;
   created_at: string;
 };
 
@@ -37,19 +41,25 @@ type MealRow = {
   created_at: string;
 };
 
-function mapUser(row: UserRow): RegistryUser {
-  return {
+function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
+  const user: RegistryUser = {
     email: row.email,
     name: row.name,
     role: row.role,
     gym: row.gym ?? "",
     coach: row.coach ?? undefined,
     addedBy: row.added_by ?? undefined,
+    tenantId: row.tenant_id ?? undefined,
     logo: row.logo ?? undefined,
     appTitle: row.app_title ?? undefined,
     themeColor: (row.theme_color as ThemeColor) ?? undefined,
     broadcast: row.broadcast ?? undefined,
+    hasPassword: Boolean(row.password_hash),
   };
+  if (includePasswordHash && row.password_hash) {
+    user.passwordHash = row.password_hash;
+  }
+  return user;
 }
 
 function mapMeal(row: MealRow): MealLog {
@@ -81,29 +91,29 @@ export async function ensureSeedData(): Promise<void> {
       email: "owner@gmail.com",
       name: "旺角店-張老闆",
       role: "coach",
-      gym: "FitClub 旺角店",
+      gym: "旺角體驗店",
       added_by: SUPER_ADMIN_EMAIL,
-      app_title: "fitclub.hk 連鎖管理",
+      app_title: "旺角體驗店",
       theme_color: "emerald",
     },
     {
       email: "student@gmail.com",
       name: "陳大文",
       role: "student",
-      gym: "FitClub 旺角店",
+      gym: "旺角體驗店",
       coach: "旺角店-張老闆",
       added_by: "owner@gmail.com",
     },
   ]);
 
   if (seedError) {
-    // RLS 未設定好時唔阻住登入；用 demo-users 後備
-    console.warn("[FitClub] 種子資料寫入失敗:", seedError.message);
+    console.warn("[seed] 種子資料寫入失敗:", seedError.message);
   }
 }
 
 export async function fetchUserByEmail(
-  email: string
+  email: string,
+  options?: { includePasswordHash?: boolean }
 ): Promise<RegistryUser | null> {
   const normalized = email.trim().toLowerCase();
   const { data, error } = await supabase
@@ -113,7 +123,7 @@ export async function fetchUserByEmail(
     .maybeSingle();
 
   if (error) throw error;
-  if (data) return mapUser(data as UserRow);
+  if (data) return mapUser(data as UserRow, options?.includePasswordHash);
 
   const { getDemoUser } = await import("@/lib/demo-users");
   return getDemoUser(normalized);
@@ -126,11 +136,42 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  const rows = (data as UserRow[]).map(mapUser);
+  const rows = (data as UserRow[]).map((row) => mapUser(row));
   if (rows.length > 0) return rows;
 
   const { getDemoRegistry } = await import("@/lib/demo-users");
   return getDemoRegistry();
+}
+
+export async function fetchUsersForSession(
+  session: UserSession
+): Promise<RegistryUser[]> {
+  const all = await fetchAllUsers();
+
+  if (session.role === "admin") return all;
+
+  if (session.tenantId) {
+    return all.filter((u) => u.tenantId === session.tenantId);
+  }
+
+  if (session.role === "coach") {
+    return all.filter(
+      (u) =>
+        u.addedBy === session.email ||
+        u.email === session.email ||
+        (u.role === "student" && u.coach === session.name)
+    );
+  }
+
+  if (session.role === "student") {
+    return all.filter(
+      (u) =>
+        u.email === session.email ||
+        (u.role === "coach" && u.name === session.coach)
+    );
+  }
+
+  return all;
 }
 
 export async function emailExists(email: string): Promise<boolean> {
@@ -139,8 +180,10 @@ export async function emailExists(email: string): Promise<boolean> {
 }
 
 export async function insertUser(
-  user: Omit<RegistryUser, "logo" | "appTitle" | "themeColor" | "broadcast">
+  user: Omit<RegistryUser, "logo" | "appTitle" | "themeColor" | "broadcast">,
+  coachSession?: UserSession
 ): Promise<void> {
+  const gymTitle = user.gym || coachSession?.brandName || "健康管理";
   const { error } = await supabase.from("users_registry").insert({
     email: user.email.trim().toLowerCase(),
     name: user.name,
@@ -148,7 +191,8 @@ export async function insertUser(
     gym: user.gym,
     coach: user.coach ?? null,
     added_by: user.addedBy ?? null,
-    app_title: user.role === "coach" ? "fitclub.hk 健康管理" : null,
+    tenant_id: user.tenantId ?? coachSession?.tenantId ?? null,
+    app_title: user.role === "coach" ? gymTitle : null,
     theme_color: user.role === "coach" ? "emerald" : null,
   });
 
@@ -163,6 +207,9 @@ export function registryUserToSession(user: RegistryUser): UserSession {
     gym: user.gym,
     coach: user.coach,
     addedBy: user.addedBy,
+    tenantId: user.tenantId,
+    brandName: user.appTitle ?? user.gym,
+    brandLogo: user.logo,
     isLoggedIn: true,
   };
 }
@@ -173,12 +220,15 @@ export function createAdminSession(email: string): UserSession {
     name: "最高總裁 (Kit Au)",
     email: email.trim().toLowerCase(),
     gym: "全港連鎖總部",
+    brandName: "連鎖總部",
     isLoggedIn: true,
   };
 }
 
 export async function fetchMealLogs(options?: {
   emails?: string[];
+  from?: string;
+  to?: string;
 }): Promise<MealLog[]> {
   let query = supabase
     .from("meal_logs")
@@ -187,6 +237,12 @@ export async function fetchMealLogs(options?: {
 
   if (options?.emails && options.emails.length > 0) {
     query = query.in("email", options.emails.map((e) => e.toLowerCase()));
+  }
+  if (options?.from) {
+    query = query.gte("created_at", options.from);
+  }
+  if (options?.to) {
+    query = query.lte("created_at", `${options.to}T23:59:59.999Z`);
   }
 
   const { data, error } = await query;
@@ -218,10 +274,11 @@ export async function insertMealLog(
 
 export async function fetchMealLogsForSession(
   session: UserSession,
-  registry: RegistryUser[]
+  registry: RegistryUser[],
+  filters?: { emails?: string[]; from?: string; to?: string }
 ): Promise<MealLog[]> {
   if (session.role === "admin") {
-    return fetchMealLogs();
+    return fetchMealLogs(filters);
   }
 
   if (session.role === "coach") {
@@ -229,39 +286,25 @@ export async function fetchMealLogsForSession(
       .filter((u) => u.role === "student" && u.addedBy === session.email)
       .map((u) => u.email);
     if (studentEmails.length === 0) return [];
-    return fetchMealLogs({ emails: studentEmails });
+
+    const emails = filters?.emails?.length
+      ? filters.emails.filter((e) => studentEmails.includes(e))
+      : studentEmails;
+
+    return fetchMealLogs({ ...filters, emails });
   }
 
-  return fetchMealLogs({ emails: [session.email] });
+  return fetchMealLogs({ ...filters, emails: [session.email] });
 }
 
 export async function resolveBranding(
   session: UserSession,
   registry: RegistryUser[]
 ): Promise<{ branding: CoachBranding; broadcast: string }> {
-  let coachRow: RegistryUser | undefined;
-
-  if (session.role === "coach") {
-    coachRow = registry.find((u) => u.email === session.email);
-  } else if (session.role === "student" && session.coach) {
-    coachRow = registry.find(
-      (u) => u.role === "coach" && u.name === session.coach
-    );
-  } else {
-    coachRow = registry.find((u) => u.role === "coach");
-  }
-
-  if (!coachRow) {
-    return { branding: DEFAULT_BRANDING, broadcast: "" };
-  }
-
+  const resolved = await resolveBrandForUser(session, registry);
   return {
-    branding: {
-      appTitle: coachRow.appTitle ?? DEFAULT_BRANDING.appTitle,
-      themeColor: coachRow.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: coachRow.logo,
-    },
-    broadcast: coachRow.broadcast ?? "",
+    branding: resolved.branding,
+    broadcast: resolved.broadcast,
   };
 }
 
@@ -272,6 +315,7 @@ export async function updateCoachBranding(
     themeColor: ThemeColor;
     logo?: string;
     broadcast: string;
+    tenantId?: string;
   }
 ): Promise<void> {
   const { error } = await supabase
@@ -281,16 +325,25 @@ export async function updateCoachBranding(
       theme_color: payload.themeColor,
       logo: payload.logo ?? null,
       broadcast: payload.broadcast,
+      gym: payload.appTitle,
     })
     .eq("email", coachEmail.trim().toLowerCase())
     .eq("role", "coach");
 
   if (error) throw error;
+
+  if (payload.tenantId) {
+    await syncTenantBranding(payload.tenantId, {
+      gymName: payload.appTitle,
+      logoUrl: payload.logo,
+    });
+  }
 }
 
 export async function updateCoachLogo(
   coachEmail: string,
-  logo: string
+  logo: string,
+  tenantId?: string
 ): Promise<void> {
   const { error } = await supabase
     .from("users_registry")
@@ -299,4 +352,12 @@ export async function updateCoachLogo(
     .eq("role", "coach");
 
   if (error) throw error;
+
+  if (tenantId) {
+    const coach = await fetchUserByEmail(coachEmail);
+    await syncTenantBranding(tenantId, {
+      gymName: coach?.appTitle ?? coach?.gym ?? "健康管理",
+      logoUrl: logo,
+    });
+  }
 }
