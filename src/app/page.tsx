@@ -238,7 +238,9 @@ export default function StudentDashboard() {
                 })
               );
             }
-            const tRes = await fetch("/api/coach/student-targets");
+            const tRes = await fetch("/api/coach/student-targets", {
+              credentials: "include",
+            });
             const tData = (await tRes.json()) as {
               targets?: StudentNutritionTargets | null;
             };
@@ -407,8 +409,10 @@ export default function StudentDashboard() {
             if (!session.email || !bodyProfile) return;
             const res = await fetch("/api/student/profile", {
               method: "PUT",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                email: session.email,
                 heightCm: bodyProfile.heightCm,
                 weightKg: bodyProfile.weightKg,
                 age: bodyProfile.age,
@@ -746,8 +750,10 @@ export default function StudentDashboard() {
                   try {
                     const res = await fetch("/api/student/profile", {
                       method: "PUT",
+                      credentials: "include",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
+                        email: session.email,
                         heightCm: h,
                         weightKg: w,
                         age: a,

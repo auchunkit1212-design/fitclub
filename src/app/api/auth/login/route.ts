@@ -21,11 +21,15 @@ export async function POST(request: NextRequest) {
     const session = await loginWithCredentials(email, password);
 
     const response = NextResponse.json({ ok: true, session });
-    response.cookies.set("current_session", JSON.stringify(session), {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: "lax",
-    });
+    response.cookies.set(
+      "current_session",
+      encodeURIComponent(JSON.stringify(session)),
+      {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      }
+    );
 
     return response;
   } catch (error) {

@@ -431,7 +431,8 @@ export async function fetchStudentBodyProfile(
 }
 
 export async function upsertStudentBodyProfile(
-  profile: Omit<StudentBodyProfile, "updatedAt">
+  profile: Omit<StudentBodyProfile, "updatedAt">,
+  options?: { useServiceRole?: boolean }
 ): Promise<StudentBodyProfile> {
   const normalized = profile.email.trim().toLowerCase();
   const row = {
@@ -446,11 +447,19 @@ export async function upsertStudentBodyProfile(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { data, error } = await client
     .from("student_body_profiles")
     .upsert(row, { onConflict: "email" })
     .select("*")
     .single();
+
+  if (error) {
+    console.warn("[body-profile] upsert failed:", error.message, error.code);
+  }
 
   const saved: StudentBodyProfile = error
     ? {
