@@ -116,6 +116,28 @@ export function generateRoast(
 
 import type { MealLog } from "./types";
 
+export function getMealAiComment(log: MealLog): string {
+  if (log.calories >= 700) {
+    return "熱量偏高，建議減少油炸同澱粉，下一餐增加蔬菜比例。";
+  }
+  if (log.calories <= 500 && log.protein >= 20) {
+    return "表現優良，蛋白質充足，可維持而家嘅飲食節奏。";
+  }
+  if (log.protein < 15) {
+    return "蛋白質偏低，建議加雞胸、魚或蛋補充。";
+  }
+  if (log.calories < 250) {
+    return "熱量偏低，注意唔好過度節食影響訓練恢復。";
+  }
+  return "整體尚可，建議控制醬料同飲品糖分。";
+}
+
+export function getMealStatus(log: MealLog): "優良" | "危險" {
+  if (log.calories >= 700) return "危險";
+  if (log.calories <= 500 && log.protein >= 20) return "優良";
+  return "危險";
+}
+
 export function generateCoachReport(logs: MealLog[]): string {
   if (logs.length === 0) {
     return "暫時未有學員飲食打卡。等學員記低第一餐，AI 先可以出整合報告。";
@@ -148,7 +170,7 @@ export function generateCoachReport(logs: MealLog[]): string {
           .join("\n")
       : "- 暫時未見明顯優秀餐單，建議提醒學員增加優質蛋白。";
 
-  return `🤖 【FitClub AI 學員整合報告】
+  return `🤖 【AI 學員整合報告】
 
 📊 數據概覽：
 - 打卡總數：${logs.length} 餐

@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
 import { generateRoast } from "@/lib/ai-mock";
-import { getUserRegistry, initUserRegistry } from "@/lib/registry";
+import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
+import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
-import { clearSession, getSession } from "@/lib/session";
+import { clearSession, getSession, saveSession } from "@/lib/session";
 import { withTimeout } from "@/lib/with-timeout";
 import {
-  getCoachBranding,
-  getCoachBroadcast,
   getMealLogs,
   getThemeClasses,
   getUserProfile,
@@ -177,29 +176,30 @@ export default function StudentDashboard() {
       try {
         await withTimeout(initUserRegistry(), 12_000, "雲端初始化逾時");
 
-        const registry = await withTimeout(getUserRegistry(), 12_000, "讀取用戶逾時");
+        const registry = await withTimeout(
+          fetchUsersForSession(activeSession),
+          12_000,
+          "讀取用戶逾時"
+        );
         const mealLogs = await withTimeout(
           getMealLogs(activeSession, registry),
           12_000,
           "讀取餐食逾時"
         );
-        const brandingData = await withTimeout(
-          getCoachBranding(activeSession, registry),
+        const brand = await withTimeout(
+          resolveBrandForUser(activeSession, registry),
           12_000,
           "讀取品牌逾時"
-        );
-        const broadcastData = await withTimeout(
-          getCoachBroadcast(activeSession, registry),
-          12_000,
-          "讀取廣播逾時"
         );
 
         if (cancelled) return;
 
         setUserRegistry(registry);
         setLogs(mealLogs);
-        setBranding(brandingData);
-        setBroadcast(broadcastData);
+        setBranding(brand.branding);
+        setBroadcast(brand.broadcast);
+        setSession(applyBrandToSession(activeSession, brand));
+        saveSession(applyBrandToSession(activeSession, brand));
 
         const rawSettings = localStorage.getItem("student_settings");
         if (rawSettings) {

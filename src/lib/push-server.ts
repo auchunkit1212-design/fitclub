@@ -34,7 +34,7 @@ export function resolveRemindersForNow(): PushPayload[] {
 
   if (WATER_HOURS_HKT.has(hour)) {
     payloads.push({
-      title: "FitClub · 飲水提醒",
+      title: "飲水提醒",
       body: "💧 飲水時間！記得補充水分，保持訓練狀態。",
       url: "/",
       tag: `water-${hour}`,
@@ -46,11 +46,11 @@ export function resolveRemindersForNow(): PushPayload[] {
       hour === 8
         ? { body: "🌅 早餐時間！記得記低你食咗咩。", tag: "meal-breakfast" }
         : hour === 12
-          ? { body: "🍱 午餐時間！打開 FitClub 記錄飲食。", tag: "meal-lunch" }
+          ? { body: "🍱 午餐時間！請打開 App 記錄飲食。", tag: "meal-lunch" }
           : { body: "🌙 晚餐時間！唔好忘記打卡記錄。", tag: "meal-dinner" };
 
     payloads.push({
-      title: "FitClub · 飲食打卡",
+      title: "飲食打卡提醒",
       body: copy.body,
       url: "/add-meal",
       tag: copy.tag,
@@ -175,7 +175,7 @@ export async function sendTestPushToAll(): Promise<CronSendResult> {
   configureWebPush();
   const payloads: PushPayload[] = [
     {
-      title: "FitClub 測試",
+      title: "推送測試",
       body: "📲 推送測試成功！飲水同飲食提醒已就緒。",
       url: "/",
       tag: "fitclub-test-push",

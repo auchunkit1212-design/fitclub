@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBranding } from "@/components/BrandingProvider";
 import { isStandaloneDisplay } from "@/lib/session";
 
 const btnClass =
@@ -12,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PwaShell() {
+  const brand = useBranding();
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -86,7 +88,7 @@ export function PwaShell() {
       {!installed && installEvent && (
         <div className="fixed bottom-24 left-4 right-4 z-50 max-w-lg mx-auto">
           <div className="bg-zinc-900 text-white rounded-2xl p-4 shadow-2xl border border-zinc-700">
-            <p className="text-sm font-semibold">📲 安裝 FitClub App</p>
+            <p className="text-sm font-semibold">📲 安裝 {brand.gymName} App</p>
             <p className="text-xs text-zinc-300 mt-1">
               加到主畫面，全屏使用，似真 App 咁順！
             </p>

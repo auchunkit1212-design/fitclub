@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { BrandingProvider } from "@/components/BrandingProvider";
+import { DynamicManifestLink } from "@/components/DynamicManifestLink";
 import { PwaShell } from "@/components/PwaShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FitClub 健康管理",
-  description: "連鎖 Gym 房專屬飲食打卡同教練管理系統",
-  applicationName: "FitClub",
-  manifest: "/manifest.json",
+  title: "健康管理平台",
+  description: "健身房專屬飲食打卡同教練管理系統",
+  applicationName: "健康管理",
+  manifest: "/api/manifest",
   icons: {
     icon: [{ url: "/logo.png", type: "image/png" }],
     apple: [{ url: "/logo.png", type: "image/png" }],
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FitClub",
+    title: "健康管理",
   },
   formatDetection: {
     telephone: false,
@@ -38,8 +40,11 @@ export default function RootLayout({
   return (
     <html lang="zh-HK">
       <body className="antialiased bg-zinc-50 min-h-screen">
-        {children}
-        <PwaShell />
+        <BrandingProvider>
+          <DynamicManifestLink />
+          {children}
+          <PwaShell />
+        </BrandingProvider>
       </body>
     </html>
   );
