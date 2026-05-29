@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { fetchTodayLogsForEmail } from "@/lib/phase4-db";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export interface PushPayload {
@@ -16,10 +17,10 @@ export interface PushSubscriptionRow {
   auth: string;
 }
 
-const MEAL_HOURS_HKT = new Set([8, 12, 19]);
-const WATER_HOURS_HKT = new Set([8, 10, 12, 14, 16, 18, 20]);
+/** 每晚推播時段：香港時間 22:00（配合 Vercel Cron UTC 14:00） */
+export const NIGHTLY_REMINDER_HOUR_HKT = 22;
 
-function getHongKongHour(): number {
+export function getHongKongHour(): number {
   const hour = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Hong_Kong",
     hour: "numeric",
@@ -28,36 +29,34 @@ function getHongKongHour(): number {
   return Number(hour);
 }
 
-export function resolveRemindersForNow(): PushPayload[] {
-  const hour = getHongKongHour();
-  const payloads: PushPayload[] = [];
-
-  if (WATER_HOURS_HKT.has(hour)) {
-    payloads.push({
-      title: "飲水提醒",
-      body: "💧 飲水時間！記得補充水分，保持訓練狀態。",
+export function buildNightlyReminderPayload(mealCountToday: number): PushPayload {
+  if (mealCountToday > 0) {
+    const calNote =
+      mealCountToday >= 3
+        ? "飲食記錄好完整"
+        : mealCountToday >= 1
+          ? "已有打卡"
+          : "";
+    return {
+      title: "今日打卡總結",
+      body: `🌙 你今天記錄了 ${mealCountToday} 餐${calNote ? `，${calNote}` : ""}。好好休息，聽日繼續加油！`,
       url: "/",
-      tag: `water-${hour}`,
-    });
+      tag: "nightly-summary",
+    };
   }
 
-  if (MEAL_HOURS_HKT.has(hour)) {
-    const copy =
-      hour === 8
-        ? { body: "🌅 早餐時間！記得記低你食咗咩。", tag: "meal-breakfast" }
-        : hour === 12
-          ? { body: "🍱 午餐時間！請打開 App 記錄飲食。", tag: "meal-lunch" }
-          : { body: "🌙 晚餐時間！唔好忘記打卡記錄。", tag: "meal-dinner" };
+  return {
+    title: "明日溫馨提示",
+    body: "🌅 聽日記得打開 App 記錄飲食，教練同 AI 會幫你跟進進度，晚安！",
+    url: "/add-meal",
+    tag: "nightly-tomorrow",
+  };
+}
 
-    payloads.push({
-      title: "飲食打卡提醒",
-      body: copy.body,
-      url: "/add-meal",
-      tag: copy.tag,
-    });
-  }
-
-  return payloads;
+/** 預覽用：僅在 22:00 HKT 回傳非空（實際發送為每位訂閱者個別內容） */
+export function resolveRemindersForNow(): PushPayload[] {
+  if (getHongKongHour() !== NIGHTLY_REMINDER_HOUR_HKT) return [];
+  return [buildNightlyReminderPayload(0)];
 }
 
 function configureWebPush(): void {
@@ -122,13 +121,13 @@ export interface CronSendResult {
   removedExpired: number;
 }
 
-export async function runScheduledPushBroadcast(): Promise<CronSendResult> {
-  configureWebPush();
-
-  const payloads = resolveRemindersForNow();
+/** 每晚 22:00 HKT：依今日打卡數發送總結或明日溫馨提示（每位訂閱者個別內容） */
+export async function runScheduledPushBroadcast(options?: {
+  force?: boolean;
+}): Promise<CronSendResult> {
   const hourHkt = getHongKongHour();
 
-  if (payloads.length === 0) {
+  if (!options?.force && hourHkt !== NIGHTLY_REMINDER_HOUR_HKT) {
     const subscriptions = await fetchAllPushSubscriptions();
     return {
       hourHkt,
@@ -140,20 +139,31 @@ export async function runScheduledPushBroadcast(): Promise<CronSendResult> {
     };
   }
 
+  configureWebPush();
   const subscriptions = await fetchAllPushSubscriptions();
   let sent = 0;
   let failed = 0;
   const expiredIds: string[] = [];
+  const payloadSamples: PushPayload[] = [];
+  const mealCountCache = new Map<string, number>();
 
   for (const row of subscriptions) {
-    for (const payload of payloads) {
-      const result = await sendOne(row, payload);
-      if (result.ok) {
-        sent += 1;
-      } else {
-        failed += 1;
-        if (result.expired) expiredIds.push(row.id);
-      }
+    const email = row.email.trim().toLowerCase();
+    let mealCount = mealCountCache.get(email);
+    if (mealCount === undefined) {
+      const logs = await fetchTodayLogsForEmail(email);
+      mealCount = logs.length;
+      mealCountCache.set(email, mealCount);
+    }
+
+    const payload = buildNightlyReminderPayload(mealCount);
+    if (payloadSamples.length < 2) payloadSamples.push(payload);
+
+    const result = await sendOne(row, payload);
+    if (result.ok) sent += 1;
+    else {
+      failed += 1;
+      if (result.expired) expiredIds.push(row.id);
     }
   }
 
@@ -162,7 +172,7 @@ export async function runScheduledPushBroadcast(): Promise<CronSendResult> {
 
   return {
     hourHkt,
-    payloads,
+    payloads: payloadSamples,
     subscriptionCount: subscriptions.length,
     sent,
     failed,
@@ -215,7 +225,7 @@ export async function sendTestPushToAll(): Promise<CronSendResult> {
   const payloads: PushPayload[] = [
     {
       title: "推送測試",
-      body: "📲 推送測試成功！飲水同飲食提醒已就緒。",
+      body: "📲 推送測試成功！每晚 10 點提醒已就緒。",
       url: "/",
       tag: "fitclub-test-push",
     },
