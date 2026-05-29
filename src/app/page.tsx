@@ -302,13 +302,13 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
       {toast && (
-        <div className="fixed top-4 left-4 right-4 bg-zinc-900 text-white px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-lg">
+        <div className="fixed top-safe left-4 right-4 bg-zinc-900 text-white px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-lg max-w-lg mx-auto">
           {toast}
         </div>
       )}
 
       {activeNotification && (
-        <div className="fixed top-4 left-4 right-4 bg-zinc-900/95 text-white p-4 rounded-2xl z-50 shadow-2xl border border-zinc-700">
+        <div className="fixed top-safe left-4 right-4 max-w-lg mx-auto bg-zinc-900/95 text-white p-4 rounded-2xl z-50 shadow-2xl border border-zinc-700">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-semibold leading-relaxed">{activeNotification}</p>
             <button
@@ -344,7 +344,9 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      <header className={`${theme.header} text-white px-4 pt-10 pb-6 rounded-b-3xl shadow-lg`}>
+      <header
+        className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-6 rounded-b-3xl shadow-lg`}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {branding.logo && (
@@ -592,8 +594,8 @@ export default function StudentDashboard() {
         ) : null}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 py-4 pb-safe">
-        <div className={`grid gap-2 ${isStudent ? "grid-cols-4" : "grid-cols-3"}`}>
+      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 pt-3 pb-safe">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
@@ -603,7 +605,7 @@ export default function StudentDashboard() {
           >
             🏠 主頁
           </button>
-          {isStudent && (
+          {isStudent ? (
             <button
               type="button"
               onClick={() => setActiveTab("settings")}
@@ -613,22 +615,21 @@ export default function StudentDashboard() {
             >
               ⚙️ 設定
             </button>
-          )}
-          {(isStudent || session.role === "coach") && (
+          ) : (
             <button
               type="button"
-              onClick={() => router.push("/add-meal")}
-              className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+              onClick={() => router.push("/coach")}
+              className={`bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
             >
-              ➕ 飲食
+              👨‍🏫 教練
             </button>
           )}
           <button
             type="button"
-            onClick={() => router.push("/coach")}
-            className={`bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            onClick={() => router.push("/add-meal")}
+            className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
-            👨‍🏫 教練
+            ➕ 飲食
           </button>
         </div>
       </nav>

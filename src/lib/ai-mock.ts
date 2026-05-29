@@ -5,6 +5,8 @@ export interface MacroEstimate {
   fats: number;
 }
 
+export const PORTION_NONE = "無 / 冇食 (0)";
+
 const HIGH_CAL_KEYWORDS = ["炒飯", "牛河", "乾炒", "焗飯", "公仔麵", "即食麵", "炸"];
 const LOW_RICE_KEYWORDS = ["少飯", "走飯", "少油"];
 
@@ -49,20 +51,36 @@ export function estimateMacros(
     carbs -= 28;
   }
 
-  if (carbsPortion === "大拳") calories += 80;
-  if (carbsPortion === "細拳") calories -= 60;
-  if (proteinPortion === "大掌") protein += 18;
-  if (proteinPortion === "細掌") protein -= 10;
-  if (hasVeggies === "有") {
+  if (carbsPortion === PORTION_NONE) {
+    carbs = 0;
+    calories -= 180;
+    fats -= 4;
+  } else {
+    if (carbsPortion === "大拳") calories += 80;
+    if (carbsPortion === "細拳") calories -= 60;
+  }
+
+  if (proteinPortion === PORTION_NONE) {
+    protein = 0;
+    calories -= 120;
+    fats -= 6;
+  } else {
+    if (proteinPortion === "大掌") protein += 18;
+    if (proteinPortion === "細掌") protein -= 10;
+  }
+
+  if (hasVeggies === PORTION_NONE) {
+    // 冇食蔬菜：唔再加蔬菜相關估算
+  } else if (hasVeggies === "有") {
     calories -= 20;
     carbs -= 5;
   }
 
   return {
-    calories: Math.max(80, Math.round(calories)),
-    protein: Math.max(2, Math.round(protein)),
-    carbs: Math.max(5, Math.round(carbs)),
-    fats: Math.max(2, Math.round(fats)),
+    calories: Math.max(0, Math.round(calories)),
+    protein: Math.max(0, Math.round(protein)),
+    carbs: Math.max(0, Math.round(carbs)),
+    fats: Math.max(0, Math.round(fats)),
   };
 }
 

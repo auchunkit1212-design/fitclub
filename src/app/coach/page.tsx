@@ -11,6 +11,7 @@ import {
   updateCoachLogo,
 } from "@/lib/db";
 import { compressFileImage } from "@/lib/image";
+import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/session";
 import type { CoachBranding, MealLog, ThemeColor, UserSession } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
@@ -155,18 +156,14 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-8 max-w-lg mx-auto">
-      <header className="bg-zinc-900 text-white px-4 py-5">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className={`text-sm text-white/80 mb-3 px-3 py-1.5 rounded-lg bg-white/10 ${btnClass}`}
-        >
-          ← 返回主頁
-        </button>
-        <h1 className="text-xl font-bold">教練白標後台</h1>
-        <p className="text-white/70 text-sm mt-1">Supabase 雲端同步</p>
-      </header>
+    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+      <PageHeader
+        title="教練白標後台"
+        subtitle="Supabase 雲端同步"
+        variant="dark"
+        backLabel="← 返回主頁"
+        onBack={() => router.push("/")}
+      />
 
       <main className="px-4 py-4 space-y-4">
         <section className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
