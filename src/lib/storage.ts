@@ -1,10 +1,18 @@
 import {
+  fetchMealLogs,
+  fetchMealLogsForSession,
+  insertMealLog,
+  resolveBranding,
+  updateCoachBranding,
+} from "@/lib/db";
+import { DEFAULT_BRANDING, DEFAULT_PROFILE } from "@/lib/types";
+import type {
   CoachBranding,
-  DEFAULT_BRANDING,
-  DEFAULT_PROFILE,
   MealLog,
-  UserProfile,
-} from "./types";
+  RegistryUser,
+  ThemeColor,
+  UserSession,
+} from "@/lib/types";
 
 export function generateId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -17,45 +25,54 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-function safeParse<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+export function getUserProfile() {
+  return DEFAULT_PROFILE;
 }
 
-export function getUserProfile(): UserProfile {
-  if (typeof window === "undefined") return DEFAULT_PROFILE;
-  return safeParse(localStorage.getItem("user_profile"), DEFAULT_PROFILE);
+export async function getCoachBranding(
+  session: UserSession,
+  registry: RegistryUser[]
+): Promise<CoachBranding> {
+  const resolved = await resolveBranding(session, registry);
+  return resolved.branding;
 }
 
-export function getCoachBranding(): CoachBranding {
-  if (typeof window === "undefined") return DEFAULT_BRANDING;
-  return safeParse(localStorage.getItem("coach_branding"), DEFAULT_BRANDING);
+export async function getCoachBroadcast(
+  session: UserSession,
+  registry: RegistryUser[]
+): Promise<string> {
+  const resolved = await resolveBranding(session, registry);
+  return resolved.broadcast;
 }
 
-export function getCoachBroadcast(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("coach_broadcast") ?? "";
+export async function getMealLogs(
+  session: UserSession,
+  registry: RegistryUser[]
+): Promise<MealLog[]> {
+  return fetchMealLogsForSession(session, registry);
 }
 
-export function getMealLogs(): MealLog[] {
-  if (typeof window === "undefined") return [];
-  return safeParse<MealLog[]>(localStorage.getItem("meal_logs"), []);
+export async function saveMealLog(
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string }
+): Promise<MealLog> {
+  return insertMealLog(log);
 }
 
-export function saveMealLogs(logs: MealLog[]): void {
-  localStorage.setItem("meal_logs", JSON.stringify(logs));
+export async function saveCoachBranding(
+  coachEmail: string,
+  branding: CoachBranding,
+  broadcast: string
+): Promise<void> {
+  await updateCoachBranding(coachEmail, {
+    appTitle: branding.appTitle,
+    themeColor: branding.themeColor,
+    logo: branding.logo,
+    broadcast,
+  });
 }
 
-export function saveCoachBranding(branding: CoachBranding): void {
-  localStorage.setItem("coach_branding", JSON.stringify(branding));
-}
-
-export function saveCoachBroadcast(message: string): void {
-  localStorage.setItem("coach_broadcast", message);
+export async function getMealLogsByEmails(emails: string[]): Promise<MealLog[]> {
+  return fetchMealLogs({ emails });
 }
 
 export function isToday(isoDate: string): boolean {
@@ -68,29 +85,34 @@ export function isToday(isoDate: string): boolean {
   );
 }
 
-export function getThemeClasses(color: CoachBranding["themeColor"]) {
+export function getThemeClasses(theme: ThemeColor) {
   const map = {
     emerald: {
       header: "bg-emerald-600",
       accent: "text-emerald-600",
-      bar: "bg-emerald-500",
+      btn: "bg-emerald-600",
+      text: "text-emerald-600",
       ring: "ring-emerald-500",
-      btn: "bg-emerald-600 hover:bg-emerald-700",
+      bar: "bg-emerald-500",
     },
     blue: {
       header: "bg-blue-600",
       accent: "text-blue-600",
-      bar: "bg-blue-500",
+      btn: "bg-blue-600",
+      text: "text-blue-600",
       ring: "ring-blue-500",
-      btn: "bg-blue-600 hover:bg-blue-700",
+      bar: "bg-blue-500",
     },
     black: {
       header: "bg-zinc-900",
-      accent: "text-zinc-900",
-      bar: "bg-zinc-800",
+      accent: "text-zinc-800",
+      btn: "bg-zinc-900",
+      text: "text-zinc-800",
       ring: "ring-zinc-700",
-      btn: "bg-zinc-900 hover:bg-zinc-800",
+      bar: "bg-zinc-800",
     },
-  };
-  return map[color];
+  } as const;
+  return map[theme] ?? map.emerald;
 }
+
+export { DEFAULT_BRANDING };

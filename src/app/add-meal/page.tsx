@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { estimateMacros } from "@/lib/ai-mock";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
-import { generateId, getMealLogs, saveMealLogs } from "@/lib/storage";
-import type { MealLog } from "@/lib/types";
+import { saveMealLog } from "@/lib/storage";
+import type { UserSession } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
 const CARBS_OPTIONS = ["細拳", "中拳", "大拳"];
@@ -80,17 +80,35 @@ export default function AddMealPage() {
     setFats(Math.round(total * 0.04));
   };
 
+  const readSessionEmail = (): string | null => {
+    const raw = localStorage.getItem("current_session");
+    if (!raw) return null;
+    try {
+      const session = JSON.parse(raw) as UserSession;
+      return session.email?.trim().toLowerCase() || null;
+    } catch {
+      return null;
+    }
+  };
+
   const handleSave = async () => {
     if (!description.trim()) {
       alert("請填寫食物描述！");
       return;
     }
     if (saveLoading) return;
+
+    const email = readSessionEmail();
+    if (!email) {
+      alert("請先登入再記錄飲食。");
+      router.push("/register");
+      return;
+    }
+
     setSaveLoading(true);
 
-    const log: MealLog = {
-      id: generateId(),
-      date: new Date().toISOString(),
+    const basePayload = {
+      email,
       mealType,
       description: description.trim(),
       imageBase64,
@@ -98,40 +116,35 @@ export default function AddMealPage() {
       protein: Number(protein) || 0,
       carbs: Number(carbs) || 0,
       fats: Number(fats) || 0,
-      createdAt: new Date().toISOString(),
+    };
+
+    const trySave = async (image?: string) => {
+      await saveMealLog({ ...basePayload, imageBase64: image });
+      router.push("/");
     };
 
     try {
-      const logs = getMealLogs();
-      saveMealLogs([log, ...logs]);
-      router.push("/");
-    } catch (error) {
-      const isQuotaError =
-        error instanceof DOMException &&
-        (error.name === "QuotaExceededError" || error.code === 22);
-
-      if (isQuotaError && log.imageBase64) {
+      await trySave(imageBase64);
+    } catch {
+      if (imageBase64) {
         try {
-          const compressedAgain = await compressDataUrl(log.imageBase64, 960, 0.58);
-          saveMealLogs([{ ...log, imageBase64: compressedAgain }, ...getMealLogs()]);
-          alert("相片太大，已自動壓縮後儲存。");
-          router.push("/");
+          const compressed = await compressDataUrl(imageBase64, 960, 0.58);
+          await trySave(compressed);
+          alert("相片太大，已自動壓縮後上傳雲端。");
           return;
         } catch {
           try {
-            const compressedHard = await compressDataUrl(log.imageBase64, 720, 0.42);
-            saveMealLogs([{ ...log, imageBase64: compressedHard }, ...getMealLogs()]);
-            alert("相片已大幅壓縮後儲存。");
-            router.push("/");
+            const compressedHard = await compressDataUrl(imageBase64, 720, 0.42);
+            await trySave(compressedHard);
+            alert("相片已大幅壓縮後上傳雲端。");
             return;
           } catch {
-            alert("儲存失敗，本地空間已滿，請先清理部分舊記錄。");
+            alert("上傳失敗，請檢查 Supabase 連線或縮小相片。");
             return;
           }
         }
       }
-
-      alert("儲存失敗，請再試一次。");
+      alert("上傳失敗，請檢查 Supabase 連線。");
     } finally {
       setSaveLoading(false);
     }

@@ -124,6 +124,7 @@ export default function StudentDashboard() {
   const [activeNotification, setActiveNotification] = useState<string | null>(null);
   const [session, setSession] = useState<UserSession | null>(null);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
 
@@ -138,50 +139,66 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    initUserRegistry();
-    setProfile(getUserProfile());
-    setBranding(getCoachBranding());
-    setBroadcast(getCoachBroadcast());
-    setLogs(getMealLogs());
-    setUserRegistry(getUserRegistry());
+    let cancelled = false;
 
-    const rawSession = localStorage.getItem("current_session");
-    if (!rawSession) {
-      router.push("/register");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(rawSession) as UserSession;
-      const role =
-        parsed.role === "coach" || parsed.role === "admin"
-          ? parsed.role
-          : "student";
-      setSession({
-        ...parsed,
-        role,
-        name: parsed.name || "體驗學員",
-        email: parsed.email || "",
-        gym: parsed.gym || "未綁定分店",
-        isLoggedIn: true,
-      });
-    } catch {
-      router.push("/register");
-      return;
-    }
-
-    const rawSettings = localStorage.getItem("student_settings");
-    if (rawSettings) {
+    const load = async () => {
+      setLoading(true);
       try {
-        const parsed = JSON.parse(rawSettings) as Partial<PersonalSettings>;
-        setSettings({
-          ...DEFAULT_SETTINGS,
+        await initUserRegistry();
+
+        const rawSession = localStorage.getItem("current_session");
+        if (!rawSession) {
+          router.push("/register");
+          return;
+        }
+
+        const parsed = JSON.parse(rawSession) as UserSession;
+        const role =
+          parsed.role === "coach" || parsed.role === "admin"
+            ? parsed.role
+            : "student";
+        const activeSession: UserSession = {
           ...parsed,
-        });
+          role,
+          name: parsed.name || "體驗學員",
+          email: parsed.email || "",
+          gym: parsed.gym || "未綁定分店",
+          isLoggedIn: true,
+        };
+
+        const registry = await getUserRegistry();
+        const mealLogs = await getMealLogs(activeSession, registry);
+        const brandingData = await getCoachBranding(activeSession, registry);
+        const broadcastData = await getCoachBroadcast(activeSession, registry);
+
+        if (cancelled) return;
+
+        setSession(activeSession);
+        setUserRegistry(registry);
+        setLogs(mealLogs);
+        setBranding(brandingData);
+        setBroadcast(broadcastData);
+        setProfile(getUserProfile());
+
+        const rawSettings = localStorage.getItem("student_settings");
+        if (rawSettings) {
+          try {
+            const settingsParsed = JSON.parse(rawSettings) as Partial<PersonalSettings>;
+            setSettings({ ...DEFAULT_SETTINGS, ...settingsParsed });
+          } catch {
+            // Keep default settings when parse fails
+          }
+        }
       } catch {
-        // Keep default settings when parse fails
+        if (!cancelled) {
+          showToast("❌ 雲端讀取失敗，請檢查 Supabase 連線。");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
+    };
+
+    load();
 
     const timerA = setTimeout(() => {
       setActiveNotification("⏰ 到時間記錄上一餐啦，唔好漏打卡！");
@@ -189,7 +206,9 @@ export default function StudentDashboard() {
     const timerB = setTimeout(() => {
       setActiveNotification("💧 補水提示：依家飲一大杯水先！");
     }, 12000);
+
     return () => {
+      cancelled = true;
       clearTimeout(timerA);
       clearTimeout(timerB);
     };
@@ -218,10 +237,10 @@ export default function StudentDashboard() {
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? "健身飲食追蹤";
 
-  if (!profile || !branding || !session) {
+  if (loading || !profile || !branding || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        載入緊...
+        從雲端載入緊...
       </div>
     );
   }
@@ -331,7 +350,6 @@ export default function StudentDashboard() {
             <FranchiseConsole
               session={session}
               registry={userRegistry}
-              logs={logs}
               onRegistryChange={setUserRegistry}
               onToast={showToast}
               onGoCoach={() => router.push("/coach")}

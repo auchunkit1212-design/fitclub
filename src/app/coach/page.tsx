@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildLogSummary, generateCoachReport } from "@/lib/ai-mock";
-import { compressFileImage } from "@/lib/image";
 import {
-  getCoachBranding,
-  getCoachBroadcast,
-  getMealLogs,
-  saveCoachBranding,
-  saveCoachBroadcast,
-} from "@/lib/storage";
-import type { CoachBranding, MealLog, ThemeColor } from "@/lib/types";
+  fetchAllUsers,
+  fetchMealLogsForSession,
+  resolveBranding,
+  updateCoachBranding,
+  updateCoachLogo,
+} from "@/lib/db";
+import { compressFileImage } from "@/lib/image";
+import type { CoachBranding, MealLog, ThemeColor, UserSession } from "@/lib/types";
+import { DEFAULT_BRANDING } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -28,10 +29,20 @@ function mealStatus(log: MealLog): "優良" | "危險" {
   return "危險";
 }
 
+function readSession(): UserSession | null {
+  const raw = localStorage.getItem("current_session");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as UserSession;
+  } catch {
+    return null;
+  }
+}
+
 export default function CoachPage() {
   const router = useRouter();
   const logoInputRef = useRef<HTMLInputElement>(null);
-
+  const [session, setSession] = useState<UserSession | null>(null);
   const [appTitle, setAppTitle] = useState("");
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
   const [logo, setLogo] = useState<string | undefined>();
@@ -40,51 +51,97 @@ export default function CoachPage() {
   const [copyId, setCopyId] = useState<string | null>(null);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
-    const branding = getCoachBranding();
-    setAppTitle(branding.appTitle);
-    setThemeColor(branding.themeColor);
-    setLogo(branding.logo);
-    setBroadcast(getCoachBroadcast());
-    setLogs(getMealLogs());
-  }, []);
+    const load = async () => {
+      const current = readSession();
+      if (!current || (current.role !== "coach" && current.role !== "admin")) {
+        router.push("/register");
+        return;
+      }
 
-  const handlePublish = () => {
-    const branding: CoachBranding = {
-      appTitle: appTitle.trim() || "健身飲食追蹤",
-      themeColor,
-      logo,
+      setSession(current);
+
+      try {
+        const registry = await fetchAllUsers();
+        const mealLogs = await fetchMealLogsForSession(current, registry);
+        setLogs(mealLogs);
+
+        if (current.role === "coach") {
+          const resolved = await resolveBranding(current, registry);
+          setAppTitle(resolved.branding.appTitle);
+          setThemeColor(resolved.branding.themeColor);
+          setLogo(resolved.branding.logo);
+          setBroadcast(resolved.broadcast);
+        } else {
+          setAppTitle(DEFAULT_BRANDING.appTitle);
+          setThemeColor(DEFAULT_BRANDING.themeColor);
+        }
+      } catch {
+        alert("無法從 Supabase 載入教練數據。");
+      } finally {
+        setLoading(false);
+      }
     };
-    saveCoachBranding(branding);
-    saveCoachBroadcast(broadcast.trim());
-    alert("已發布品牌設定、Logo 同緊急廣播！");
+
+    load();
+  }, [router]);
+
+  const handlePublish = async () => {
+    if (!session || session.role !== "coach") {
+      alert("請用教練帳號登入後再發布品牌設定。");
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      await updateCoachBranding(session.email, {
+        appTitle: appTitle.trim() || DEFAULT_BRANDING.appTitle,
+        themeColor,
+        logo,
+        broadcast: broadcast.trim(),
+      });
+      alert("已同步到 Supabase 雲端！");
+    } catch {
+      alert("雲端發布失敗，請稍後再試。");
+    } finally {
+      setPublishing(false);
+    }
   };
 
-  const handleLogoPick = () => {
-    logoInputRef.current?.click();
-  };
+  const handleLogoPick = () => logoInputRef.current?.click();
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !session || session.role !== "coach") return;
+
     try {
       const compressed = await compressFileImage(file);
       setLogo(compressed);
-      alert("Logo 上傳成功，記得撳「發布」同步去學員主頁。");
+      await updateCoachLogo(session.email, compressed);
+      alert("Logo 已上傳到 Supabase 雲端！");
     } catch {
-      alert("Logo 處理失敗，請再試一次。");
+      alert("Logo 處理或上傳失敗。");
     }
     e.target.value = "";
   };
 
-  const generateAIReport = () => {
+  const generateAIReport = async () => {
+    if (!session) return;
     setIsGenerating(true);
     setAiReport(null);
-    setTimeout(() => {
-      setAiReport(generateCoachReport(logs));
+    try {
+      const registry = await fetchAllUsers();
+      const freshLogs = await fetchMealLogsForSession(session, registry);
+      setLogs(freshLogs);
+      setAiReport(generateCoachReport(freshLogs));
+    } catch {
+      alert("無法從 Supabase 拉取學員飲食記錄。");
+    } finally {
       setIsGenerating(false);
-    }, 1000);
+    }
   };
 
   const handleCopy = async (log: MealLog) => {
@@ -98,6 +155,14 @@ export default function CoachPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-500">
+        從雲端載入緊...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 pb-8 max-w-lg mx-auto">
       <header className="bg-zinc-900 text-white px-4 py-5">
@@ -109,7 +174,7 @@ export default function CoachPage() {
           ← 返回主頁
         </button>
         <h1 className="text-xl font-bold">教練白標後台</h1>
-        <p className="text-white/70 text-sm mt-1">品牌、AI 報告、學員飲食記錄</p>
+        <p className="text-white/70 text-sm mt-1">Supabase 雲端同步</p>
       </header>
 
       <main className="px-4 py-4 space-y-4">
@@ -117,16 +182,13 @@ export default function CoachPage() {
           <h2 className="text-sm font-bold text-indigo-200">
             🤖 AI 數據智能整合中心
           </h2>
-          <p className="text-xs text-indigo-100/90">
-            一鍵分析學員最新飲食打卡，生成廣東話教練報告。
-          </p>
           <button
             type="button"
             disabled={isGenerating}
             onClick={generateAIReport}
             className={`w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
-            {isGenerating ? "⏳ AI 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
+            {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
           </button>
           {aiReport && (
             <pre className="bg-white/10 p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap border border-white/10">
@@ -135,91 +197,92 @@ export default function CoachPage() {
           )}
         </section>
 
-        <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">品牌中心</h2>
+        {session?.role === "coach" && (
+          <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
+            <h2 className="font-semibold text-zinc-800">品牌中心（雲端）</h2>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              App 標題
-            </label>
-            <input
-              type="text"
-              value={appTitle}
-              onChange={(e) => setAppTitle(e.target.value)}
-              placeholder="例如：阿強健身室飲食計劃"
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              健身房 Logo
-            </label>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoChange}
-            />
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={handleLogoPick}
-              onKeyDown={(e) => e.key === "Enter" && handleLogoPick()}
-              className={`flex items-center gap-3 border-2 border-dashed border-zinc-300 rounded-xl p-3 ${btnClass}`}
-            >
-              <div className="w-12 h-12 rounded-full bg-zinc-100 overflow-hidden shrink-0">
-                {logo ? (
-                  <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] text-zinc-400 flex items-center justify-center h-full">
-                    無
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-zinc-600">撳一下上傳 Logo（自動壓縮）</p>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                App 標題
+              </label>
+              <input
+                type="text"
+                value={appTitle}
+                onChange={(e) => setAppTitle(e.target.value)}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
+              />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              主題色
-            </label>
-            <select
-              value={themeColor}
-              onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3"
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
+                健身房 Logo
+              </label>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleLogoPick}
+                onKeyDown={(e) => e.key === "Enter" && handleLogoPick()}
+                className={`flex items-center gap-3 border-2 border-dashed border-zinc-300 rounded-xl p-3 ${btnClass}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-zinc-100 overflow-hidden shrink-0">
+                  {logo ? (
+                    <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-zinc-400 flex items-center justify-center h-full">
+                      無
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-zinc-600">撳一下上傳（即時寫入雲端）</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                主題色
+              </label>
+              <select
+                value={themeColor}
+                onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
+              >
+                {THEME_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                緊急廣播訊息
+              </label>
+              <textarea
+                value={broadcast}
+                onChange={(e) => setBroadcast(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={publishing}
+              onClick={handlePublish}
+              className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              {THEME_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              緊急廣播訊息
-            </label>
-            <textarea
-              value={broadcast}
-              onChange={(e) => setBroadcast(e.target.value)}
-              placeholder="例如：聽日記得帶水壺，高溫警告！"
-              rows={3}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={handlePublish}
-            className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl ${btnClass}`}
-          >
-            發布
-          </button>
-        </section>
+              {publishing ? "發布緊..." : "發布到雲端"}
+            </button>
+          </section>
+        )}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
           <h2 className="font-semibold text-zinc-800 mb-3">
@@ -253,7 +316,7 @@ export default function CoachPage() {
                             {log.mealType} · {log.description}
                           </p>
                           <p className="text-xs text-zinc-500 mt-1">
-                            {new Date(log.date).toLocaleString("zh-HK")} ·{" "}
+                            {log.email} · {new Date(log.date).toLocaleString("zh-HK")} ·{" "}
                             {log.calories} kcal
                           </p>
                         </div>

@@ -18,6 +18,10 @@ export interface RegistryUser {
   gym: string;
   coach?: string;
   addedBy?: string;
+  logo?: string;
+  appTitle?: string;
+  themeColor?: ThemeColor;
+  broadcast?: string;
 }
 
 export interface UserSession {
@@ -32,6 +36,7 @@ export interface UserSession {
 
 export interface MealLog {
   id: string;
+  email: string;
   date: string;
   mealType: string;
   description: string;
