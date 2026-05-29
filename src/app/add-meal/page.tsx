@@ -1,12 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
-import { compressDataUrl, compressFileImage } from "@/lib/image";
-import { saveMealLog } from "@/lib/storage";
-import { getSession } from "@/lib/session";
+import { OnboardingModal } from "@/components/OnboardingModal";
+import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
+import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
+import {
+  computeTargetProfile,
+  isBodyProfileComplete,
+} from "@/lib/body-profile";
+import {
+  fetchStudentBodyProfile,
+  fetchUsersForSession,
+} from "@/lib/db";
+import { compressDataUrl, compressFileImage } from "@/lib/image";
+import { initUserRegistry } from "@/lib/registry";
+import { getSession } from "@/lib/session";
+import {
+  getMealLogs,
+  isToday,
+  saveMealLog,
+} from "@/lib/storage";
+import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
 const CARBS_OPTIONS = [PORTION_NONE, "細拳", "中拳", "大拳"];
@@ -35,6 +51,49 @@ export default function AddMealPage() {
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackPerPiece, setSnackPerPiece] = useState(80);
   const [snackQty, setSnackQty] = useState(1);
+  const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(null);
+  const [profileChecked, setProfileChecked] = useState(false);
+  const [todayLogs, setTodayLogs] = useState<MealLog[]>([]);
+  const [goalCalories, setGoalCalories] = useState(2000);
+  const [showNutritionDash, setShowNutritionDash] = useState(false);
+  const [session, setSession] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    const parsed = getSession();
+    if (!parsed?.email) {
+      router.push("/register");
+      return;
+    }
+    const active: UserSession = { ...parsed, isLoggedIn: true };
+    setSession(active);
+
+    (async () => {
+      try {
+        await initUserRegistry();
+        const registry = await fetchUsersForSession(active);
+        const logs = await getMealLogs(active, registry);
+        setTodayLogs(logs.filter((l) => isToday(l.date)));
+
+        if (active.role === "student") {
+          const body = await fetchStudentBodyProfile(active.email);
+          setBodyProfile(body);
+          if (body && isBodyProfileComplete(body)) {
+            const targets = computeTargetProfile(body);
+            setGoalCalories(targets.targetCalories);
+          }
+        }
+      } finally {
+        setProfileChecked(true);
+      }
+    })();
+  }, [router]);
+
+  const needsOnboarding =
+    session?.role === "student" &&
+    profileChecked &&
+    !isBodyProfileComplete(bodyProfile);
+
+  const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
 
   const handleImageClick = () => {
     fileInputRef.current?.click();
@@ -82,8 +141,8 @@ export default function AddMealPage() {
   };
 
   const readSessionEmail = (): string | null => {
-    const session = getSession();
-    return session?.email?.trim().toLowerCase() || null;
+    const s = getSession();
+    return s?.email?.trim().toLowerCase() || null;
   };
 
   const handleSave = async () => {
@@ -145,8 +204,55 @@ export default function AddMealPage() {
     }
   };
 
+  if (!profileChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-500">
+        載入中...
+      </div>
+    );
+  }
+
+  if (needsOnboarding && session?.email) {
+    return (
+      <OnboardingModal
+        email={session.email}
+        initial={bodyProfile ?? undefined}
+        onComplete={(saved) => {
+          setBodyProfile(saved);
+          setGoalCalories(computeTargetProfile(saved).targetCalories);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+      {showNutritionDash && (
+        <NutritionDashboard
+          logs={todayLogs}
+          goalCalories={goalCalories}
+          exerciseCalories={exerciseDaily}
+          onClose={() => setShowNutritionDash(false)}
+          onExerciseChange={async (kcal) => {
+            if (!session?.email || !bodyProfile) return;
+            const res = await fetch("/api/student/profile", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                heightCm: bodyProfile.heightCm,
+                weightKg: bodyProfile.weightKg,
+                age: bodyProfile.age,
+                gender: bodyProfile.gender,
+                targetWeightKg: bodyProfile.targetWeightKg,
+                exerciseCaloriesDaily: kcal,
+              }),
+            });
+            const data = (await res.json()) as { profile?: StudentBodyProfile };
+            if (data.profile) setBodyProfile(data.profile);
+          }}
+        />
+      )}
+
       <PageHeader
         title="記錄飲食"
         onBack={() => router.push("/")}
@@ -154,6 +260,14 @@ export default function AddMealPage() {
       />
 
       <main className="px-4 py-4 space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowNutritionDash(true)}
+          className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
+        >
+          📊 高級營養分析
+        </button>
+
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
@@ -179,7 +293,7 @@ export default function AddMealPage() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="例如：乾炒牛河、少飯、凍奶茶走甜..."
+              placeholder="例如：牛肉叉燒拉麵、茶餐廳乾炒牛河..."
               rows={3}
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base resize-none"
             />
@@ -220,6 +334,9 @@ export default function AddMealPage() {
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-800">快速份量估算</h2>
+          <p className="text-xs text-zinc-500">
+            AI 已啟用外食隱形熱量修正（湯底、紅油、用油）
+          </p>
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-xs text-zinc-500">碳水（拳頭大小）</label>

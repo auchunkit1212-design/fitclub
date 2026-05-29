@@ -6,6 +6,8 @@ import type {
   CoachBranding,
   MealLog,
   RegistryUser,
+  StudentBodyProfile,
+  StudentGender,
   ThemeColor,
   UserSession,
 } from "@/lib/types";
@@ -360,4 +362,105 @@ export async function updateCoachLogo(
       logoUrl: logo,
     });
   }
+}
+
+type BodyProfileRow = {
+  email: string;
+  height_cm: number;
+  weight_kg: number;
+  age: number;
+  gender: string;
+  target_weight_kg: number;
+  exercise_calories_daily: number;
+  onboarding_complete: boolean;
+  updated_at: string;
+};
+
+function mapBodyProfile(row: BodyProfileRow): StudentBodyProfile {
+  return {
+    email: row.email,
+    heightCm: Number(row.height_cm),
+    weightKg: Number(row.weight_kg),
+    age: row.age,
+    gender: row.gender as StudentGender,
+    targetWeightKg: Number(row.target_weight_kg),
+    exerciseCaloriesDaily: row.exercise_calories_daily ?? 0,
+    onboardingComplete: row.onboarding_complete ?? true,
+    updatedAt: row.updated_at,
+  };
+}
+
+const BODY_PROFILE_CACHE_PREFIX = "student_body_profile:";
+
+function readLocalBodyProfile(email: string): StudentBodyProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${BODY_PROFILE_CACHE_PREFIX}${email}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as StudentBodyProfile;
+  } catch {
+    return null;
+  }
+}
+
+export function writeLocalBodyProfile(profile: StudentBodyProfile): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(
+    `${BODY_PROFILE_CACHE_PREFIX}${profile.email}`,
+    JSON.stringify(profile)
+  );
+}
+
+export async function fetchStudentBodyProfile(
+  email: string
+): Promise<StudentBodyProfile | null> {
+  const normalized = email.trim().toLowerCase();
+  const { data, error } = await supabase
+    .from("student_body_profiles")
+    .select("*")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[body-profile] fetch failed:", error.message);
+    return readLocalBodyProfile(normalized);
+  }
+
+  if (data) return mapBodyProfile(data as BodyProfileRow);
+  return readLocalBodyProfile(normalized);
+}
+
+export async function upsertStudentBodyProfile(
+  profile: Omit<StudentBodyProfile, "updatedAt">
+): Promise<StudentBodyProfile> {
+  const normalized = profile.email.trim().toLowerCase();
+  const row = {
+    email: normalized,
+    height_cm: profile.heightCm,
+    weight_kg: profile.weightKg,
+    age: profile.age,
+    gender: profile.gender,
+    target_weight_kg: profile.targetWeightKg,
+    exercise_calories_daily: profile.exerciseCaloriesDaily ?? 0,
+    onboarding_complete: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("student_body_profiles")
+    .upsert(row, { onConflict: "email" })
+    .select("*")
+    .single();
+
+  const saved: StudentBodyProfile = error
+    ? {
+        ...profile,
+        email: normalized,
+        onboardingComplete: true,
+        updatedAt: row.updated_at,
+      }
+    : mapBodyProfile(data as BodyProfileRow);
+
+  writeLocalBodyProfile(saved);
+  return saved;
 }

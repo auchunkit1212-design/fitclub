@@ -1,5 +1,19 @@
 export type ThemeColor = "emerald" | "blue" | "black";
 
+export type StudentGender = "male" | "female" | "other";
+
+export interface StudentBodyProfile {
+  email: string;
+  heightCm: number;
+  weightKg: number;
+  age: number;
+  gender: StudentGender;
+  targetWeightKg: number;
+  exerciseCaloriesDaily: number;
+  onboardingComplete: boolean;
+  updatedAt?: string;
+}
+
 export interface UserProfile {
   targetCalories: number;
   targetProtein: number;
