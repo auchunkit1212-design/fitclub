@@ -11,3 +11,17 @@ body {
 body {
   @apply bg-zinc-50 text-zinc-900 antialiased;
 }
+
+@layer utilities {
+  .pt-safe {
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .top-safe {
+    top: max(1rem, env(safe-area-inset-top));
+  }
+}

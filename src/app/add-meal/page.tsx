@@ -2,15 +2,16 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { estimateMacros } from "@/lib/ai-mock";
+import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { saveMealLog } from "@/lib/storage";
 import { getSession } from "@/lib/session";
+import { PageHeader } from "@/components/PageHeader";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
-const CARBS_OPTIONS = ["細拳", "中拳", "大拳"];
-const PROTEIN_OPTIONS = ["細掌", "中掌", "大掌"];
-const VEGGIE_OPTIONS = ["有", "無"];
+const CARBS_OPTIONS = [PORTION_NONE, "細拳", "中拳", "大拳"];
+const PROTEIN_OPTIONS = [PORTION_NONE, "細掌", "中掌", "大掌"];
+const VEGGIE_OPTIONS = [PORTION_NONE, "有"];
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -145,19 +146,12 @@ export default function AddMealPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-8 max-w-lg mx-auto">
-      <header className="bg-white border-b border-zinc-200 px-4 py-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className={`text-zinc-600 text-sm font-medium px-3 py-2 rounded-lg bg-zinc-100 ${btnClass}`}
-          >
-            ← 返回
-          </button>
-          <h1 className="text-lg font-bold">記錄飲食</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+      <PageHeader
+        title="記錄飲食"
+        onBack={() => router.push("/")}
+        backLabel="← 返回"
+      />
 
       <main className="px-4 py-4 space-y-4">
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">

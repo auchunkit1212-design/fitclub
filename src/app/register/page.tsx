@@ -90,12 +90,12 @@ export default function RegisterPage() {
 
   return (
     <div
-      className={`max-w-lg mx-auto min-h-screen bg-zinc-50 flex flex-col justify-center px-6 ${
+      className={`max-w-lg mx-auto min-h-screen bg-zinc-50 flex flex-col justify-center px-6 pt-safe ${
         showIosBanner ? "pb-44" : "pb-8"
       }`}
     >
       {toast && (
-        <div className="fixed top-4 left-4 right-4 z-50 max-w-lg mx-auto bg-zinc-900 text-white px-4 py-3 rounded-xl text-sm font-semibold text-center shadow-lg">
+        <div className="fixed top-safe left-4 right-4 z-50 max-w-lg mx-auto bg-zinc-900 text-white px-4 py-3 rounded-xl text-sm font-semibold text-center shadow-lg">
           {toast}
         </div>
       )}
