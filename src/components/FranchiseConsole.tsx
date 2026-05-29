@@ -4,9 +4,10 @@ import { useState } from "react";
 import { generateCoachReport } from "@/lib/ai-mock";
 import {
   emailExists,
-  getUserRegistry,
-  saveUserRegistry,
-} from "@/lib/registry";
+  fetchAllUsers,
+  fetchMealLogsForSession,
+  insertUser,
+} from "@/lib/db";
 import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
 
 const btnClass =
@@ -15,7 +16,6 @@ const btnClass =
 interface FranchiseConsoleProps {
   session: UserSession;
   registry: RegistryUser[];
-  logs: MealLog[];
   onRegistryChange: (users: RegistryUser[]) => void;
   onToast: (message: string) => void;
   onGoCoach: () => void;
@@ -24,7 +24,6 @@ interface FranchiseConsoleProps {
 export function FranchiseConsole({
   session,
   registry,
-  logs,
   onRegistryChange,
   onToast,
   onGoCoach,
@@ -36,6 +35,7 @@ export function FranchiseConsole({
   const [newStudentName, setNewStudentName] = useState("");
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const staffList = registry.filter((user) => user.role === "coach");
   const studentList = registry.filter((user) => {
@@ -44,71 +44,81 @@ export function FranchiseConsole({
     return user.addedBy === session.email;
   });
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffEmail.trim() || !newStaffName.trim()) {
       onToast("⚠️ 請輸入完整 Email 與名字！");
       return;
     }
-    if (emailExists(newStaffEmail)) {
-      onToast("🚨 該 Email 已經登記過！");
-      return;
-    }
-
-    const updated = [
-      ...getUserRegistry(),
-      {
+    setSubmitting(true);
+    try {
+      if (await emailExists(newStaffEmail)) {
+        onToast("🚨 該 Email 已經登記過！");
+        return;
+      }
+      await insertUser({
         email: newStaffEmail.trim().toLowerCase(),
         name: newStaffName.trim(),
-        role: "coach" as const,
+        role: "coach",
         gym: newStaffGym,
         addedBy: session.email,
-      },
-    ];
-    saveUserRegistry(updated);
-    onRegistryChange(updated);
-    setNewStaffEmail("");
-    setNewStaffName("");
-    onToast(`👑 已授權教練：${newStaffName}`);
+      });
+      const updated = await fetchAllUsers();
+      onRegistryChange(updated);
+      setNewStaffEmail("");
+      setNewStaffName("");
+      onToast(`👑 已授權教練：${newStaffName}`);
+    } catch {
+      onToast("❌ 雲端寫入失敗，請稍後再試。");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudentEmail.trim() || !newStudentName.trim()) {
       onToast("⚠️ 請輸入學員 Email 與名字！");
       return;
     }
-    if (emailExists(newStudentEmail)) {
-      onToast("🚨 該學員 Email 已被登記！");
-      return;
-    }
-
-    const updated = [
-      ...getUserRegistry(),
-      {
+    setSubmitting(true);
+    try {
+      if (await emailExists(newStudentEmail)) {
+        onToast("🚨 該學員 Email 已被登記！");
+        return;
+      }
+      await insertUser({
         email: newStudentEmail.trim().toLowerCase(),
         name: newStudentName.trim(),
-        role: "student" as const,
+        role: "student",
         gym: session.gym,
         coach: session.name,
         addedBy: session.email,
-      },
-    ];
-    saveUserRegistry(updated);
-    onRegistryChange(updated);
-    setNewStudentEmail("");
-    setNewStudentName("");
-    onToast(`💪 已登記學員：${newStudentName}`);
+      });
+      const updated = await fetchAllUsers();
+      onRegistryChange(updated);
+      setNewStudentEmail("");
+      setNewStudentName("");
+      onToast(`💪 已登記學員：${newStudentName}`);
+    } catch {
+      onToast("❌ 雲端寫入失敗，請稍後再試。");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     setIsGenerating(true);
     setAiReport(null);
-    setTimeout(() => {
+    try {
+      const logs: MealLog[] = await fetchMealLogsForSession(session, registry);
       setAiReport(generateCoachReport(logs));
+      onToast("✨ 已從 Supabase 拉取最新數據並生成報告！");
+    } catch {
+      onToast("❌ 無法從雲端讀取飲食記錄。");
+    } finally {
       setIsGenerating(false);
-      onToast("✨ AI 報告已生成！");
-    }, 1000);
+    }
   };
 
   return (
@@ -116,7 +126,7 @@ export function FranchiseConsole({
       {(session.role === "admin" || session.role === "coach") && (
         <section className="bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
           <h2 className="text-sm font-bold text-indigo-300">
-            📊 一鍵 AI 智能整合
+            📊 一鍵 AI 智能整合（Supabase 實時）
           </h2>
           <button
             type="button"
@@ -124,7 +134,7 @@ export function FranchiseConsole({
             onClick={handleGenerateReport}
             className={`w-full py-3 bg-indigo-600 font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
-            {isGenerating ? "⏳ AI 整合緊..." : "🧠 整合學員飲食記錄"}
+            {isGenerating ? "⏳ 從雲端整合緊..." : "🧠 整合旗下學員飲食記錄"}
           </button>
           {aiReport && (
             <pre className="bg-white/10 p-3 rounded-xl text-xs whitespace-pre-wrap border border-white/10">
@@ -167,9 +177,10 @@ export function FranchiseConsole({
             />
             <button
               type="submit"
-              className={`w-full py-3 bg-zinc-900 text-white font-semibold rounded-xl ${btnClass}`}
+              disabled={submitting}
+              className={`w-full py-3 bg-zinc-900 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              🚀 授權並加入名單
+              {submitting ? "寫入雲端緊..." : "🚀 授權並加入名單"}
             </button>
           </form>
           <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -198,7 +209,7 @@ export function FranchiseConsole({
               onClick={onGoCoach}
               className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-xl ${btnClass}`}
             >
-              進入教練後台（Logo / 廣播）
+              進入教練後台（Logo / 廣播 → 雲端）
             </button>
           </section>
 
@@ -231,9 +242,10 @@ export function FranchiseConsole({
               />
               <button
                 type="submit"
-                className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-xl ${btnClass}`}
+                disabled={submitting}
+                className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
               >
-                ➕ 登記學員並開通
+                {submitting ? "寫入雲端緊..." : "➕ 登記學員並開通"}
               </button>
             </form>
           </section>

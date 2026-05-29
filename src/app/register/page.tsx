@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   SUPER_ADMIN_EMAIL,
   createAdminSession,
-  findRegistryUser,
+  fetchUserByEmail,
   initUserRegistry,
   registryUserToSession,
 } from "@/lib/registry";
@@ -17,9 +17,12 @@ export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    initUserRegistry();
+    initUserRegistry().catch(() => {
+      // Seed may fail if tables not ready yet
+    });
   }, []);
 
   const showToast = (msg: string) => {
@@ -27,7 +30,7 @@ export default function RegisterPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
@@ -35,29 +38,36 @@ export default function RegisterPage() {
       return;
     }
 
-    if (normalized === SUPER_ADMIN_EMAIL) {
-      localStorage.setItem(
-        "current_session",
-        JSON.stringify(createAdminSession(normalized))
-      );
-      showToast("👑 最高總控制官：歡迎回來！");
-      setTimeout(() => router.push("/"), 1200);
-      return;
-    }
+    setLoading(true);
+    try {
+      if (normalized === SUPER_ADMIN_EMAIL) {
+        localStorage.setItem(
+          "current_session",
+          JSON.stringify(createAdminSession(normalized))
+        );
+        showToast("👑 最高總控制官：歡迎回來！");
+        setTimeout(() => router.push("/"), 1200);
+        return;
+      }
 
-    const foundUser = findRegistryUser(normalized);
-    if (foundUser) {
-      localStorage.setItem(
-        "current_session",
-        JSON.stringify(registryUserToSession(foundUser))
-      );
-      const roleLabel = foundUser.role === "coach" ? "教練/老闆" : "學員";
-      showToast(`🎉 歡迎 ${foundUser.name}（${roleLabel}）`);
-      setTimeout(() => router.push("/"), 1200);
-      return;
-    }
+      const foundUser = await fetchUserByEmail(normalized);
+      if (foundUser) {
+        localStorage.setItem(
+          "current_session",
+          JSON.stringify(registryUserToSession(foundUser))
+        );
+        const roleLabel = foundUser.role === "coach" ? "教練/老闆" : "學員";
+        showToast(`🎉 歡迎 ${foundUser.name}（${roleLabel}）`);
+        setTimeout(() => router.push("/"), 1200);
+        return;
+      }
 
-    showToast("❌ 此 Email 尚未獲授權，請聯絡教練或老闆登記。");
+      showToast("❌ 此 Email 尚未獲授權，請聯絡教練或老闆登記。");
+    } catch {
+      showToast("❌ 雲端連線失敗，請檢查 Supabase 設定同 SQL 是否已執行。");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,7 +84,7 @@ export default function RegisterPage() {
             🔒 FitClub 連鎖加盟系統
           </h1>
           <p className="text-xs text-zinc-500 mt-1">
-            請用已授權 Email 登入
+            雲端 Supabase 驗證 · 已授權 Email 才可登入
           </p>
         </div>
 
@@ -94,9 +104,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className={`w-full py-4 bg-zinc-900 text-white font-bold rounded-xl shadow-md ${btnClass}`}
+            disabled={loading}
+            className={`w-full py-4 bg-zinc-900 text-white font-bold rounded-xl shadow-md disabled:opacity-60 ${btnClass}`}
           >
-            🚀 智能驗證權限並登入
+            {loading ? "驗證緊..." : "🚀 智能驗證權限並登入"}
           </button>
         </form>
 
