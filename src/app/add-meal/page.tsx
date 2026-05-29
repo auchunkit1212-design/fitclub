@@ -19,6 +19,7 @@ import {
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession } from "@/lib/session";
+import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { getMealLogs, isToday } from "@/lib/storage";
 import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
@@ -70,6 +71,13 @@ export default function AddMealPage() {
     setSession(active);
 
     (async () => {
+      const envStatus = getSupabasePublicEnvStatus();
+      if (!envStatus.ok) {
+        console.error("[add-meal] Supabase env missing", envStatus);
+      } else {
+        console.log("[add-meal] Supabase env ok", envStatus.urlPreview);
+      }
+
       try {
         await initUserRegistry();
         const registry = await fetchUsersForSession(active);
@@ -215,8 +223,19 @@ export default function AddMealPage() {
         body: JSON.stringify({ ...basePayload, imageBase64: image }),
       });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        throw new Error(err.error ?? "儲存失敗");
+        const err = (await res.json()) as {
+          error?: string;
+          code?: string;
+          detail?: string;
+          hint?: string;
+        };
+        console.error("[add-meal] API error", err);
+        throw new Error(
+          err.error ??
+            (err.code === "STORAGE_BUCKET_MISSING"
+              ? "請在 Supabase 執行 storage-food-images.sql 建立 food-images Bucket"
+              : "儲存失敗")
+        );
       }
       router.push("/");
     };
@@ -225,17 +244,9 @@ export default function AddMealPage() {
       await trySave(imageToUpload);
     } catch (err) {
       console.error("[add-meal] save failed", err);
-      if (imageToUpload) {
-        try {
-          const smaller = await compressDataUrl(imageToUpload);
-          await trySave(smaller);
-          return;
-        } catch {
-          alert("上傳失敗，請檢查 Supabase 連線或縮小相片。");
-          return;
-        }
-      }
-      alert("上傳失敗，請檢查 Supabase 連線。");
+      const message =
+        err instanceof Error ? err.message : "上傳失敗，請檢查 Supabase 連線。";
+      alert(message);
     } finally {
       setSaveLoading(false);
     }

@@ -37,6 +37,7 @@ import type {
   UserProfile,
   UserSession,
 } from "@/lib/types";
+import { getMealImageSrc } from "@/lib/meal-display";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
 const MOCK_WEIGHTS = [72.4, 72.1, 71.9, 71.6, 71.4, 71.2, 71.0];
@@ -633,9 +634,9 @@ export default function StudentDashboard() {
                       key={log.id}
                       className="flex gap-3 p-2 rounded-xl bg-zinc-50 border border-zinc-100"
                     >
-                      {log.imageBase64 && (
+                      {getMealImageSrc(log) && (
                         <img
-                          src={log.imageBase64}
+                          src={getMealImageSrc(log)}
                           alt=""
                           className="w-14 h-14 rounded-lg object-cover shrink-0"
                         />
