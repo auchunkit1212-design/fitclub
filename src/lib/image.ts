@@ -1,4 +1,13 @@
-export function fileToDataUrl(file: File): Promise<string> {
+import imageCompression from "browser-image-compression";
+
+const COMPRESS_OPTIONS = {
+  maxSizeMB: 1,
+  maxWidthOrHeight: 1024,
+  useWebWorker: true,
+  fileType: "image/jpeg" as const,
+};
+
+export function fileToDataUrl(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -13,55 +22,29 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export function compressDataUrl(
+async function dataUrlToFile(
   dataUrl: string,
-  maxWidth: number,
-  quality: number
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-      const width = Math.max(1, Math.round(img.width * ratio));
-      const height = Math.max(1, Math.round(img.height * ratio));
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("CANVAS_CONTEXT_FAILED"));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(canvas.toDataURL("image/jpeg", quality));
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (typeof reader.result === "string") {
-              resolve(reader.result);
-              return;
-            }
-            reject(new Error("READ_COMPRESSED_FAILED"));
-          };
-          reader.onerror = () => reject(new Error("READ_COMPRESSED_FAILED"));
-          reader.readAsDataURL(blob);
-        },
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = () => reject(new Error("IMAGE_DECODE_FAILED"));
-    img.src = dataUrl;
+  filename = "meal-photo.jpg"
+): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, {
+    type: blob.type || "image/jpeg",
   });
 }
 
+/** 使用 browser-image-compression 壓縮相片（≤1MB、最長邊 1024px） */
 export async function compressFileImage(file: File): Promise<string> {
-  const raw = await fileToDataUrl(file);
-  return compressDataUrl(raw, 1280, 0.78);
+  const compressed = await imageCompression(file, COMPRESS_OPTIONS);
+  return fileToDataUrl(compressed);
+}
+
+/** 將既有 data URL 再壓縮（上傳前保險） */
+export async function compressDataUrl(
+  dataUrl: string,
+  _maxWidth?: number,
+  _quality?: number
+): Promise<string> {
+  const file = await dataUrlToFile(dataUrl);
+  return compressFileImage(file);
 }
