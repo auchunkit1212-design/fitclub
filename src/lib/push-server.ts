@@ -171,6 +171,45 @@ export async function runScheduledPushBroadcast(): Promise<CronSendResult> {
 }
 
 /** 手動測試：向所有訂閱發送一條測試通知 */
+export async function fetchPushSubscriptionsForEmails(
+  emails: string[]
+): Promise<PushSubscriptionRow[]> {
+  if (emails.length === 0) return [];
+  const normalized = emails.map((e) => e.trim().toLowerCase());
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("push_subscriptions")
+    .select("id, email, endpoint, p256dh, auth")
+    .in("email", normalized);
+
+  if (error) throw error;
+  return (data ?? []) as PushSubscriptionRow[];
+}
+
+/** 向指定電郵的訂閱發送單條通知 */
+export async function sendPushToEmails(
+  emails: string[],
+  payload: PushPayload
+): Promise<{ sent: number; failed: number }> {
+  configureWebPush();
+  const subscriptions = await fetchPushSubscriptionsForEmails(emails);
+  let sent = 0;
+  let failed = 0;
+  const expiredIds: string[] = [];
+
+  for (const row of subscriptions) {
+    const result = await sendOne(row, payload);
+    if (result.ok) sent += 1;
+    else {
+      failed += 1;
+      if (result.expired) expiredIds.push(row.id);
+    }
+  }
+
+  await removeExpiredSubscriptions(Array.from(new Set(expiredIds)));
+  return { sent, failed };
+}
+
 export async function sendTestPushToAll(): Promise<CronSendResult> {
   configureWebPush();
   const payloads: PushPayload[] = [

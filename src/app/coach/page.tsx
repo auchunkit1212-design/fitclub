@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
+import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
@@ -50,6 +51,12 @@ export default function CoachPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [toast, setToast] = useState("");
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(""), 3000);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -279,12 +286,26 @@ export default function CoachPage() {
           </section>
         )}
 
+        {session?.role === "coach" && students.length > 0 && (
+          <CoachActivityWall
+            logs={logs}
+            students={students}
+            onToast={showToast}
+          />
+        )}
+
         <CoachMealHistoryPanel
           logs={logs}
           students={students}
           gymName={brand.gymName}
         />
       </main>
+
+      {toast && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
