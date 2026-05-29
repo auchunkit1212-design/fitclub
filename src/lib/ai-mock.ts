@@ -7,8 +7,81 @@ export interface MacroEstimate {
 
 export const PORTION_NONE = "無 / 冇食 (0)";
 
+/**
+ * AI 卡路里估算系統指令（外食與隱形熱量修正）
+ * 用於未來接入 LLM 時；現時 estimateMacros 依此規則實作。
+ */
+export const AI_CALORIE_SYSTEM_PROMPT = `你是香港飲食卡路里估算專家。必須遵守：
+
+1. 外食隱形熱量：遇到「湯麵、拉麵、烏冬、茶餐廳、炒、炸、煲、腩、叉燒、油」等字眼，必須把高脂肪湯底（牛骨湯、豚骨湯）、紅油、濃醬汁、烹調用油計入總熱量，不可只算麵與肉。
+2. 合理區間：一碗牛肉叉燒拉麵必須落在 700–900 kcal；茶餐廳乾炒牛河 850–1100 kcal；炸物套餐 +200–350 kcal 油分。
+3. 飲品：全糖奶茶/檸茶 250–350 kcal；走甜仍保留 80–120 kcal。
+4. 嚴禁過低估算：寧可偏高 10% 亦不可低於外食實際常識下限。
+5. 輸出：calories, protein_g, carbs_g, fats_g 整數，並附一句隱形熱量說明。`;
+
 const HIGH_CAL_KEYWORDS = ["炒飯", "牛河", "乾炒", "焗飯", "公仔麵", "即食麵", "炸"];
+const OUTDOOR_HIDDEN_CAL = [
+  "湯麵",
+  "拉麵",
+  "烏冬",
+  "茶餐廳",
+  "炒",
+  "炸",
+  "煲",
+  "牛腩",
+  "叉燒",
+  "油麵",
+  "雲吞",
+  "米線",
+  "麻辣",
+  "紅油",
+  "腩",
+];
+const RAMEN_KEYWORDS = ["拉麵", "叉燒", "牛肉", "豚骨", "湯麵"];
 const LOW_RICE_KEYWORDS = ["少飯", "走飯", "少油"];
+
+function matchesAny(text: string, keywords: string[]): boolean {
+  return keywords.some((k) => text.includes(k));
+}
+
+function applyHiddenCalorieFloor(
+  desc: string,
+  estimate: MacroEstimate
+): MacroEstimate {
+  let { calories, protein, carbs, fats } = estimate;
+
+  if (
+    matchesAny(desc, RAMEN_KEYWORDS) &&
+    (desc.includes("拉麵") || desc.includes("湯麵") || desc.includes("叉燒"))
+  ) {
+    calories = Math.max(calories, 720);
+    if (desc.includes("牛肉") && desc.includes("叉燒")) {
+      calories = Math.max(calories, 780);
+      calories = Math.min(calories, 920);
+    }
+    fats = Math.max(fats, 28);
+    protein = Math.max(protein, 32);
+    carbs = Math.max(carbs, 75);
+  }
+
+  if (matchesAny(desc, OUTDOOR_HIDDEN_CAL)) {
+    const oilBonus = desc.includes("炸") ? 220 : desc.includes("炒") ? 160 : 120;
+    calories = Math.max(calories, 650) + (calories < 700 ? oilBonus * 0.35 : 0);
+    fats = Math.max(fats, fats + 12);
+  }
+
+  if (desc.includes("茶餐廳") || desc.includes("常餐")) {
+    calories = Math.max(calories, 880);
+    fats = Math.max(fats, 36);
+  }
+
+  return {
+    calories: Math.round(calories),
+    protein: Math.round(protein),
+    carbs: Math.round(carbs),
+    fats: Math.round(fats),
+  };
+}
 
 export function estimateMacros(
   description: string,
@@ -16,7 +89,6 @@ export function estimateMacros(
   proteinPortion: string,
   hasVeggies: string
 ): MacroEstimate {
-  const text = description.toLowerCase();
   const desc = description;
 
   let calories = 450;
@@ -24,31 +96,37 @@ export function estimateMacros(
   let carbs = 55;
   let fats = 16;
 
-  if (HIGH_CAL_KEYWORDS.some((k) => desc.includes(k))) {
-    calories = 820;
-    protein = 28;
-    carbs = 78;
-    fats = 38;
+  if (matchesAny(desc, HIGH_CAL_KEYWORDS)) {
+    calories = 920;
+    protein = 32;
+    carbs = 82;
+    fats = 42;
+  } else if (matchesAny(desc, OUTDOOR_HIDDEN_CAL)) {
+    calories = 780;
+    protein = 30;
+    carbs = 72;
+    fats = 34;
   } else if (desc.includes("奶茶") || desc.includes("檸茶")) {
-    calories = 280;
+    calories = desc.includes("走甜") ? 95 : 310;
     protein = 4;
-    carbs = 42;
-    fats = 10;
+    carbs = desc.includes("走甜") ? 12 : 48;
+    fats = desc.includes("走甜") ? 2 : 12;
   } else if (desc.includes("三文治") || desc.includes("多士")) {
-    calories = 380;
-    protein = 14;
-    carbs = 40;
-    fats = 18;
+    calories = 420;
+    protein = 16;
+    carbs = 44;
+    fats = 20;
   } else if (desc.includes("通粉") || desc.includes("意粉")) {
-    calories = 520;
-    protein = 22;
-    carbs = 62;
-    fats = 18;
+    calories = 580;
+    protein = 24;
+    carbs = 68;
+    fats = 22;
   }
 
   if (LOW_RICE_KEYWORDS.some((k) => desc.includes(k))) {
-    calories -= 120;
-    carbs -= 28;
+    calories -= 100;
+    carbs -= 24;
+    fats -= 6;
   }
 
   if (carbsPortion === PORTION_NONE) {
@@ -70,18 +148,20 @@ export function estimateMacros(
   }
 
   if (hasVeggies === PORTION_NONE) {
-    // 冇食蔬菜：唔再加蔬菜相關估算
+    // no veggie adjustment
   } else if (hasVeggies === "有") {
     calories -= 20;
     carbs -= 5;
   }
 
-  return {
+  const base: MacroEstimate = {
     calories: Math.max(0, Math.round(calories)),
     protein: Math.max(0, Math.round(protein)),
     carbs: Math.max(0, Math.round(carbs)),
     fats: Math.max(0, Math.round(fats)),
   };
+
+  return applyHiddenCalorieFloor(desc, base);
 }
 
 export function generateRoast(
@@ -118,7 +198,7 @@ import type { MealLog } from "./types";
 
 export function getMealAiComment(log: MealLog): string {
   if (log.calories >= 700) {
-    return "熱量偏高，建議減少油炸同澱粉，下一餐增加蔬菜比例。";
+    return "熱量偏高（已含湯底/用油估算），建議減少油炸同澱粉，下一餐增加蔬菜比例。";
   }
   if (log.calories <= 500 && log.protein >= 20) {
     return "表現優良，蛋白質充足，可維持而家嘅飲食節奏。";

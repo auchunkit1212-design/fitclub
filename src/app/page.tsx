@@ -2,9 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BodyProfileFields,
+  bodyProfileToFormValues,
+} from "@/components/BodyProfileFields";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
+import { OnboardingModal } from "@/components/OnboardingModal";
+import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
 import { generateRoast } from "@/lib/ai-mock";
+import {
+  computeTargetProfile,
+  isBodyProfileComplete,
+} from "@/lib/body-profile";
+import { fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
@@ -20,6 +31,7 @@ import type {
   CoachBranding,
   MealLog,
   RegistryUser,
+  StudentBodyProfile,
   UserProfile,
   UserSession,
 } from "@/lib/types";
@@ -132,6 +144,12 @@ export default function StudentDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
+  const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(
+    null
+  );
+  const [bodyForm, setBodyForm] = useState(bodyProfileToFormValues(null));
+  const [showNutritionDash, setShowNutritionDash] = useState(false);
+  const [profileChecked, setProfileChecked] = useState(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -201,6 +219,23 @@ export default function StudentDashboard() {
         setSession(applyBrandToSession(activeSession, brand));
         saveSession(applyBrandToSession(activeSession, brand));
 
+        if (role === "student" && activeSession.email) {
+          const body = await fetchStudentBodyProfile(activeSession.email);
+          if (!cancelled) {
+            setBodyProfile(body);
+            setBodyForm(bodyProfileToFormValues(body));
+            if (body && isBodyProfileComplete(body)) {
+              setProfile(
+                computeTargetProfile(body, {
+                  job: settings.job,
+                  weeklyFrequency: settings.weeklyFrequency,
+                })
+              );
+            }
+          }
+        }
+        if (!cancelled) setProfileChecked(true);
+
         const rawSettings = localStorage.getItem("student_settings");
         if (rawSettings) {
           try {
@@ -221,7 +256,10 @@ export default function StudentDashboard() {
         setUserRegistry([]);
         showToast("❌ 雲端讀取失敗，請檢查網絡或 Supabase。");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          if (role !== "student") setProfileChecked(true);
+        }
       }
     };
 
@@ -253,6 +291,9 @@ export default function StudentDashboard() {
 
   const targetCalories = profile?.targetCalories ?? 2000;
   const targetProtein = profile?.targetProtein ?? 120;
+  const needsOnboarding =
+    isStudent && profileChecked && !isBodyProfileComplete(bodyProfile);
+  const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
 
   const roast = generateRoast(
     todayCalories,
@@ -299,8 +340,54 @@ export default function StudentDashboard() {
     );
   }
 
+  if (needsOnboarding && session.email) {
+    return (
+      <OnboardingModal
+        email={session.email}
+        initial={bodyProfile ?? undefined}
+        themeBtn={theme.btn}
+        onComplete={(saved) => {
+          setBodyProfile(saved);
+          setBodyForm(bodyProfileToFormValues(saved));
+          setProfile(
+            computeTargetProfile(saved, {
+              job: settings.job,
+              weeklyFrequency: settings.weeklyFrequency,
+            })
+          );
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
+      {showNutritionDash && isStudent && (
+        <NutritionDashboard
+          logs={todayLogs}
+          goalCalories={targetCalories}
+          exerciseCalories={exerciseDaily}
+          onClose={() => setShowNutritionDash(false)}
+          onExerciseChange={async (kcal) => {
+            if (!session.email || !bodyProfile) return;
+            const res = await fetch("/api/student/profile", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                heightCm: bodyProfile.heightCm,
+                weightKg: bodyProfile.weightKg,
+                age: bodyProfile.age,
+                gender: bodyProfile.gender,
+                targetWeightKg: bodyProfile.targetWeightKg,
+                exerciseCaloriesDaily: kcal,
+              }),
+            });
+            const data = (await res.json()) as { profile?: StudentBodyProfile };
+            if (data.profile) setBodyProfile(data.profile);
+          }}
+        />
+      )}
+
       {toast && (
         <div className="fixed top-safe left-4 right-4 bg-zinc-900 text-white px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-lg max-w-lg mx-auto">
           {toast}
@@ -443,6 +530,14 @@ export default function StudentDashboard() {
               </p>
             </section>
 
+            <button
+              type="button"
+              onClick={() => setShowNutritionDash(true)}
+              className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg ${btnClass}`}
+            >
+              📊 高級營養分析
+            </button>
+
             <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
               <h2 className="font-semibold text-zinc-800">今日進度</h2>
               <ProgressBar
@@ -577,13 +672,55 @@ export default function StudentDashboard() {
               </select>
             </div>
 
+            <BodyProfileFields
+              values={bodyForm}
+              onChange={(patch) =>
+                setBodyForm((prev) => ({ ...prev, ...patch }))
+              }
+            />
+
             <PushReminderToggle />
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 localStorage.setItem("student_settings", JSON.stringify(settings));
-                alert("設定已儲存，下次打開都會記住。");
+                const h = Number(bodyForm.heightCm);
+                const w = Number(bodyForm.weightKg);
+                const a = Number(bodyForm.age);
+                const tw = Number(bodyForm.targetWeightKg);
+                if (session.email && h && w && a && tw) {
+                  try {
+                    const res = await fetch("/api/student/profile", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        heightCm: h,
+                        weightKg: w,
+                        age: a,
+                        gender: bodyForm.gender,
+                        targetWeightKg: tw,
+                        exerciseCaloriesDaily:
+                          Number(bodyForm.exerciseCaloriesDaily) || 0,
+                      }),
+                    });
+                    const data = (await res.json()) as {
+                      profile?: StudentBodyProfile;
+                    };
+                    if (data.profile) {
+                      setBodyProfile(data.profile);
+                      setProfile(
+                        computeTargetProfile(data.profile, {
+                          job: settings.job,
+                          weeklyFrequency: settings.weeklyFrequency,
+                        })
+                      );
+                    }
+                  } catch {
+                    showToast("身體數據同步失敗，已儲存本地設定。");
+                  }
+                }
+                showToast("設定已儲存");
                 setActiveTab("dashboard");
               }}
               className={`w-full ${theme.btn} text-white font-semibold py-3.5 rounded-xl active:scale-95 active:opacity-80 transition-all cursor-pointer`}
