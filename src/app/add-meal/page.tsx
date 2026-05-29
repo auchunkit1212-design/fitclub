@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
+import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
 import {
   computeTargetProfile,
@@ -17,11 +19,7 @@ import {
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession } from "@/lib/session";
-import {
-  getMealLogs,
-  isToday,
-  saveMealLog,
-} from "@/lib/storage";
+import { getMealLogs, isToday } from "@/lib/storage";
 import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
@@ -55,6 +53,9 @@ export default function AddMealPage() {
   const [profileChecked, setProfileChecked] = useState(false);
   const [todayLogs, setTodayLogs] = useState<MealLog[]>([]);
   const [goalCalories, setGoalCalories] = useState(2000);
+  const [goalProtein, setGoalProtein] = useState(120);
+  const [goalCarbs, setGoalCarbs] = useState(200);
+  const [goalFats, setGoalFats] = useState(65);
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
 
@@ -80,6 +81,23 @@ export default function AddMealPage() {
           if (body && isBodyProfileComplete(body)) {
             const targets = computeTargetProfile(body);
             setGoalCalories(targets.targetCalories);
+            setGoalProtein(targets.targetProtein);
+          }
+          const tRes = await fetch("/api/coach/student-targets");
+          const tData = (await tRes.json()) as {
+            targets?: {
+              locked: boolean;
+              targetCalories: number;
+              targetProtein: number;
+              targetCarbs: number;
+              targetFats: number;
+            };
+          };
+          if (tData.targets?.locked) {
+            setGoalCalories(tData.targets.targetCalories);
+            setGoalProtein(tData.targets.targetProtein);
+            setGoalCarbs(tData.targets.targetCarbs);
+            setGoalFats(tData.targets.targetFats);
           }
         }
       } finally {
@@ -173,7 +191,16 @@ export default function AddMealPage() {
     };
 
     const trySave = async (image?: string) => {
-      await saveMealLog({ ...basePayload, imageBase64: image });
+      const res = await fetch("/api/meals/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...basePayload, imageBase64: image }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "儲存失敗");
+      }
       router.push("/");
     };
 
@@ -231,6 +258,9 @@ export default function AddMealPage() {
         <NutritionDashboard
           logs={todayLogs}
           goalCalories={goalCalories}
+          goalProtein={goalProtein}
+          goalCarbs={goalCarbs}
+          goalFats={goalFats}
           exerciseCalories={exerciseDaily}
           onClose={() => setShowNutritionDash(false)}
           onExerciseChange={async (kcal) => {
@@ -267,6 +297,16 @@ export default function AddMealPage() {
         >
           📊 高級營養分析
         </button>
+
+        <FoodSearchEngine
+          onAddToMeal={(item) => {
+            setDescription(item.description);
+            setCalories(item.calories);
+            setProtein(item.protein);
+            setCarbs(item.carbs);
+            setFats(item.fats);
+          }}
+        />
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
           <div>
@@ -403,6 +443,9 @@ export default function AddMealPage() {
           </button>
           {snackOpen && (
             <div className="mt-4 space-y-3 pt-3 border-t border-zinc-100">
+              <SnackLabelScanner
+                onApplyPerPiece={(perPiece) => setSnackPerPiece(perPiece)}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-zinc-500">每件卡路里</label>

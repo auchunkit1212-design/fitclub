@@ -30,8 +30,10 @@ import {
 import type {
   CoachBranding,
   MealLog,
+  MealLogReaction,
   RegistryUser,
   StudentBodyProfile,
+  StudentNutritionTargets,
   UserProfile,
   UserSession,
 } from "@/lib/types";
@@ -150,6 +152,10 @@ export default function StudentDashboard() {
   const [bodyForm, setBodyForm] = useState(bodyProfileToFormValues(null));
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [profileChecked, setProfileChecked] = useState(false);
+  const [coachTargets, setCoachTargets] = useState<StudentNutritionTargets | null>(
+    null
+  );
+  const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -232,6 +238,17 @@ export default function StudentDashboard() {
                 })
               );
             }
+            const tRes = await fetch("/api/coach/student-targets");
+            const tData = (await tRes.json()) as {
+              targets?: StudentNutritionTargets | null;
+            };
+            if (tData.targets?.locked) {
+              setCoachTargets(tData.targets);
+              setProfile({
+                targetCalories: tData.targets.targetCalories,
+                targetProtein: tData.targets.targetProtein,
+              });
+            }
           }
         }
         if (!cancelled) setProfileChecked(true);
@@ -286,11 +303,26 @@ export default function StudentDashboard() {
     [logs]
   );
 
+  useEffect(() => {
+    if (!isStudent || todayLogs.length === 0) return;
+    const poll = async () => {
+      const ids = todayLogs.map((l) => l.id).join(",");
+      const res = await fetch(`/api/coach/reactions?mealLogIds=${ids}`);
+      const data = (await res.json()) as { reactions?: MealLogReaction[] };
+      setCoachReactions(data.reactions ?? []);
+    };
+    poll();
+    const timer = setInterval(poll, 30_000);
+    return () => clearInterval(timer);
+  }, [todayLogs, isStudent]);
+
   const todayCalories = todayLogs.reduce((s, l) => s + l.calories, 0);
   const todayProtein = todayLogs.reduce((s, l) => s + l.protein, 0);
 
   const targetCalories = profile?.targetCalories ?? 2000;
   const targetProtein = profile?.targetProtein ?? 120;
+  const targetCarbs = coachTargets?.targetCarbs ?? 200;
+  const targetFats = coachTargets?.targetFats ?? 65;
   const needsOnboarding =
     isStudent && profileChecked && !isBodyProfileComplete(bodyProfile);
   const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
@@ -366,6 +398,9 @@ export default function StudentDashboard() {
         <NutritionDashboard
           logs={todayLogs}
           goalCalories={targetCalories}
+          goalProtein={targetProtein}
+          goalCarbs={targetCarbs}
+          goalFats={targetFats}
           exerciseCalories={exerciseDaily}
           onClose={() => setShowNutritionDash(false)}
           onExerciseChange={async (kcal) => {
@@ -498,6 +533,24 @@ export default function StudentDashboard() {
               onGoCoach={() => router.push("/coach")}
             />
           )}
+
+        {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
+          <div className="bg-zinc-900 text-amber-300 px-4 py-3 rounded-xl text-sm font-medium border border-amber-500/40">
+            📜 教練聖旨已鎖定目標：{coachTargets.targetCalories} kcal · 蛋白{" "}
+            {coachTargets.targetProtein}g · 碳水 {coachTargets.targetCarbs}g · 脂肪{" "}
+            {coachTargets.targetFats}g
+          </div>
+        )}
+
+        {activeTab === "dashboard" && isStudent && coachReactions.length > 0 && (
+          <div className="bg-indigo-600 text-white px-4 py-3 rounded-xl text-sm">
+            {coachReactions.slice(0, 3).map((r) => (
+              <p key={r.id} className="font-medium">
+                教練回覆咗你 {r.sticker}
+              </p>
+            ))}
+          </div>
+        )}
 
         {activeTab === "dashboard" && isStudent && broadcast.trim() && (
           <div className="bg-red-600 text-white px-4 py-3 rounded-xl shadow-md animate-pulse text-sm font-medium">

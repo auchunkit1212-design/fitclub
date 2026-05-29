@@ -79,6 +79,51 @@ export interface MealLog {
   createdAt: string;
 }
 
+export interface StudentNutritionTargets {
+  studentEmail: string;
+  targetCalories: number;
+  targetProtein: number;
+  targetCarbs: number;
+  targetFats: number;
+  locked: boolean;
+  setByCoachEmail?: string;
+  updatedAt?: string;
+}
+
+export interface MealLogReaction {
+  id: string;
+  mealLogId: string;
+  coachEmail: string;
+  sticker: string;
+  createdAt: string;
+}
+
+export interface FavoriteFood {
+  id: string;
+  studentEmail: string;
+  name: string;
+  brand: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  servingLabel: string;
+  useCount: number;
+  lastUsedAt: string;
+}
+
+export interface FoodSearchItem {
+  id: string;
+  name: string;
+  brand: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  servingLabel: string;
+  source: "edamam" | "mock";
+}
+
 export const DEFAULT_PROFILE: UserProfile = {
   targetCalories: 2000,
   targetProtein: 120,

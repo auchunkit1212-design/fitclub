@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { MealRecommendation } from "@/lib/ai-coach";
 import {
   Cell,
   Legend,
@@ -22,6 +23,9 @@ const btnClass =
 interface NutritionDashboardProps {
   logs: MealLog[];
   goalCalories: number;
+  goalProtein?: number;
+  goalCarbs?: number;
+  goalFats?: number;
   exerciseCalories: number;
   onClose: () => void;
   onExerciseChange?: (kcal: number) => void;
@@ -64,11 +68,18 @@ function MicroBar({
 export function NutritionDashboard({
   logs,
   goalCalories,
+  goalProtein = 120,
+  goalCarbs = 200,
+  goalFats = 65,
   exerciseCalories,
   onClose,
   onExerciseChange,
 }: NutritionDashboardProps) {
   const [exerciseInput, setExerciseInput] = useState(String(exerciseCalories));
+  const [recommendations, setRecommendations] = useState<MealRecommendation[]>(
+    []
+  );
+  const [loadingRec, setLoadingRec] = useState(false);
 
   const totals = useMemo(() => {
     return logs.reduce(
@@ -84,6 +95,37 @@ export function NutritionDashboard({
 
   const exercise = Number(exerciseInput) || 0;
   const remaining = goalCalories - totals.calories + exercise;
+  const remProtein = Math.max(0, goalProtein - totals.protein);
+  const remCarbs = Math.max(0, goalCarbs - totals.carbs);
+  const remFats = Math.max(0, goalFats - totals.fats);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingRec(true);
+      try {
+        const res = await fetch("/api/ai/meal-recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            remainingCalories: remaining,
+            remainingProtein: remProtein,
+            remainingCarbs: remCarbs,
+            remainingFats: remFats,
+          }),
+        });
+        const data = (await res.json()) as {
+          recommendations?: MealRecommendation[];
+        };
+        if (!cancelled) setRecommendations(data.recommendations ?? []);
+      } finally {
+        if (!cancelled) setLoadingRec(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [remaining, remProtein, remCarbs, remFats]);
 
   const buckets = useMemo(() => groupLogsByBucket(logs), [logs]);
 
@@ -292,6 +334,29 @@ export function NutritionDashboard({
                 )}
               </div>
             </div>
+          </section>
+
+          <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-4 shadow-sm space-y-3">
+            <h3 className="font-semibold text-zinc-800">💡 剩餘 Quota 配餐推薦</h3>
+            {loadingRec ? (
+              <p className="text-sm text-zinc-500">AI 配餐建議生成中...</p>
+            ) : (
+              <ul className="space-y-2">
+                {recommendations.map((rec, i) => (
+                  <li
+                    key={i}
+                    className="bg-white rounded-xl p-3 border border-amber-100 text-sm"
+                  >
+                    <p className="font-semibold text-amber-900">{rec.title}</p>
+                    <p className="text-zinc-600 mt-1 leading-relaxed">{rec.description}</p>
+                    <p className="text-xs text-zinc-500 mt-2">
+                      約 {rec.estimatedCalories} kcal · P{rec.protein} C{rec.carbs} F
+                      {rec.fats}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
