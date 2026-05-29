@@ -46,6 +46,7 @@ export default function AddMealPage() {
   const [fats, setFats] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [imageCompressing, setImageCompressing] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackPerPiece, setSnackPerPiece] = useState(80);
   const [snackQty, setSnackQty] = useState(1);
@@ -120,13 +121,17 @@ export default function AddMealPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImageCompressing(true);
     try {
       const compressed = await compressFileImage(file);
       setImageBase64(compressed);
-    } catch {
-      alert("相片處理失敗，請再試一次。");
+    } catch (err) {
+      console.error("[add-meal] image compress failed", err);
+      alert("相片壓縮失敗，請換一張較細的相片或再試一次。");
+    } finally {
+      setImageCompressing(false);
+      e.target.value = "";
     }
-    e.target.value = "";
   };
 
   const runFakeAi = () => {
@@ -179,11 +184,23 @@ export default function AddMealPage() {
 
     setSaveLoading(true);
 
+    let imageToUpload = imageBase64;
+    if (imageBase64) {
+      try {
+        imageToUpload = await compressDataUrl(imageBase64);
+        setImageBase64(imageToUpload);
+      } catch (err) {
+        console.error("[add-meal] pre-upload compress failed", err);
+        alert("相片壓縮失敗，請重新選擇相片。");
+        setSaveLoading(false);
+        return;
+      }
+    }
+
     const basePayload = {
       email,
       mealType,
       description: description.trim(),
-      imageBase64,
       calories: Number(calories) || 0,
       protein: Number(protein) || 0,
       carbs: Number(carbs) || 0,
@@ -205,24 +222,17 @@ export default function AddMealPage() {
     };
 
     try {
-      await trySave(imageBase64);
-    } catch {
-      if (imageBase64) {
+      await trySave(imageToUpload);
+    } catch (err) {
+      console.error("[add-meal] save failed", err);
+      if (imageToUpload) {
         try {
-          const compressed = await compressDataUrl(imageBase64, 960, 0.58);
-          await trySave(compressed);
-          alert("相片太大，已自動壓縮後上傳雲端。");
+          const smaller = await compressDataUrl(imageToUpload);
+          await trySave(smaller);
           return;
         } catch {
-          try {
-            const compressedHard = await compressDataUrl(imageBase64, 720, 0.42);
-            await trySave(compressedHard);
-            alert("相片已大幅壓縮後上傳雲端。");
-            return;
-          } catch {
-            alert("上傳失敗，請檢查 Supabase 連線或縮小相片。");
-            return;
-          }
+          alert("上傳失敗，請檢查 Supabase 連線或縮小相片。");
+          return;
         }
       }
       alert("上傳失敗，請檢查 Supabase 連線。");
@@ -353,11 +363,17 @@ export default function AddMealPage() {
             <div
               role="button"
               tabIndex={0}
-              onClick={handleImageClick}
-              onKeyDown={(e) => e.key === "Enter" && handleImageClick()}
-              className={`border-2 border-dashed border-zinc-300 rounded-2xl p-6 text-center ${btnClass}`}
+              onClick={imageCompressing ? undefined : handleImageClick}
+              onKeyDown={(e) =>
+                !imageCompressing && e.key === "Enter" && handleImageClick()
+              }
+              className={`border-2 border-dashed border-zinc-300 rounded-2xl p-6 text-center ${
+                imageCompressing ? "opacity-70 pointer-events-none" : btnClass
+              }`}
             >
-              {imageBase64 ? (
+              {imageCompressing ? (
+                <p className="text-zinc-600 font-medium">壓縮相片中...</p>
+              ) : imageBase64 ? (
                 <img
                   src={imageBase64}
                   alt="已上傳食物"
@@ -365,7 +381,7 @@ export default function AddMealPage() {
                 />
               ) : (
                 <p className="text-zinc-500">
-                  📷 撳一下上傳相片（儲存喺記憶體，唔寫入硬碟）
+                  📷 撳一下拍照或選擇相片（自動壓縮至 1MB 內）
                 </p>
               )}
             </div>
@@ -508,10 +524,14 @@ export default function AddMealPage() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={saveLoading}
+          disabled={saveLoading || imageCompressing}
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
-          {saveLoading ? "儲存中..." : "儲存記錄"}
+          {saveLoading
+            ? imageBase64
+              ? "壓縮並上傳中..."
+              : "儲存中..."
+            : "儲存記錄"}
         </button>
       </main>
     </div>
