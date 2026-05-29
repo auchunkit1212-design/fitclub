@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { generateRoast } from "@/lib/ai-mock";
+import { getUserRegistry, initUserRegistry } from "@/lib/registry";
 import {
   getCoachBranding,
   getCoachBroadcast,
@@ -11,16 +13,17 @@ import {
   getUserProfile,
   isToday,
 } from "@/lib/storage";
-import type { CoachBranding, MealLog, UserProfile } from "@/lib/types";
+import type {
+  CoachBranding,
+  MealLog,
+  RegistryUser,
+  UserProfile,
+  UserSession,
+} from "@/lib/types";
 
 const MOCK_WEIGHTS = [72.4, 72.1, 71.9, 71.6, 71.4, 71.2, 71.0];
 type ActiveTab = "dashboard" | "settings";
 
-interface UserSession {
-  role: "student" | "coach";
-  name: string;
-  gym?: string;
-}
 
 interface PersonalSettings {
   nickname: string;
@@ -30,6 +33,9 @@ interface PersonalSettings {
   weeklyFrequency: string;
   waterReminder: string;
 }
+
+const btnClass =
+  "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 const DEFAULT_SETTINGS: PersonalSettings = {
   nickname: "",
@@ -116,31 +122,52 @@ export default function StudentDashboard() {
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [activeNotification, setActiveNotification] = useState<string | null>(null);
-  const [session, setSession] = useState<UserSession>({
-    role: "student",
-    name: "體驗學員",
-    gym: "未綁定分店",
-  });
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
+  const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(""), 3000);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("current_session");
+    router.push("/register");
+  };
+
   useEffect(() => {
+    initUserRegistry();
     setProfile(getUserProfile());
     setBranding(getCoachBranding());
     setBroadcast(getCoachBroadcast());
     setLogs(getMealLogs());
+    setUserRegistry(getUserRegistry());
 
     const rawSession = localStorage.getItem("current_session");
-    if (rawSession) {
-      try {
-        const parsed = JSON.parse(rawSession) as Partial<UserSession>;
-        setSession({
-          role: parsed.role === "coach" ? "coach" : "student",
-          name: parsed.name || "體驗學員",
-          gym: parsed.gym || "未綁定分店",
-        });
-      } catch {
-        // Keep fallback session when parse fails
-      }
+    if (!rawSession) {
+      router.push("/register");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(rawSession) as UserSession;
+      const role =
+        parsed.role === "coach" || parsed.role === "admin"
+          ? parsed.role
+          : "student";
+      setSession({
+        ...parsed,
+        role,
+        name: parsed.name || "體驗學員",
+        email: parsed.email || "",
+        gym: parsed.gym || "未綁定分店",
+        isLoggedIn: true,
+      });
+    } catch {
+      router.push("/register");
+      return;
     }
 
     const rawSettings = localStorage.getItem("student_settings");
@@ -166,7 +193,9 @@ export default function StudentDashboard() {
       clearTimeout(timerA);
       clearTimeout(timerB);
     };
-  }, []);
+  }, [router]);
+
+  const isStudent = session?.role === "student";
 
   const todayLogs = useMemo(
     () => logs.filter((l) => isToday(l.date)),
@@ -189,7 +218,7 @@ export default function StudentDashboard() {
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? "健身飲食追蹤";
 
-  if (!profile || !branding) {
+  if (!profile || !branding || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
         載入緊...
@@ -199,6 +228,12 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen pb-28 max-w-lg mx-auto">
+      {toast && (
+        <div className="fixed top-4 left-4 right-4 bg-zinc-900 text-white px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-lg">
+          {toast}
+        </div>
+      )}
+
       {activeNotification && (
         <div className="fixed top-4 left-4 right-4 bg-zinc-900/95 text-white p-4 rounded-2xl z-50 shadow-2xl border border-zinc-700">
           <div className="flex items-start justify-between gap-3">
@@ -237,23 +272,92 @@ export default function StudentDashboard() {
       )}
 
       <header className={`${theme.header} text-white px-4 pt-10 pb-6 rounded-b-3xl shadow-lg`}>
-        <p className="text-white/80 text-sm">
-          {session.role === "coach" ? "教練主頁" : "學員主頁"}
-        </p>
-        <h1 className="text-2xl font-bold mt-1">{title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            {branding.logo && (
+              <img
+                src={branding.logo}
+                alt="Logo"
+                className="w-8 h-8 rounded-full object-cover bg-white shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <p className="text-white/80 text-sm">
+                {session.role === "coach"
+                  ? "教練主頁"
+                  : session.role === "admin"
+                    ? "老闆主頁"
+                    : "學員主頁"}
+              </p>
+              <h1 className="text-2xl font-bold mt-1 truncate">{title}</h1>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`shrink-0 text-[11px] bg-white/15 px-2 py-1 rounded-lg ${btnClass}`}
+          >
+            🚪 登出
+          </button>
+        </div>
         <p className="text-white/90 text-sm mt-2">
-          {settings.nickname || session.name} · 今日已記錄 {todayLogs.length} 餐
+          {settings.nickname || session.name} · {session.gym} · 今日已記錄{" "}
+          {todayLogs.length} 餐
         </p>
       </header>
 
       <main className="px-4 -mt-4 space-y-4">
-        {activeTab === "dashboard" && broadcast.trim() && (
+        {activeTab === "dashboard" && (
+          <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 text-sm">
+            <div className="flex justify-between items-center">
+              <p className="font-semibold text-zinc-900">
+                👋 歡迎，{settings.nickname || session.name}
+              </p>
+              <span className="text-[10px] font-bold uppercase bg-zinc-900 text-white px-2 py-0.5 rounded">
+                {session.role === "admin"
+                  ? "總控制台"
+                  : session.role === "coach"
+                    ? "教練"
+                    : "學員"}
+              </span>
+            </div>
+            <p className="text-zinc-500 mt-1 font-mono text-xs">{session.email}</p>
+            <p className="text-zinc-500 text-xs">📍 {session.gym}</p>
+          </section>
+        )}
+
+        {activeTab === "dashboard" &&
+          (session.role === "admin" || session.role === "coach") && (
+            <FranchiseConsole
+              session={session}
+              registry={userRegistry}
+              logs={logs}
+              onRegistryChange={setUserRegistry}
+              onToast={showToast}
+              onGoCoach={() => router.push("/coach")}
+            />
+          )}
+
+        {activeTab === "dashboard" && isStudent && broadcast.trim() && (
           <div className="bg-red-600 text-white px-4 py-3 rounded-xl shadow-md animate-pulse text-sm font-medium">
             📣 教練突發警告: {broadcast}
           </div>
         )}
 
-        {activeTab === "dashboard" ? (
+        {activeTab === "dashboard" && isStudent && (
+          <section className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-4 shadow-md">
+            <p className="text-sm font-semibold text-amber-100 mb-1">
+              🤖 專屬教練 AI 點評
+            </p>
+            <p className="text-sm leading-relaxed">
+              你已綁定【{session.gym}】，負責教練【{session.coach || "專業教練組"}】。
+              今日{todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"}，記得跟【
+              {settings.mealSchedule}】食！
+            </p>
+          </section>
+        )}
+
+        {activeTab === "dashboard" && isStudent ? (
           <>
             <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
               <h2 className={`text-sm font-semibold ${theme.accent} mb-2`}>
@@ -324,7 +428,7 @@ export default function StudentDashboard() {
               </section>
             )}
           </>
-        ) : (
+        ) : isStudent ? (
           <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
             <h2 className="font-semibold text-zinc-800">⚙️ 個人化設定</h2>
             <div className="space-y-1">
@@ -410,40 +514,44 @@ export default function StudentDashboard() {
               儲存設定
             </button>
           </section>
-        )}
+        ) : null}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 py-4 pb-safe">
-        <div className="grid grid-cols-4 gap-2">
+        <div className={`grid gap-2 ${isStudent ? "grid-cols-4" : "grid-cols-3"}`}>
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
             className={`${
               activeTab === "dashboard" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
-            } font-semibold py-3 rounded-xl shadow-sm active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
+            } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
           >
             🏠 主頁
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("settings")}
-            className={`${
-              activeTab === "settings" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
-            } font-semibold py-3 rounded-xl shadow-sm active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
-          >
-            ⚙️ 設定
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/add-meal")}
-            className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm`}
-          >
-            ➕ 飲食
-          </button>
+          {isStudent && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className={`${
+                activeTab === "settings" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
+              } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
+            >
+              ⚙️ 設定
+            </button>
+          )}
+          {(isStudent || session.role === "coach") && (
+            <button
+              type="button"
+              onClick={() => router.push("/add-meal")}
+              className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            >
+              ➕ 飲食
+            </button>
+          )}
           <button
             type="button"
             onClick={() => router.push("/coach")}
-            className="bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md active:scale-95 active:opacity-80 transition-all cursor-pointer text-sm"
+            className={`bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
             👨‍🏫 教練
           </button>

@@ -96,6 +96,56 @@ export function generateRoast(
   return "表現唔錯，再留意下脂肪同鈉就完美啦！";
 }
 
+import type { MealLog } from "./types";
+
+export function generateCoachReport(logs: MealLog[]): string {
+  if (logs.length === 0) {
+    return "暫時未有學員飲食打卡。等學員記低第一餐，AI 先可以出整合報告。";
+  }
+
+  const totalCalories = logs.reduce((sum, log) => sum + log.calories, 0);
+  const avgCalories = Math.round(totalCalories / logs.length);
+  const highRisk = logs.filter((log) => log.calories >= 700);
+  const goodLogs = logs.filter((log) => log.calories <= 500 && log.protein >= 20);
+
+  const riskLines =
+    highRisk.length > 0
+      ? highRisk
+          .slice(0, 3)
+          .map(
+            (log) =>
+              `- ${log.description}（${log.calories} kcal）熱量偏高，建議教練跟進鈉同油脂。`
+          )
+          .join("\n")
+      : "- 今日未見超高熱量地雷餐，整體可控。";
+
+  const goodLines =
+    goodLogs.length > 0
+      ? goodLogs
+          .slice(0, 3)
+          .map(
+            (log) =>
+              `- ${log.description}（蛋白 ${log.protein}g）表現唔錯，可以繼續鼓勵。`
+          )
+          .join("\n")
+      : "- 暫時未見明顯優秀餐單，建議提醒學員增加優質蛋白。";
+
+  return `🤖 【FitClub AI 學員整合報告】
+
+📊 數據概覽：
+- 打卡總數：${logs.length} 餐
+- 平均熱量：${avgCalories} kcal / 餐
+
+🚨 高風險飲食：
+${riskLines}
+
+✅ 表現良好：
+${goodLines}
+
+💡 教練建議：
+今個星期優先處理高熱量打卡學員，配合飲水提醒同蛋白質目標，進度會穩定好多。`;
+}
+
 export function buildLogSummary(log: {
   mealType: string;
   description: string;
