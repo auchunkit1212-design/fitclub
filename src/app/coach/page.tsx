@@ -11,6 +11,7 @@ import {
   updateCoachLogo,
 } from "@/lib/db";
 import { compressFileImage } from "@/lib/image";
+import { getSession } from "@/lib/session";
 import type { CoachBranding, MealLog, ThemeColor, UserSession } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
@@ -27,16 +28,6 @@ function mealStatus(log: MealLog): "優良" | "危險" {
   if (log.calories >= 700) return "危險";
   if (log.calories <= 500 && log.protein >= 20) return "優良";
   return "危險";
-}
-
-function readSession(): UserSession | null {
-  const raw = localStorage.getItem("current_session");
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as UserSession;
-  } catch {
-    return null;
-  }
 }
 
 export default function CoachPage() {
@@ -56,7 +47,7 @@ export default function CoachPage() {
 
   useEffect(() => {
     const load = async () => {
-      const current = readSession();
+      const current = getSession();
       if (!current || (current.role !== "coach" && current.role !== "admin")) {
         router.push("/register");
         return;

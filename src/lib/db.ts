@@ -96,7 +96,10 @@ export async function ensureSeedData(): Promise<void> {
     },
   ]);
 
-  if (seedError) throw seedError;
+  if (seedError) {
+    // RLS 未設定好時唔阻住登入；用 demo-users 後備
+    console.warn("[FitClub] 種子資料寫入失敗:", seedError.message);
+  }
 }
 
 export async function fetchUserByEmail(
@@ -110,7 +113,10 @@ export async function fetchUserByEmail(
     .maybeSingle();
 
   if (error) throw error;
-  return data ? mapUser(data as UserRow) : null;
+  if (data) return mapUser(data as UserRow);
+
+  const { getDemoUser } = await import("@/lib/demo-users");
+  return getDemoUser(normalized);
 }
 
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
@@ -120,7 +126,11 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return (data as UserRow[]).map(mapUser);
+  const rows = (data as UserRow[]).map(mapUser);
+  if (rows.length > 0) return rows;
+
+  const { getDemoRegistry } = await import("@/lib/demo-users");
+  return getDemoRegistry();
 }
 
 export async function emailExists(email: string): Promise<boolean> {

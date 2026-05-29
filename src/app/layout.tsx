@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "FitClub 健康管理",
   description: "連鎖 Gym 房專屬飲食打卡同教練管理系統",
   applicationName: "FitClub",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

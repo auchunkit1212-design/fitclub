@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { estimateMacros } from "@/lib/ai-mock";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { saveMealLog } from "@/lib/storage";
-import type { UserSession } from "@/lib/types";
+import { getSession } from "@/lib/session";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
 const CARBS_OPTIONS = ["細拳", "中拳", "大拳"];
@@ -81,14 +81,8 @@ export default function AddMealPage() {
   };
 
   const readSessionEmail = (): string | null => {
-    const raw = localStorage.getItem("current_session");
-    if (!raw) return null;
-    try {
-      const session = JSON.parse(raw) as UserSession;
-      return session.email?.trim().toLowerCase() || null;
-    } catch {
-      return null;
-    }
+    const session = getSession();
+    return session?.email?.trim().toLowerCase() || null;
   };
 
   const handleSave = async () => {
