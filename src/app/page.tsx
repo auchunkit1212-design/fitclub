@@ -3,8 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
+import { PushReminderToggle } from "@/components/PushReminderToggle";
 import { generateRoast } from "@/lib/ai-mock";
 import { getUserRegistry, initUserRegistry } from "@/lib/registry";
+import { goTo } from "@/lib/navigate";
+import { clearSession, getSession } from "@/lib/session";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   getCoachBranding,
   getCoachBroadcast,
@@ -20,6 +24,7 @@ import type {
   UserProfile,
   UserSession,
 } from "@/lib/types";
+import { DEFAULT_BRANDING } from "@/lib/types";
 
 const MOCK_WEIGHTS = [72.4, 72.1, 71.9, 71.6, 71.4, 71.2, 71.0];
 type ActiveTab = "dashboard" | "settings";
@@ -125,6 +130,7 @@ export default function StudentDashboard() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
 
@@ -134,7 +140,7 @@ export default function StudentDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("current_session");
+    clearSession();
     router.push("/register");
   };
 
@@ -143,42 +149,57 @@ export default function StudentDashboard() {
 
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
+
+      const parsed = getSession();
+      if (!parsed) {
+        setLoading(false);
+        goTo(router, "/register");
+        return;
+      }
+
+      const role =
+        parsed.role === "coach" || parsed.role === "admin"
+          ? parsed.role
+          : "student";
+      const activeSession: UserSession = {
+        ...parsed,
+        role,
+        name: parsed.name || "體驗學員",
+        email: parsed.email || "",
+        gym: parsed.gym || "未綁定分店",
+        isLoggedIn: true,
+      };
+
+      setSession(activeSession);
+      setProfile(getUserProfile());
+
       try {
-        await initUserRegistry();
+        await withTimeout(initUserRegistry(), 12_000, "雲端初始化逾時");
 
-        const rawSession = localStorage.getItem("current_session");
-        if (!rawSession) {
-          router.push("/register");
-          return;
-        }
-
-        const parsed = JSON.parse(rawSession) as UserSession;
-        const role =
-          parsed.role === "coach" || parsed.role === "admin"
-            ? parsed.role
-            : "student";
-        const activeSession: UserSession = {
-          ...parsed,
-          role,
-          name: parsed.name || "體驗學員",
-          email: parsed.email || "",
-          gym: parsed.gym || "未綁定分店",
-          isLoggedIn: true,
-        };
-
-        const registry = await getUserRegistry();
-        const mealLogs = await getMealLogs(activeSession, registry);
-        const brandingData = await getCoachBranding(activeSession, registry);
-        const broadcastData = await getCoachBroadcast(activeSession, registry);
+        const registry = await withTimeout(getUserRegistry(), 12_000, "讀取用戶逾時");
+        const mealLogs = await withTimeout(
+          getMealLogs(activeSession, registry),
+          12_000,
+          "讀取餐食逾時"
+        );
+        const brandingData = await withTimeout(
+          getCoachBranding(activeSession, registry),
+          12_000,
+          "讀取品牌逾時"
+        );
+        const broadcastData = await withTimeout(
+          getCoachBroadcast(activeSession, registry),
+          12_000,
+          "讀取廣播逾時"
+        );
 
         if (cancelled) return;
 
-        setSession(activeSession);
         setUserRegistry(registry);
         setLogs(mealLogs);
         setBranding(brandingData);
         setBroadcast(broadcastData);
-        setProfile(getUserProfile());
 
         const rawSettings = localStorage.getItem("student_settings");
         if (rawSettings) {
@@ -189,10 +210,16 @@ export default function StudentDashboard() {
             // Keep default settings when parse fails
           }
         }
-      } catch {
-        if (!cancelled) {
-          showToast("❌ 雲端讀取失敗，請檢查 Supabase 連線。");
-        }
+      } catch (error) {
+        if (cancelled) return;
+        const message =
+          error instanceof Error ? error.message : "雲端讀取失敗";
+        setLoadError(message);
+        setBranding(DEFAULT_BRANDING);
+        setBroadcast("");
+        setLogs([]);
+        setUserRegistry([]);
+        showToast("❌ 雲端讀取失敗，請檢查網絡或 Supabase。");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -237,10 +264,37 @@ export default function StudentDashboard() {
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? "健身飲食追蹤";
 
-  if (loading || !profile || !branding || !session) {
+  if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        從雲端載入緊...
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-zinc-500 px-6 text-center">
+        <p>前往登入頁...</p>
+        <button
+          type="button"
+          onClick={() => goTo(router, "/register")}
+          className={`px-4 py-2 rounded-xl bg-zinc-900 text-white text-sm font-medium ${btnClass}`}
+        >
+          去登入
+        </button>
+      </div>
+    );
+  }
+
+  if (loading || !branding) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-zinc-500 px-6 text-center">
+        <p>從雲端載入緊...</p>
+        {loadError && (
+          <>
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => goTo(router, "/register")}
+              className={`px-4 py-2 rounded-xl bg-zinc-900 text-white text-sm font-medium ${btnClass}`}
+            >
+              返回登入
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -520,6 +574,9 @@ export default function StudentDashboard() {
                 <option value="關閉提示">關閉提示</option>
               </select>
             </div>
+
+            <PushReminderToggle />
+
             <button
               type="button"
               onClick={() => {

@@ -1,4 +1,4 @@
--- FitClub 雲端數據庫結構（貼到 Supabase SQL Editor 執行）
+-- FitClub 雲端數據庫（貼到 Supabase → SQL Editor → Run）
 
 create extension if not exists "pgcrypto";
 
@@ -40,13 +40,17 @@ alter table meal_logs enable row level security;
 -- 開發用：允許 anon key 讀寫（正式環境請改用 Supabase Auth + 嚴格 RLS）
 drop policy if exists "dev_all_users_registry" on users_registry;
 create policy "dev_all_users_registry" on users_registry
-  for all using (true) with check (true);
+  for all to anon, authenticated
+  using (true)
+  with check (true);
 
 drop policy if exists "dev_all_meal_logs" on meal_logs;
 create policy "dev_all_meal_logs" on meal_logs
-  for all using (true) with check (true);
+  for all to anon, authenticated
+  using (true)
+  with check (true);
 
--- Demo 種子資料（可選）
+-- Demo 種子資料
 insert into users_registry (email, name, role, gym, coach, added_by, app_title, theme_color)
 values
   ('owner@gmail.com', '旺角店-張老闆', 'coach', 'FitClub 旺角店', null, 'auchunkit1212@gmail.com', 'fitclub.hk 連鎖管理', 'emerald'),
