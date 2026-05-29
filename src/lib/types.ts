@@ -8,6 +8,26 @@ export interface UserProfile {
 export interface CoachBranding {
   appTitle: string;
   themeColor: ThemeColor;
+  logo?: string;
+}
+
+export interface RegistryUser {
+  email: string;
+  name: string;
+  role: "student" | "coach";
+  gym: string;
+  coach?: string;
+  addedBy?: string;
+}
+
+export interface UserSession {
+  role: "student" | "coach" | "admin";
+  name: string;
+  email: string;
+  gym: string;
+  coach?: string;
+  addedBy?: string;
+  isLoggedIn: boolean;
 }
 
 export interface MealLog {
