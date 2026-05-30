@@ -19,6 +19,15 @@ export interface UserProfile {
   targetProtein: number;
 }
 
+export interface WeightLog {
+  id: string;
+  email: string;
+  weightKg: number;
+  /** YYYY-MM-DD */
+  logDate: string;
+  createdAt: string;
+}
+
 export interface CoachBranding {
   appTitle: string;
   themeColor: ThemeColor;
