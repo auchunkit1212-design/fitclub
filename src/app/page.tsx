@@ -7,6 +7,7 @@ import {
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
 import { BottomNav } from "@/components/BottomNav";
+import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
@@ -23,6 +24,10 @@ import { goTo } from "@/lib/navigate";
 import { clearSession, getSession, saveSession } from "@/lib/session";
 import { withTimeout } from "@/lib/with-timeout";
 import {
+  fetchWeightLogsLastDays,
+  upsertWeightLog,
+} from "@/lib/weight-logs";
+import {
   getMealLogs,
   getThemeClasses,
   getUserProfile,
@@ -37,13 +42,12 @@ import type {
   StudentNutritionTargets,
   UserProfile,
   UserSession,
+  WeightLog,
 } from "@/lib/types";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
-const MOCK_WEIGHTS = [72.4, 72.1, 71.9, 71.6, 71.4, 71.2, 71.0];
 type ActiveTab = "dashboard" | "settings";
-
 
 interface PersonalSettings {
   nickname: string;
@@ -65,40 +69,6 @@ const DEFAULT_SETTINGS: PersonalSettings = {
   weeklyFrequency: "3次",
   waterReminder: "每2小時提示",
 };
-
-function WeightTrendChart() {
-  const min = Math.min(...MOCK_WEIGHTS) - 0.5;
-  const max = Math.max(...MOCK_WEIGHTS) + 0.5;
-  const range = max - min || 1;
-  const w = 280;
-  const h = 80;
-  const pad = 8;
-
-  const points = MOCK_WEIGHTS.map((weight, i) => {
-    const x = pad + (i / (MOCK_WEIGHTS.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((weight - min) / range) * (h - pad * 2);
-    return `${x},${y}`;
-  }).join(" ");
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20">
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points}
-        className="text-emerald-500"
-      />
-      {MOCK_WEIGHTS.map((weight, i) => {
-        const x = pad + (i / (MOCK_WEIGHTS.length - 1)) * (w - pad * 2);
-        const y = h - pad - ((weight - min) / range) * (h - pad * 2);
-        return <circle key={i} cx={x} cy={y} r="3" className="fill-emerald-500" />;
-      })}
-    </svg>
-  );
-}
 
 function ProgressBar({
   label,
@@ -158,6 +128,10 @@ export default function StudentDashboard() {
     null
   );
   const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [weightLogsLoading, setWeightLogsLoading] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+  const [weightSaving, setWeightSaving] = useState(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -253,6 +227,26 @@ export default function StudentDashboard() {
                 targetProtein: tData.targets.targetProtein,
               });
             }
+            setWeightLogsLoading(true);
+            try {
+              const weights = await fetchWeightLogsLastDays(activeSession.email, 7);
+              if (!cancelled) {
+                setWeightLogs(weights);
+                const today = new Date().toISOString().slice(0, 10);
+                const todayLog = weights.find((w) => w.logDate === today);
+                setWeightInput(
+                  todayLog
+                    ? String(todayLog.weightKg)
+                    : body?.weightKg
+                      ? String(body.weightKg)
+                      : ""
+                );
+              }
+            } catch {
+              if (!cancelled) setWeightLogs([]);
+            } finally {
+              if (!cancelled) setWeightLogsLoading(false);
+            }
           }
         }
         if (!cancelled) setProfileChecked(true);
@@ -330,6 +324,27 @@ export default function StudentDashboard() {
   const needsOnboarding =
     isStudent && profileChecked && !isBodyProfileComplete(bodyProfile);
   const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
+
+  const handleSaveWeight = async () => {
+    if (!session?.email || weightSaving) return;
+    const w = Number(weightInput);
+    if (!w || w < 30 || w > 300) {
+      alert("請輸入有效體重（30–300 kg）");
+      return;
+    }
+    setWeightSaving(true);
+    try {
+      await upsertWeightLog(session.email, w);
+      const refreshed = await fetchWeightLogsLastDays(session.email, 7);
+      setWeightLogs(refreshed);
+      showToast("✅ 今日體重已記錄");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "儲存失敗";
+      alert(`體重儲存失敗：${message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql`);
+    } finally {
+      setWeightSaving(false);
+    }
+  };
 
   const roast = generateRoast(
     todayCalories,
@@ -615,15 +630,30 @@ export default function StudentDashboard() {
               />
             </section>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-semibold text-zinc-800">體重趨勢（模擬）</h2>
+            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h2 className="font-semibold text-zinc-800">體重趨勢</h2>
                 <span className="text-xs text-zinc-400">過去 7 日</span>
               </div>
-              <WeightTrendChart />
-              <p className="text-xs text-zinc-400 mt-2 text-center">
-                最新: {MOCK_WEIGHTS[MOCK_WEIGHTS.length - 1]} kg
-              </p>
+              <WeightTrendChart logs={weightLogs} loading={weightLogsLoading} />
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  placeholder="今日體重 (kg)"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={weightSaving}
+                  onClick={handleSaveWeight}
+                  className={`shrink-0 px-4 py-2.5 rounded-xl ${theme.btn} text-white text-sm font-semibold disabled:opacity-60 ${btnClass}`}
+                >
+                  {weightSaving ? "儲存中..." : "更新今日體重"}
+                </button>
+              </div>
             </section>
 
             {todayLogs.length > 0 && (
