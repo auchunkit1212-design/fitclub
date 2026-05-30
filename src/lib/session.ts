@@ -34,7 +34,20 @@ export function getSession(): UserSession | null {
 export function saveSession(session: UserSession): void {
   const json = JSON.stringify(session);
   localStorage.setItem(SESSION_KEY, json);
-  document.cookie = `${SESSION_KEY}=${encodeURIComponent(json)};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax`;
+  const secure =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? ";Secure"
+      : "";
+  document.cookie = `${SESSION_KEY}=${encodeURIComponent(json)};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax${secure}`;
+}
+
+/** PWA / iOS 備用：API 請求帶 session header（cookie 可能未送出） */
+export function getSessionRequestHeaders(): Record<string, string> {
+  const session = getSession();
+  if (!session?.email) return {};
+  return {
+    "X-Fitclub-Session": encodeURIComponent(JSON.stringify(session)),
+  };
 }
 
 export function clearSession(): void {
