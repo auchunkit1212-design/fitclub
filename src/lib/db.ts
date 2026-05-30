@@ -179,6 +179,29 @@ export async function fetchUsersForSession(
   return all;
 }
 
+/** 教練 / 管理員可見的學員列表（與 fetchUsersForSession 範圍一致） */
+export function filterStudentsForSession(
+  session: UserSession,
+  registry: RegistryUser[]
+): RegistryUser[] {
+  if (session.role === "admin") {
+    return registry.filter((u) => u.role === "student");
+  }
+
+  if (session.role === "coach") {
+    const coachEmail = session.email.trim().toLowerCase();
+    return registry.filter(
+      (u) =>
+        u.role === "student" &&
+        (u.addedBy === coachEmail ||
+          (session.name && u.coach === session.name) ||
+          (session.tenantId != null && u.tenantId === session.tenantId))
+    );
+  }
+
+  return [];
+}
+
 export async function emailExists(email: string): Promise<boolean> {
   const user = await fetchUserByEmail(email);
   return Boolean(user);
@@ -331,9 +354,9 @@ export async function fetchMealLogsForSession(
   }
 
   if (session.role === "coach") {
-    const studentEmails = registry
-      .filter((u) => u.role === "student" && u.addedBy === session.email)
-      .map((u) => u.email);
+    const studentEmails = filterStudentsForSession(session, registry).map(
+      (u) => u.email
+    );
     if (studentEmails.length === 0) return [];
 
     const emails = filters?.emails?.length
