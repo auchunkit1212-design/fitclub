@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       {
         error: readable.message,
         code: code ?? "DB_ERROR",
-        hint: "請確認 meal_logs 表含 image_url 欄位（執行 storage-food-images.sql）及 Vercel 已設 SUPABASE_SERVICE_ROLE_KEY",
+        hint: "請在 Supabase 執行 fix-meal-logs-columns.sql（及 storage-food-images.sql）並確認 Vercel 已設 SUPABASE_SERVICE_ROLE_KEY",
       },
       { status: 500 }
     );
