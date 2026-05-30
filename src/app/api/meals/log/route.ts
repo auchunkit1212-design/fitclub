@@ -3,6 +3,7 @@ import { insertMealLog } from "@/lib/db";
 import { MEAL_IMAGES_BUCKET } from "@/lib/meal-image-storage";
 import { notifyCoachOfNewMealLog } from "@/lib/meal-notifications";
 import { parseSessionFromRequest } from "@/lib/session-server";
+import { toReadableError } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 
 export const runtime = "nodejs";
@@ -63,16 +64,16 @@ export async function POST(request: Request) {
       imageStorage: body.imageUrl ? MEAL_IMAGES_BUCKET : undefined,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "儲存失敗";
+    const readable = toReadableError(error, "儲存失敗");
     const code =
       error && typeof error === "object" && "code" in error
         ? String((error as { code: string }).code)
         : undefined;
     return NextResponse.json(
       {
-        error: message,
+        error: readable.message,
         code: code ?? "DB_ERROR",
-        hint: "請確認 meal_logs 表含 image_url 欄位，且 schema.sql RLS 已啟用",
+        hint: "請確認 meal_logs 表含 image_url 欄位（執行 storage-food-images.sql）及 Vercel 已設 SUPABASE_SERVICE_ROLE_KEY",
       },
       { status: 500 }
     );
