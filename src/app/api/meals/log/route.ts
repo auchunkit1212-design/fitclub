@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { insertMealLog } from "@/lib/db";
-import { uploadMealImageToStorage } from "@/lib/meal-image-storage";
+import { MEAL_IMAGES_BUCKET } from "@/lib/meal-image-storage";
 import { notifyCoachOfNewMealLog } from "@/lib/meal-notifications";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     mealType: string;
     description: string;
-    imageBase64?: string;
+    imageUrl?: string;
     calories: number;
     protein: number;
     carbs: number;
@@ -40,43 +40,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    let imageUrl: string | undefined;
-    let imageBase64: string | undefined;
-
-    if (body.imageBase64?.trim()) {
-      try {
-        imageUrl = await uploadMealImageToStorage(
-          session.email,
-          body.imageBase64.trim()
-        );
-      } catch (storageErr) {
-        const msg =
-          storageErr instanceof Error ? storageErr.message : "Storage failed";
-        console.warn("[meals/log] Storage upload failed, fallback base64:", msg);
-
-        if (msg.includes("Bucket not found") || msg.includes("bucket")) {
-          return NextResponse.json(
-            {
-              error:
-                "找不到 food-images Storage Bucket，請在 Supabase 執行 supabase/storage-food-images.sql",
-              code: "STORAGE_BUCKET_MISSING",
-              detail: msg,
-            },
-            { status: 500 }
-          );
-        }
-
-        imageBase64 = body.imageBase64.trim();
-      }
-    }
-
     const log = await insertMealLog(
       {
         email: session.email,
         mealType: body.mealType,
         description: body.description.trim(),
-        imageBase64,
-        imageUrl,
+        imageUrl: body.imageUrl?.trim() || undefined,
         calories: Number(body.calories) || 0,
         protein: Number(body.protein) || 0,
         carbs: Number(body.carbs) || 0,
@@ -89,7 +58,10 @@ export async function POST(request: Request) {
       console.warn("[push] coach alert failed:", err)
     );
 
-    return NextResponse.json({ log, imageStorage: imageUrl ? "food-images" : "base64" });
+    return NextResponse.json({
+      log,
+      imageStorage: body.imageUrl ? MEAL_IMAGES_BUCKET : undefined,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "儲存失敗";
     const code =
@@ -100,7 +72,7 @@ export async function POST(request: Request) {
       {
         error: message,
         code: code ?? "DB_ERROR",
-        hint: "請確認 Supabase meal_logs 表、RLS 及 storage-food-images.sql 已執行",
+        hint: "請確認 meal_logs 表含 image_url 欄位，且 schema.sql RLS 已啟用",
       },
       { status: 500 }
     );

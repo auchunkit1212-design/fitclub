@@ -17,6 +17,7 @@ import {
   fetchUsersForSession,
 } from "@/lib/db";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
+import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession } from "@/lib/session";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
@@ -205,6 +206,27 @@ export default function AddMealPage() {
       }
     }
 
+    let uploadedImageUrl: string | undefined;
+    if (imageToUpload) {
+      try {
+        uploadedImageUrl = await uploadMealImageFromClient(email, imageToUpload);
+        console.log("[add-meal] Storage upload ok (anon client)", uploadedImageUrl);
+      } catch (storageErr) {
+        console.error("[add-meal] Storage upload failed (anon client)", storageErr);
+        const msg =
+          storageErr instanceof Error ? storageErr.message : "Storage failed";
+        alert(
+          msg.includes("STORAGE_BUCKET_MISSING")
+            ? "找不到 food-images Bucket，請在 Supabase SQL Editor 執行 storage-food-images.sql"
+            : msg.includes("STORAGE_RLS_DENIED")
+              ? "Storage 權限不足，請執行 storage-food-images.sql 設定 RLS"
+              : `相片上傳失敗：${msg}`
+        );
+        setSaveLoading(false);
+        return;
+      }
+    }
+
     const basePayload = {
       email,
       mealType,
@@ -215,12 +237,12 @@ export default function AddMealPage() {
       fats: Number(fats) || 0,
     };
 
-    const trySave = async (image?: string) => {
+    const trySave = async (imageUrl?: string) => {
       const res = await fetch("/api/meals/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...basePayload, imageBase64: image }),
+        body: JSON.stringify({ ...basePayload, imageUrl }),
       });
       if (!res.ok) {
         const err = (await res.json()) as {
@@ -241,7 +263,7 @@ export default function AddMealPage() {
     };
 
     try {
-      await trySave(imageToUpload);
+      await trySave(uploadedImageUrl);
     } catch (err) {
       console.error("[add-meal] save failed", err);
       const message =
