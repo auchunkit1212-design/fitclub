@@ -6,6 +6,7 @@ import {
   BodyProfileFields,
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
+import { BottomNav } from "@/components/BottomNav";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
@@ -791,45 +792,12 @@ export default function StudentDashboard() {
         ) : null}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 pt-3 pb-safe">
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("dashboard")}
-            className={`${
-              activeTab === "dashboard" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
-            } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
-          >
-            🏠 主頁
-          </button>
-          {isStudent ? (
-            <button
-              type="button"
-              onClick={() => setActiveTab("settings")}
-              className={`${
-                activeTab === "settings" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
-              } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
-            >
-              ⚙️ 設定
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => router.push("/coach")}
-              className={`bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
-            >
-              👨‍🏫 教練
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => router.push("/add-meal")}
-            className={`${theme.btn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
-          >
-            ➕ 飲食
-          </button>
-        </div>
-      </nav>
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        role={session?.role ?? "student"}
+        themeBtn={theme.btn}
+      />
     </div>
   );
 }
