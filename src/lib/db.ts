@@ -1,6 +1,7 @@
 import { resolveBrandForUser } from "@/lib/branding";
 import { syncTenantBranding } from "@/lib/tenant";
 import { supabase } from "@/lib/supabase";
+import { toReadableError } from "@/lib/errors";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
 import type {
   CoachBranding,
@@ -262,23 +263,46 @@ export async function insertMealLog(
     ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
     : supabase;
 
-  const { data, error } = await client
+  const baseRow = {
+    email: log.email.trim().toLowerCase(),
+    meal_type: log.mealType,
+    description: log.description,
+    calories: log.calories,
+    protein: log.protein,
+    carbs: log.carbs,
+    fats: log.fats,
+    image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+    image_url: log.imageUrl ?? null,
+  };
+
+  let { data, error } = await client
     .from("meal_logs")
-    .insert({
-      email: log.email.trim().toLowerCase(),
-      meal_type: log.mealType,
-      description: log.description,
-      calories: log.calories,
-      protein: log.protein,
-      carbs: log.carbs,
-      fats: log.fats,
-      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-      image_url: log.imageUrl ?? null,
-    })
+    .insert(baseRow)
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (
+    error &&
+    log.imageUrl &&
+    (error.message.includes("image_url") || error.code === "PGRST204")
+  ) {
+    ({ data, error } = await client
+      .from("meal_logs")
+      .insert({
+        email: baseRow.email,
+        meal_type: baseRow.meal_type,
+        description: baseRow.description,
+        calories: baseRow.calories,
+        protein: baseRow.protein,
+        carbs: baseRow.carbs,
+        fats: baseRow.fats,
+        image_base64: baseRow.image_base64,
+      })
+      .select("*")
+      .single());
+  }
+
+  if (error) throw toReadableError(error, "meal_logs 寫入失敗");
   return mapMeal(data as MealRow);
 }
 

@@ -19,9 +19,10 @@ import {
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
 import { initUserRegistry } from "@/lib/registry";
-import { getSession } from "@/lib/session";
+import { getSession, saveSession } from "@/lib/session";
+import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
-import { getMealLogs, isToday } from "@/lib/storage";
+import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
 import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
@@ -193,6 +194,9 @@ export default function AddMealPage() {
 
     setSaveLoading(true);
 
+    const currentSession = getSession();
+    if (currentSession) saveSession(currentSession);
+
     let imageToUpload = imageBase64;
     if (imageBase64) {
       try {
@@ -213,17 +217,15 @@ export default function AddMealPage() {
         console.log("[add-meal] Storage upload ok (anon client)", uploadedImageUrl);
       } catch (storageErr) {
         console.error("[add-meal] Storage upload failed (anon client)", storageErr);
-        const msg =
-          storageErr instanceof Error ? storageErr.message : "Storage failed";
-        alert(
-          msg.includes("STORAGE_BUCKET_MISSING")
-            ? "找不到 food-images Bucket，請在 Supabase SQL Editor 執行 storage-food-images.sql"
-            : msg.includes("STORAGE_RLS_DENIED")
-              ? "Storage 權限不足，請執行 storage-food-images.sql 設定 RLS"
-              : `相片上傳失敗：${msg}`
+        const msg = errorMessage(storageErr, "Storage failed");
+        const skipPhoto = window.confirm(
+          `相片無法上傳至 food-images：\n${msg}\n\n是否仍要儲存飲食記錄（不含相片）？`
         );
-        setSaveLoading(false);
-        return;
+        if (!skipPhoto) {
+          setSaveLoading(false);
+          return;
+        }
+        uploadedImageUrl = undefined;
       }
     }
 
@@ -238,25 +240,60 @@ export default function AddMealPage() {
     };
 
     const trySave = async (imageUrl?: string) => {
-      const res = await fetch("/api/meals/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ ...basePayload, imageUrl }),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/meals/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ ...basePayload, imageUrl }),
+        });
+      } catch (networkErr) {
+        console.error("[add-meal] network error", networkErr);
+        throw new Error(
+          errorMessage(networkErr, "無法連線伺服器，請檢查網絡後再試")
+        );
+      }
+
       if (!res.ok) {
-        const err = (await res.json()) as {
+        let errBody: {
           error?: string;
           code?: string;
           detail?: string;
           hint?: string;
-        };
-        console.error("[add-meal] API error", err);
+        } = {};
+        try {
+          errBody = (await res.json()) as typeof errBody;
+        } catch {
+          errBody = { error: `HTTP ${res.status}` };
+        }
+        console.error("[add-meal] API error", { status: res.status, ...errBody });
+
+        if (res.status === 401) {
+          throw new Error("登入已過期，請重新登入後再試");
+        }
+
+        if (res.status >= 500) {
+          console.warn("[add-meal] API failed, trying direct Supabase save");
+          await saveMealLog({
+            email,
+            mealType: basePayload.mealType,
+            description: basePayload.description,
+            imageUrl,
+            calories: basePayload.calories,
+            protein: basePayload.protein,
+            carbs: basePayload.carbs,
+            fats: basePayload.fats,
+          });
+          router.push("/");
+          return;
+        }
+
         throw new Error(
-          err.error ??
-            (err.code === "STORAGE_BUCKET_MISSING"
-              ? "請在 Supabase 執行 storage-food-images.sql 建立 food-images Bucket"
-              : "儲存失敗")
+          errBody.error ??
+            (errBody.code === "DB_ERROR"
+              ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
+              : `儲存失敗 (HTTP ${res.status})`)
         );
       }
       router.push("/");
@@ -266,9 +303,7 @@ export default function AddMealPage() {
       await trySave(uploadedImageUrl);
     } catch (err) {
       console.error("[add-meal] save failed", err);
-      const message =
-        err instanceof Error ? err.message : "上傳失敗，請檢查 Supabase 連線。";
-      alert(message);
+      alert(errorMessage(err, "上傳失敗，請檢查 Supabase 連線"));
     } finally {
       setSaveLoading(false);
     }
