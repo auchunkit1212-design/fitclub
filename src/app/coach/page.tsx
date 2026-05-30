@@ -9,6 +9,7 @@ import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
   fetchUsersForSession,
+  filterStudentsForSession,
   resolveBranding,
   updateCoachBranding,
   updateCoachLogo,
@@ -62,6 +63,7 @@ export default function CoachPage() {
     const load = async () => {
       const current = getSession();
       if (!current || (current.role !== "coach" && current.role !== "admin")) {
+        setLoading(false);
         router.push("/register");
         return;
       }
@@ -72,11 +74,7 @@ export default function CoachPage() {
         const registry = await fetchUsersForSession(current);
         const mealLogs = await fetchMealLogsForSession(current, registry);
         setLogs(mealLogs);
-        setStudents(
-          registry.filter(
-            (u) => u.role === "student" && u.addedBy === current.email
-          )
-        );
+        setStudents(filterStudentsForSession(current, registry));
 
         if (current.role === "coach") {
           const resolved = await resolveBranding(current, registry);
