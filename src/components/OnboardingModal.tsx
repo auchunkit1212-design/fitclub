@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { upsertStudentBodyProfile } from "@/lib/db";
-import { getSession, saveSession } from "@/lib/session";
+import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import type { StudentBodyProfile, StudentGender } from "@/lib/types";
 
 const btnClass =
@@ -131,7 +131,10 @@ export function OnboardingModal({
       const res = await fetch("/api/student/profile", {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
         body: JSON.stringify({
           email: normalizedEmail,
           heightCm: h,
