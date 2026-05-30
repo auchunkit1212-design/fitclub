@@ -37,11 +37,11 @@ type MealRow = {
   meal_type: string;
   description: string;
   calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-  image_base64: string | null;
-  image_url: string | null;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  image_base64?: string | null;
+  image_url?: string | null;
   created_at: string;
 };
 
@@ -76,9 +76,9 @@ function mapMeal(row: MealRow): MealLog {
     imageBase64: row.image_base64 ?? undefined,
     imageUrl: row.image_url ?? undefined,
     calories: row.calories,
-    protein: row.protein,
-    carbs: row.carbs,
-    fats: row.fats,
+    protein: row.protein ?? 0,
+    carbs: row.carbs ?? 0,
+    fats: row.fats ?? 0,
     createdAt: row.created_at,
   };
 }
@@ -263,47 +263,62 @@ export async function insertMealLog(
     ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
     : supabase;
 
-  const baseRow = {
-    email: log.email.trim().toLowerCase(),
-    meal_type: log.mealType,
-    description: log.description,
-    calories: log.calories,
-    protein: log.protein,
-    carbs: log.carbs,
-    fats: log.fats,
-    image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-    image_url: log.imageUrl ?? null,
-  };
+  const email = log.email.trim().toLowerCase();
+  const attempts: Record<string, unknown>[] = [
+    {
+      email,
+      meal_type: log.mealType,
+      description: log.description,
+      calories: log.calories,
+      protein: log.protein,
+      carbs: log.carbs,
+      fats: log.fats,
+      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+      image_url: log.imageUrl ?? null,
+    },
+    {
+      email,
+      meal_type: log.mealType,
+      description: log.description,
+      calories: log.calories,
+      protein: log.protein,
+      carbs: log.carbs,
+      fats: log.fats,
+      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+    },
+    {
+      email,
+      meal_type: log.mealType,
+      description: log.description,
+      calories: log.calories,
+    },
+  ];
 
-  let { data, error } = await client
-    .from("meal_logs")
-    .insert(baseRow)
-    .select("*")
-    .single();
-
-  if (
-    error &&
-    log.imageUrl &&
-    (error.message.includes("image_url") || error.code === "PGRST204")
-  ) {
-    ({ data, error } = await client
+  let lastError: unknown = null;
+  for (const row of attempts) {
+    const { data, error } = await client
       .from("meal_logs")
-      .insert({
-        email: baseRow.email,
-        meal_type: baseRow.meal_type,
-        description: baseRow.description,
-        calories: baseRow.calories,
-        protein: baseRow.protein,
-        carbs: baseRow.carbs,
-        fats: baseRow.fats,
-        image_base64: baseRow.image_base64,
-      })
+      .insert(row)
       .select("*")
-      .single());
+      .single();
+
+    if (!error) return mapMeal(data as MealRow);
+
+    lastError = error;
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    const msg = error.message ?? "";
+    const missingColumn =
+      code === "PGRST204" ||
+      msg.includes("schema cache") ||
+      msg.includes("Could not find");
+    if (!missingColumn) break;
   }
 
-  if (error) throw toReadableError(error, "meal_logs 寫入失敗");
-  return mapMeal(data as MealRow);
+  if (lastError) throw toReadableError(lastError, "meal_logs 寫入失敗");
+  throw new Error("meal_logs 寫入失敗");
 }
 
 export async function fetchMealLogsForSession(
