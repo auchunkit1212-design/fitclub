@@ -48,3 +48,17 @@ create policy "student_body_profiles_all" on student_body_profiles
 
 -- 正式環境可改為 tenant / coach email 條件，例如：
 -- using (email in (select email from users_registry where added_by = current_setting('app.coach_email')))
+
+-- meal_log_reactions（動態牆 Emoji 貼紙）— 詳見 fix-meal-log-reactions.sql
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'meal_log_reactions'
+  ) then
+    execute 'alter table meal_log_reactions enable row level security';
+    execute 'drop policy if exists "phase4_reactions_all" on meal_log_reactions';
+    execute 'drop policy if exists "meal_log_reactions_all" on meal_log_reactions';
+    execute 'create policy "meal_log_reactions_all" on meal_log_reactions for all to anon, authenticated using (true) with check (true)';
+  end if;
+end $$;

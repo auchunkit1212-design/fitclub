@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { getMealStatus } from "@/lib/ai-mock";
+import { errorMessage } from "@/lib/errors";
+import { getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
 
 const STICKERS = ["👍", "🔥", "💪", "⭐", "🎯", "❤️", "👏", "🥗"];
@@ -53,17 +55,39 @@ export function CoachActivityWall({
   };
 
   const sendReaction = async (log: MealLog, sticker: string) => {
-    const res = await fetch("/api/coach/reactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const res = await fetch("/api/coach/reactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          mealLogId: log.id,
+          sticker,
+          studentEmail: log.email,
+        }),
+      });
+
+      const data = (await res.json()) as { error?: string; hint?: string };
+
+      if (res.ok) {
+        onToast(`已送出 ${sticker} 給學員`);
+        return;
+      }
+
+      console.error("發送 reaction 失敗:", {
+        status: res.status,
+        error: data.error,
+        hint: data.hint,
         mealLogId: log.id,
-        sticker,
-        studentEmail: log.email,
-      }),
-    });
-    if (res.ok) onToast(`已送出 ${sticker} 給學員`);
-    else onToast("發送失敗");
+      });
+      onToast(data.error ?? `發送失敗 (HTTP ${res.status})`);
+    } catch (err) {
+      console.error("發送 reaction 失敗:", err);
+      onToast(errorMessage(err, "發送失敗"));
+    }
   };
 
   const saveTargets = async () => {
