@@ -19,7 +19,7 @@ import {
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
 import { initUserRegistry } from "@/lib/registry";
-import { getSession, saveSession } from "@/lib/session";
+import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
@@ -244,7 +244,10 @@ export default function AddMealPage() {
       try {
         res = await fetch("/api/meals/log", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionRequestHeaders(),
+          },
           credentials: "include",
           body: JSON.stringify({ ...basePayload, imageUrl }),
         });
@@ -270,7 +273,19 @@ export default function AddMealPage() {
         console.error("[add-meal] API error", { status: res.status, ...errBody });
 
         if (res.status === 401) {
-          throw new Error("登入已過期，請重新登入後再試");
+          console.warn("[add-meal] API 401, fallback direct Supabase save");
+          await saveMealLog({
+            email,
+            mealType: basePayload.mealType,
+            description: basePayload.description,
+            imageUrl,
+            calories: basePayload.calories,
+            protein: basePayload.protein,
+            carbs: basePayload.carbs,
+            fats: basePayload.fats,
+          });
+          router.push("/");
+          return;
         }
 
         if (res.status >= 500) {

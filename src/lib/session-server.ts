@@ -13,23 +13,33 @@ export function hasSessionCookie(request: Request): boolean {
   return Boolean(readCookieValue(cookieHeader, SESSION_KEY));
 }
 
-export function parseSessionFromRequest(
-  request: Request
-): UserSession | null {
-  const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) return null;
-
-  const raw = readCookieValue(cookieHeader, SESSION_KEY);
-  if (!raw) return null;
-
+function parseSessionJson(raw: string): UserSession | null {
   const attempts = [raw, decodeURIComponent(raw)];
   for (const candidate of attempts) {
     try {
       const session = JSON.parse(candidate) as UserSession;
       if (session?.email) return session;
     } catch {
-      // try next parse strategy
+      // try next
     }
   }
   return null;
+}
+
+export function parseSessionFromRequest(
+  request: Request
+): UserSession | null {
+  const headerRaw = request.headers.get("x-fitclub-session");
+  if (headerRaw) {
+    const fromHeader = parseSessionJson(headerRaw);
+    if (fromHeader) return fromHeader;
+  }
+
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+
+  const raw = readCookieValue(cookieHeader, SESSION_KEY);
+  if (!raw) return null;
+
+  return parseSessionJson(raw);
 }
