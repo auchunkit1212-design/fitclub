@@ -2,12 +2,24 @@ import { NextResponse } from "next/server";
 import { insertMealReaction } from "@/lib/phase4-db";
 import { notifyStudentOfReaction } from "@/lib/meal-notifications";
 import { parseSessionFromRequest } from "@/lib/session-server";
+import { toReadableError } from "@/lib/errors";
 
 const STICKERS = ["👍", "🔥", "💪", "⭐", "🎯", "❤️", "👏", "🥗"];
 
+function isCoachOrAdmin(session: ReturnType<typeof parseSessionFromRequest>) {
+  return (
+    Boolean(session?.email) &&
+    (session?.role === "coach" || session?.role === "admin")
+  );
+}
+
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
-  if (!session?.email || (session.role !== "coach" && session.role !== "admin")) {
+  if (!isCoachOrAdmin(session)) {
+    console.warn("[coach/reactions] unauthorized", {
+      hasSession: Boolean(session?.email),
+      role: session?.role,
+    });
     return NextResponse.json({ error: "僅教練可操作" }, { status: 403 });
   }
 
@@ -28,22 +40,32 @@ export async function POST(request: Request) {
   try {
     const reaction = await insertMealReaction(
       body.mealLogId,
-      session.email,
-      body.sticker
+      session!.email,
+      body.sticker,
+      { useServiceRole: true }
     );
 
     if (body.studentEmail) {
       notifyStudentOfReaction(
         body.studentEmail,
         body.sticker,
-        session.name
-      ).catch(console.warn);
+        session!.name || "教練"
+      ).catch((pushErr) => {
+        console.warn("[coach/reactions] push notification failed (ignored):", pushErr);
+      });
     }
 
     return NextResponse.json({ reaction });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "發送失敗";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const readable = toReadableError(error, "發送失敗");
+    console.error("[coach/reactions] insert failed:", readable.message, error);
+    return NextResponse.json(
+      {
+        error: readable.message,
+        hint: "請在 Supabase 執行 fix-meal-log-reactions.sql 及確認 SUPABASE_SERVICE_ROLE_KEY",
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -21,7 +21,7 @@ import { fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
-import { clearSession, getSession, saveSession } from "@/lib/session";
+import { clearSession, getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { withTimeout } from "@/lib/with-timeout";
 import {
   fetchWeightLogsLastDays,
@@ -305,7 +305,10 @@ export default function StudentDashboard() {
     if (!isStudent || todayLogs.length === 0) return;
     const poll = async () => {
       const ids = todayLogs.map((l) => l.id).join(",");
-      const res = await fetch(`/api/coach/reactions?mealLogIds=${ids}`);
+      const res = await fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
+        credentials: "include",
+        headers: getSessionRequestHeaders(),
+      });
       const data = (await res.json()) as { reactions?: MealLogReaction[] };
       setCoachReactions(data.reactions ?? []);
     };

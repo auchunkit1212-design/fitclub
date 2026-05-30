@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
+import { toReadableError } from "@/lib/errors";
 import { fetchAllUsers, fetchUserByEmail } from "@/lib/db";
 import type {
   FavoriteFood,
@@ -86,9 +87,12 @@ function mapTargets(row: Record<string, unknown>): StudentNutritionTargets {
 export async function insertMealReaction(
   mealLogId: string,
   coachEmail: string,
-  sticker: string
+  sticker: string,
+  options?: { useServiceRole?: boolean }
 ): Promise<MealLogReaction> {
-  const { data, error } = await supabase
+  const client = options?.useServiceRole ? getSupabaseAdmin() : supabase;
+
+  const { data, error } = await client
     .from("meal_log_reactions")
     .upsert(
       {
@@ -101,7 +105,12 @@ export async function insertMealReaction(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw toReadableError(
+      error,
+      "meal_log_reactions 寫入失敗（請執行 fix-meal-log-reactions.sql）"
+    );
+  }
   return mapReaction(data);
 }
 
