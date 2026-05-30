@@ -45,8 +45,15 @@ export function saveSession(session: UserSession): void {
 export function getSessionRequestHeaders(): Record<string, string> {
   const session = getSession();
   if (!session?.email) return {};
+  const slim = {
+    email: session.email,
+    role: session.role,
+    name: session.name,
+    gym: session.gym,
+    isLoggedIn: true as const,
+  };
   return {
-    "X-Fitclub-Session": encodeURIComponent(JSON.stringify(session)),
+    "X-Fitclub-Session": encodeURIComponent(JSON.stringify(slim)),
   };
 }
 

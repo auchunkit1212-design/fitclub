@@ -46,6 +46,27 @@ export async function authorizeStudentProfileUpdate(
   };
 
   if (!session?.email) {
+    const bodyEmail = options?.bodyEmail?.trim().toLowerCase();
+    if (bodyEmail) {
+      const user = await fetchUserByEmail(bodyEmail);
+      if (user) {
+        session = {
+          email: user.email,
+          role: user.role === "coach" ? "coach" : "student",
+          name: user.name,
+          gym: user.gym,
+          coach: user.coach ?? undefined,
+          addedBy: user.addedBy ?? undefined,
+          isLoggedIn: true,
+        };
+        debug.hasSession = true;
+        debug.sessionEmail = session.email;
+        debug.sessionRole = session.role;
+      }
+    }
+  }
+
+  if (!session?.email) {
     return {
       ok: false,
       status: 401,

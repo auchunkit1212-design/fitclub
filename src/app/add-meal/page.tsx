@@ -239,8 +239,22 @@ export default function AddMealPage() {
       fats: Number(fats) || 0,
     };
 
+    const mealPayload = {
+      email,
+      mealType: basePayload.mealType,
+      description: basePayload.description,
+      calories: basePayload.calories,
+      protein: basePayload.protein,
+      carbs: basePayload.carbs,
+      fats: basePayload.fats,
+    };
+
+    const saveDirect = async (imageUrl?: string) => {
+      await saveMealLog({ ...mealPayload, imageUrl });
+    };
+
     const trySave = async (imageUrl?: string) => {
-      let res: Response;
+      let res: Response | null = null;
       try {
         res = await fetch("/api/meals/log", {
           method: "POST",
@@ -252,66 +266,46 @@ export default function AddMealPage() {
           body: JSON.stringify({ ...basePayload, imageUrl }),
         });
       } catch (networkErr) {
-        console.error("[add-meal] network error", networkErr);
-        throw new Error(
-          errorMessage(networkErr, "無法連線伺服器，請檢查網絡後再試")
-        );
+        console.warn("[add-meal] API network error, fallback direct save", networkErr);
+        await saveDirect(imageUrl);
+        router.push("/");
+        return;
       }
 
-      if (!res.ok) {
-        let errBody: {
-          error?: string;
-          code?: string;
-          detail?: string;
-          hint?: string;
-        } = {};
-        try {
-          errBody = (await res.json()) as typeof errBody;
-        } catch {
-          errBody = { error: `HTTP ${res.status}` };
-        }
-        console.error("[add-meal] API error", { status: res.status, ...errBody });
+      if (res.ok) {
+        router.push("/");
+        return;
+      }
 
-        if (res.status === 401) {
-          console.warn("[add-meal] API 401, fallback direct Supabase save");
-          await saveMealLog({
-            email,
-            mealType: basePayload.mealType,
-            description: basePayload.description,
-            imageUrl,
-            calories: basePayload.calories,
-            protein: basePayload.protein,
-            carbs: basePayload.carbs,
-            fats: basePayload.fats,
-          });
-          router.push("/");
-          return;
-        }
+      let errBody: {
+        error?: string;
+        code?: string;
+        detail?: string;
+        hint?: string;
+      } = {};
+      try {
+        errBody = (await res.json()) as typeof errBody;
+      } catch {
+        errBody = { error: `HTTP ${res.status}` };
+      }
+      console.error("[add-meal] API error", { status: res.status, ...errBody });
 
-        if (res.status >= 500) {
-          console.warn("[add-meal] API failed, trying direct Supabase save");
-          await saveMealLog({
-            email,
-            mealType: basePayload.mealType,
-            description: basePayload.description,
-            imageUrl,
-            calories: basePayload.calories,
-            protein: basePayload.protein,
-            carbs: basePayload.carbs,
-            fats: basePayload.fats,
-          });
-          router.push("/");
-          return;
-        }
-
+      try {
+        console.warn("[add-meal] fallback direct Supabase save");
+        await saveDirect(imageUrl);
+        router.push("/");
+      } catch (directErr) {
+        console.error("[add-meal] direct save failed", directErr);
         throw new Error(
-          errBody.error ??
-            (errBody.code === "DB_ERROR"
-              ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
-              : `儲存失敗 (HTTP ${res.status})`)
+          errorMessage(
+            directErr,
+            errBody.error ??
+              (errBody.code === "DB_ERROR"
+                ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
+                : `儲存失敗 (HTTP ${res.status})`)
+          )
         );
       }
-      router.push("/");
     };
 
     try {

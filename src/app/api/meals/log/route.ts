@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { insertMealLog } from "@/lib/db";
+import { resolveMealLogEmail } from "@/lib/meal-log-auth";
 import { MEAL_IMAGES_BUCKET } from "@/lib/meal-image-storage";
 import { notifyCoachOfNewMealLog } from "@/lib/meal-notifications";
 import { parseSessionFromRequest } from "@/lib/session-server";
@@ -22,11 +23,9 @@ export async function POST(request: Request) {
   }
 
   const session = parseSessionFromRequest(request);
-  if (!session?.email) {
-    return NextResponse.json({ error: "未登入" }, { status: 401 });
-  }
 
   const body = (await request.json()) as {
+    email?: string;
     mealType: string;
     description: string;
     imageUrl?: string;
@@ -36,6 +35,11 @@ export async function POST(request: Request) {
     fats: number;
   };
 
+  const email = await resolveMealLogEmail(session, body.email);
+  if (!email) {
+    return NextResponse.json({ error: "未登入" }, { status: 401 });
+  }
+
   if (!body.description?.trim()) {
     return NextResponse.json({ error: "請填寫食物描述" }, { status: 400 });
   }
@@ -43,7 +47,7 @@ export async function POST(request: Request) {
   try {
     const log = await insertMealLog(
       {
-        email: session.email,
+        email,
         mealType: body.mealType,
         description: body.description.trim(),
         imageUrl: body.imageUrl?.trim() || undefined,

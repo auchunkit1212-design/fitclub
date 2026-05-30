@@ -1,5 +1,5 @@
-const CACHE_VERSION = "fitclub-pwa-v4";
-const STATIC_CACHE = "fitclub-static-v4";
+const CACHE_VERSION = "fitclub-pwa-v5";
+const STATIC_CACHE = "fitclub-static-v5";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
 const PRECACHE_URLS = ["/logo.png", "/manifest.json"];
@@ -66,20 +66,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Next 靜態資源：快取優先
+  // Next 靜態資源：網絡優先，避免 PWA 長期使用舊版 JS
   if (isStaticAsset(url.pathname)) {
     event.respondWith(
-      caches.match(event.request).then(
-        (cached) =>
-          cached ||
-          fetch(event.request).then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, copy));
-            }
-            return response;
-          })
-      )
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
