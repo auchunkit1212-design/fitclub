@@ -1,49 +1,69 @@
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
+/** Supabase Storage bucket for meal photos */
 export const MEAL_IMAGES_BUCKET = "food-images";
 
-function parseDataUrl(dataUrl: string): {
-  contentType: string;
-  buffer: Buffer;
-  ext: string;
-} {
+function dataUrlToBlob(dataUrl: string): Blob {
   const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
   if (!match) {
     throw new Error("INVALID_IMAGE_DATA_URL");
   }
-  const contentType = match[1];
-  const buffer = Buffer.from(match[2], "base64");
-  const ext = contentType.includes("png")
-    ? "png"
-    : contentType.includes("webp")
-      ? "webp"
-      : "jpg";
-  return { contentType, buffer, ext };
+  const mime = match[1];
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
 }
 
-/** 伺服器端：壓縮後的 data URL → Supabase Storage → 公開 URL */
-export async function uploadMealImageToStorage(
+function storagePathForEmail(studentEmail: string, ext: string): string {
+  const safeEmail = studentEmail
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9@._-]/g, "_");
+  return `${safeEmail}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+}
+
+/**
+ * 前端直傳 Supabase Storage（使用 supabase-js + anon key，非 service role）
+ */
+export async function uploadMealImageFromClient(
   studentEmail: string,
   dataUrl: string
 ): Promise<string> {
-  const admin = getSupabaseAdmin();
-  const { contentType, buffer, ext } = parseDataUrl(dataUrl);
-  const safeEmail = studentEmail.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, "_");
-  const path = `${safeEmail}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { supabase } = await import("@/lib/supabase");
 
-  const { error } = await admin.storage
+  const blob = dataUrlToBlob(dataUrl);
+  const ext = blob.type.includes("png")
+    ? "png"
+    : blob.type.includes("webp")
+      ? "webp"
+      : "jpg";
+  const path = storagePathForEmail(studentEmail, ext);
+
+  const { error } = await supabase.storage
     .from(MEAL_IMAGES_BUCKET)
-    .upload(path, buffer, {
-      contentType,
+    .upload(path, blob, {
+      contentType: blob.type || "image/jpeg",
       cacheControl: "3600",
       upsert: false,
     });
 
   if (error) {
-    throw new Error(`STORAGE_UPLOAD_FAILED: ${error.message}`);
+    const msg = error.message ?? "unknown";
+    if (msg.toLowerCase().includes("bucket") || msg.includes("not found")) {
+      throw new Error(
+        "STORAGE_BUCKET_MISSING: 請在 Supabase 執行 storage-food-images.sql"
+      );
+    }
+    if (msg.toLowerCase().includes("row-level security") || msg.includes("policy")) {
+      throw new Error(
+        "STORAGE_RLS_DENIED: Storage RLS 拒絕上傳，請執行 storage-food-images.sql"
+      );
+    }
+    throw new Error(`STORAGE_UPLOAD_FAILED: ${msg}`);
   }
 
-  const { data } = admin.storage.from(MEAL_IMAGES_BUCKET).getPublicUrl(path);
+  const { data } = supabase.storage.from(MEAL_IMAGES_BUCKET).getPublicUrl(path);
   if (!data.publicUrl) {
     throw new Error("STORAGE_PUBLIC_URL_FAILED");
   }
