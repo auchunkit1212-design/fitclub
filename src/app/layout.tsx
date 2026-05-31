@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { BRAND_FULL, BRAND_NAME, APP_LOGO_PATH } from "@/lib/brand";
+import { BRAND_FULL, BRAND_NAME } from "@/lib/brand";
 import { BrandingProvider } from "@/components/BrandingProvider";
 import { DynamicManifestLink } from "@/components/DynamicManifestLink";
 import { PwaShell } from "@/components/PwaShell";
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   applicationName: BRAND_NAME,
   manifest: "/api/manifest",
     icons: {
-    icon: [{ url: APP_LOGO_PATH, type: "image/png" }],
-    apple: [{ url: APP_LOGO_PATH, type: "image/png" }],
+    icon: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
   },
   appleWebApp: {
     capable: true,

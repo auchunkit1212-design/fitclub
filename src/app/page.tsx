@@ -505,13 +505,7 @@ export default function StudentDashboard() {
         className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5 rounded-b-3xl shadow-lg overflow-hidden`}
       >
         <div className="flex items-start gap-2.5 min-w-0">
-          <GorillaMascot
-            themeColor={branding?.themeColor ?? "emerald"}
-            logoUrl={
-              isCustomBrandLogo(branding?.logo) ? branding?.logo : undefined
-            }
-            size="sm"
-          />
+          <GorillaMascot logoUrl={branding?.logo} size="sm" />
           <div className="flex-1 min-w-0 pt-0.5">
             <p className="text-white/75 text-[10px] leading-tight line-clamp-1">
               {BRAND_TAGLINE}

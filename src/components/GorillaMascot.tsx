@@ -1,44 +1,143 @@
 "use client";
 
 import Image from "next/image";
-import { APP_LOGO_PATH, isCustomBrandLogo } from "@/lib/brand";
+import { isCustomBrandLogo, resolveTenantLogoUrl } from "@/lib/brand";
 
 interface GorillaMascotProps {
   logoUrl?: string;
+  /** @deprecated 保留供 Header 傳 tenant 上下文，logo 仍以 logoUrl 為準 */
+  tenantSlug?: string;
   className?: string;
   size?: "sm" | "md";
-  /** @deprecated 官方 logo 為固定黑白大猩猩，不再跟 theme 變色 */
+  /** @deprecated 背心固定為白色，不再跟 theme 變色 */
   themeColor?: string;
 }
 
-/** Nutrition Coach 官方大猩猩 logo */
+const VEST_PATH =
+  "M350 640 C380 610 440 590 512 590 C584 590 644 610 674 640 L690 760 C660 820 590 860 512 860 C434 860 364 820 334 760 Z";
+
+/** 啡色大猩猩 + 白背心 + 胸口商戶 Logo 徽章 */
 export function GorillaMascot({
   logoUrl,
   className = "",
   size = "md",
 }: GorillaMascotProps) {
   const dim = size === "sm" ? "w-14 h-14" : "w-[4.5rem] h-[4.5rem]";
-  const showTenantLogo = isCustomBrandLogo(logoUrl);
+  const tenantLogo = resolveTenantLogoUrl(logoUrl);
+  const showTenantLogo = Boolean(tenantLogo);
+  const badgeSize = size === "sm" ? "w-8 h-8" : "w-10 h-10";
 
   return (
-    <div className={`relative shrink-0 ${dim} ${className}`}>
-      <Image
-        src={APP_LOGO_PATH}
-        alt="Nutrition Coach"
-        width={256}
-        height={256}
-        className="w-full h-full object-contain drop-shadow-sm"
-        priority
-      />
-      {showTenantLogo && logoUrl ? (
-        <Image
-          src={logoUrl}
-          alt=""
-          width={48}
-          height={48}
-          unoptimized
-          className="absolute -bottom-0.5 -right-0.5 w-[28%] h-[28%] rounded-full border-2 border-white object-cover shadow-sm"
+    <div className={`relative shrink-0 ${dim} ${className}`} aria-hidden>
+      <svg
+        viewBox="0 0 1024 1024"
+        className="w-full h-full drop-shadow-sm"
+        role="img"
+        aria-label="Nutrition Coach 吉祥物"
+      >
+        <path
+          fill="#8B4513"
+          d="M512 80 C680 80 780 160 820 260 C860 200 940 220 980 320 C1020 420 980 540 920 620 C960 700 940 820 860 900 C780 980 640 980 512 980 C384 980 244 980 164 900 C84 820 64 700 104 620 C44 540 4 420 44 320 C84 220 164 200 204 260 C244 160 344 80 512 80Z"
         />
+        <path
+          fill="#FFFFFF"
+          d="M512 210 C620 210 700 270 720 360 C740 450 700 530 640 570 C600 600 560 610 512 610 C464 610 424 600 384 570 C324 530 284 450 304 360 C324 270 404 210 512 210Z"
+        />
+        <path fill="#3E2723" d="M390 340 C420 310 470 310 500 340 C470 360 420 360 390 340Z" />
+        <path fill="#3E2723" d="M524 340 C554 310 604 310 634 340 C604 360 554 360 524 340Z" />
+        <circle cx="445" cy="395" r="38" fill="#3E2723" />
+        <circle cx="579" cy="395" r="38" fill="#3E2723" />
+        <circle cx="458" cy="382" r="10" fill="#FFFFFF" />
+        <circle cx="592" cy="382" r="10" fill="#FFFFFF" />
+        <path
+          fill="#3E2723"
+          d="M470 455 C485 430 500 430 512 445 C524 430 539 430 554 455 C539 480 524 490 512 490 C500 490 485 480 470 455Z"
+        />
+        <path
+          fill="#3E2723"
+          d="M360 520 C400 580 440 600 512 600 C584 600 624 580 664 520 C640 640 580 680 512 680 C444 680 384 640 360 520Z"
+        />
+        <path
+          fill="#FFFFFF"
+          d="M400 560 C440 590 476 600 512 600 C548 600 584 590 624 560 C600 610 560 630 512 630 C464 630 424 610 400 560Z"
+        />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="12"
+          strokeLinecap="round"
+          d="M250 320 C220 280 200 320 220 380"
+        />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="12"
+          strokeLinecap="round"
+          d="M774 320 C804 280 824 320 804 380"
+        />
+        <path id="gorilla-white-vest" fill="#FFFFFF" d={VEST_PATH} />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="10"
+          strokeLinecap="round"
+          d="M120 520 C200 460 280 430 350 450"
+        />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="10"
+          strokeLinecap="round"
+          d="M904 520 C824 460 744 430 674 450"
+        />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="8"
+          strokeLinecap="round"
+          d="M390 700 C440 740 472 760 512 760 C552 760 584 740 634 700"
+        />
+        <path
+          fill="none"
+          stroke="#F5DEB3"
+          strokeWidth="8"
+          strokeLinecap="round"
+          d="M430 760 C470 790 490 800 512 800 C534 800 554 790 594 760"
+        />
+        <path
+          fill="none"
+          stroke="#E8E8E8"
+          strokeWidth="10"
+          strokeLinecap="round"
+          d="M350 640 C300 580 240 540 180 500"
+        />
+        <path
+          fill="none"
+          stroke="#E8E8E8"
+          strokeWidth="10"
+          strokeLinecap="round"
+          d="M674 640 C724 580 784 540 844 500"
+        />
+        <path
+          fill="none"
+          stroke="#E8E8E8"
+          strokeWidth="10"
+          strokeLinecap="round"
+          d="M350 640 C400 610 460 590 512 590 C564 590 624 610 674 640"
+        />
+      </svg>
+
+      {showTenantLogo && tenantLogo ? (
+        <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-[18%]">
+          <Image
+            src={tenantLogo}
+            alt=""
+            width={40}
+            height={40}
+            unoptimized
+            className={`${badgeSize} rounded-full object-cover border-2 border-white/90 shadow-md`}
+          />
+        </div>
       ) : null}
     </div>
   );

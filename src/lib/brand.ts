@@ -16,6 +16,16 @@ export function themeColorToHex(theme: "emerald" | "blue" | "black"): string {
 export function isCustomBrandLogo(logo?: string): boolean {
   if (!logo?.trim()) return false;
   if (logo.includes("gorilla-logo.png")) return false;
+  if (logo.includes("gorilla.svg")) return false;
   if (logo.includes("logo.png")) return false;
-  return logo.startsWith("data:") || logo.startsWith("http");
+  return (
+    logo.startsWith("data:") ||
+    logo.startsWith("http") ||
+    logo.startsWith("/api/tenant/logo")
+  );
+}
+
+/** 解析可疊加在白背心上的 tenant logo */
+export function resolveTenantLogoUrl(logoUrl?: string): string | undefined {
+  return isCustomBrandLogo(logoUrl) ? logoUrl : undefined;
 }
