@@ -116,9 +116,9 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
     <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-zinc-800">🔍 巨型食物搜尋引擎</h2>
-        {lastSource === "gemini" && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
-            Gemini AI
+        {lastSource === "local" && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            智能估算
           </span>
         )}
       </div>

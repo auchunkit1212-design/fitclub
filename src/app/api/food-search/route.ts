@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { FoodSearchError, searchFoodWithGemini } from "@/lib/food-search-ai";
+import { FoodSearchError, searchFoodLocally } from "@/lib/food-search-ai";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const items = await searchFoodWithGemini(query);
-    return NextResponse.json({ items, source: "gemini" });
+    const items = await searchFoodLocally(query);
+    return NextResponse.json({ items, source: "local" });
   } catch (error) {
     if (error instanceof FoodSearchError) {
       console.error("[food-search]", error.message);

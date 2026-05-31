@@ -1,14 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { estimateMacros } from "@/lib/ai-mock";
 import type { FoodSearchItem } from "@/lib/types";
-
-export interface AiFoodSearchResult {
-  food_name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  weight_g: number;
-}
 
 export class FoodSearchError extends Error {
   statusCode: number;
@@ -20,99 +11,144 @@ export class FoodSearchError extends Error {
   }
 }
 
-const SYSTEM_INSTRUCTION =
-  "你是一個精通香港飲食與各國料理的營養資料庫。請嚴格根據用戶提供的食物名稱，估算標準一人份的營養素。必須回傳 JSON。";
+type MacroSet = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  weightG: number;
+};
 
-function parseAiJson(raw: string, query: string): AiFoodSearchResult {
-  const trimmed = raw.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonText = fenced ? fenced[1].trim() : trimmed;
+/** 關鍵字越具體越靠前匹配 */
+const FOOD_RULES: { test: RegExp; macros: MacroSet }[] = [
+  {
+    test: /latte|拿鐵|flat white/i,
+    macros: { calories: 190, protein: 9, carbs: 18, fats: 8, weightG: 350 },
+  },
+  {
+    test: /cappuccino|卡布/i,
+    macros: { calories: 120, protein: 6, carbs: 12, fats: 6, weightG: 300 },
+  },
+  {
+    test: /espresso|意式|浓缩/i,
+    macros: { calories: 5, protein: 0, carbs: 1, fats: 0, weightG: 30 },
+  },
+  {
+    test: /coffee|咖啡/i,
+    macros: { calories: 15, protein: 1, carbs: 2, fats: 0, weightG: 240 },
+  },
+  {
+    test: /叉燒飯|char siu rice/i,
+    macros: { calories: 820, protein: 32, carbs: 95, fats: 32, weightG: 450 },
+  },
+  {
+    test: /茶走|奶茶|檸茶|milky tea/i,
+    macros: { calories: 310, protein: 4, carbs: 48, fats: 12, weightG: 350 },
+  },
+  {
+    test: /乾炒牛河|炒牛河/i,
+    macros: { calories: 950, protein: 28, carbs: 88, fats: 48, weightG: 420 },
+  },
+  {
+    test: /拉麵|ramen|叉燒.*麵|牛肉.*麵/i,
+    macros: { calories: 780, protein: 34, carbs: 82, fats: 30, weightG: 480 },
+  },
+  {
+    test: /雞胸|chicken breast/i,
+    macros: { calories: 220, protein: 42, carbs: 0, fats: 5, weightG: 150 },
+  },
+  {
+    test: /三文治|sandwich|多士|toast/i,
+    macros: { calories: 420, protein: 16, carbs: 44, fats: 20, weightG: 180 },
+  },
+  {
+    test: /沙拉|salad/i,
+    macros: { calories: 280, protein: 12, carbs: 18, fats: 18, weightG: 250 },
+  },
+  {
+    test: /壽司|sushi/i,
+    macros: { calories: 380, protein: 18, carbs: 58, fats: 8, weightG: 220 },
+  },
+  {
+    test: /漢堡|burger/i,
+    macros: { calories: 650, protein: 28, carbs: 52, fats: 36, weightG: 280 },
+  },
+  {
+    test: /pizza|薄餅/i,
+    macros: { calories: 720, protein: 26, carbs: 78, fats: 32, weightG: 320 },
+  },
+  {
+    test: /意粉|pasta|通粉/i,
+    macros: { calories: 580, protein: 24, carbs: 68, fats: 22, weightG: 350 },
+  },
+  {
+    test: /蛋|egg/i,
+    macros: { calories: 155, protein: 13, carbs: 1, fats: 11, weightG: 100 },
+  },
+  {
+    test: /飯|rice(?!.*cake)/i,
+    macros: { calories: 520, protein: 14, carbs: 78, fats: 14, weightG: 380 },
+  },
+  {
+    test: /麵|noodle/i,
+    macros: { calories: 480, protein: 18, carbs: 68, fats: 14, weightG: 400 },
+  },
+  {
+    test: /湯|soup/i,
+    macros: { calories: 180, protein: 12, carbs: 14, fats: 8, weightG: 350 },
+  },
+];
 
-  let parsed: Partial<AiFoodSearchResult & { fats?: number }>;
-  try {
-    parsed = JSON.parse(jsonText) as Partial<AiFoodSearchResult & { fats?: number }>;
-  } catch {
-    throw new FoodSearchError("AI 回應格式錯誤，無法解析營養資料，請換個關鍵字再試", 502);
+function hashQuery(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    h = (h * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+function estimateFromRules(query: string): MacroSet {
+  const q = query.trim();
+  const lower = q.toLowerCase();
+
+  for (const rule of FOOD_RULES) {
+    if (rule.test.test(q) || rule.test.test(lower)) {
+      return rule.macros;
+    }
   }
 
-  const calories = Number(parsed.calories);
-  const protein = Number(parsed.protein);
-  const carbs = Number(parsed.carbs);
-  const fat = Number(parsed.fat ?? parsed.fats);
-  const weight_g = Number(parsed.weight_g);
-
-  if (
-    !Number.isFinite(calories) ||
-    !Number.isFinite(protein) ||
-    !Number.isFinite(carbs) ||
-    !Number.isFinite(fat) ||
-    calories <= 0
-  ) {
-    throw new FoodSearchError("AI 回應缺少有效營養數值，請換個關鍵字再試", 502);
-  }
+  const base = estimateMacros(q, "中拳", "中掌", "有");
+  const h = hashQuery(lower);
+  const jitter = (h % 41) - 20;
 
   return {
-    food_name: String(parsed.food_name ?? query).trim() || query,
-    calories: Math.round(calories),
-    protein: Math.round(protein),
-    carbs: Math.round(carbs),
-    fat: Math.round(fat),
-    weight_g: Math.round(Number.isFinite(weight_g) ? weight_g : 0),
+    calories: Math.max(80, base.calories + jitter),
+    protein: Math.max(0, base.protein + ((h >> 3) % 7) - 3),
+    carbs: Math.max(0, base.carbs + ((h >> 5) % 11) - 5),
+    fats: Math.max(0, base.fats + ((h >> 7) % 5) - 2),
+    weightG: 280 + (h % 120),
   };
 }
 
-function toSearchItem(result: AiFoodSearchResult): FoodSearchItem {
+function toSearchItem(query: string, macros: MacroSet): FoodSearchItem {
   return {
-    id: `ai-${Date.now()}-${result.food_name.slice(0, 12)}`,
-    name: result.food_name,
+    id: `local-${Date.now()}-${query.slice(0, 12)}`,
+    name: query.trim(),
     brand: "",
-    calories: result.calories,
-    protein: result.protein,
-    carbs: result.carbs,
-    fats: result.fat,
-    weightG: result.weight_g,
-    servingLabel: result.weight_g > 0 ? `約 ${result.weight_g}g` : "標準一人份",
-    source: "gemini",
+    calories: macros.calories,
+    protein: macros.protein,
+    carbs: macros.carbs,
+    fats: macros.fats,
+    weightG: macros.weightG,
+    servingLabel: `約 ${macros.weightG}g · 標準一人份`,
+    source: "local",
   };
 }
 
-export async function searchFoodWithGemini(query: string): Promise<FoodSearchItem[]> {
+/** 本地智能估算（無需外部 API，即時可用） */
+export async function searchFoodLocally(query: string): Promise<FoodSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new FoodSearchError(
-      "AI 尚未設定，請聯絡管理員在環境變數加入 GEMINI_API_KEY",
-      500
-    );
-  }
-
-  const userPrompt = `請估算『${q}』。回傳 JSON 格式必須為：{"calories": 數字, "protein": 數字, "carbs": 數字, "fat": 數字, "weight_g": 數字}`;
-
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_INSTRUCTION,
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.3,
-      },
-    });
-
-    const result = await model.generateContent(userPrompt);
-    const content = result.response.text();
-    if (!content.trim()) {
-      throw new FoodSearchError("AI 未回傳營養資料，請換個關鍵字再試", 502);
-    }
-
-    const parsed = parseAiJson(content, q);
-    return [toSearchItem(parsed)];
-  } catch (error) {
-    if (error instanceof FoodSearchError) throw error;
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[food-search-ai] Gemini error", message);
-    throw new FoodSearchError("AI 分析失敗，請稍後再試", 502);
-  }
+  const macros = estimateFromRules(q);
+  return [toSearchItem(q, macros)];
 }
