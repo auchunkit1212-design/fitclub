@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
+import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
@@ -13,7 +14,7 @@ import {
   resolveBranding,
   updateCoachLogo,
 } from "@/lib/db";
-import { applyBrandToSession } from "@/lib/branding";
+import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
@@ -51,6 +52,7 @@ export default function CoachPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [toast, setToast] = useState("");
 
   const showToast = (message: string) => {
@@ -76,7 +78,14 @@ export default function CoachPage() {
         setStudents(filterStudentsForSession(current, registry));
 
         if (current.role === "coach") {
+          const brandResolved = await resolveBrandForUser(current, registry);
           const resolved = await resolveBranding(current, registry);
+          setInviteCode(
+            brandResolved.tenantSlug ??
+              current.tenantSlug ??
+              current.tenantId ??
+              ""
+          );
           setAppTitle(resolved.branding.appTitle);
           setThemeColor(resolved.branding.themeColor);
           setLogo(resolved.branding.logo);
@@ -210,6 +219,13 @@ export default function CoachPage() {
             </pre>
           )}
         </section>
+
+        {session?.role === "coach" && (
+          <CoachInviteCodePanel
+            inviteCode={inviteCode}
+            onCopied={showToast}
+          />
+        )}
 
         {session?.role === "coach" && (
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">

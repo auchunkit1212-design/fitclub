@@ -60,6 +60,17 @@ export async function fetchTenantBySlug(slug: string): Promise<Tenant | null> {
   return data ? mapTenant(data as TenantRow) : null;
 }
 
+/** 學員註冊邀請碼：先比對 slug，再 fallback 至 tenant id */
+export async function fetchTenantByInviteCode(
+  code: string
+): Promise<Tenant | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  const bySlug = await fetchTenantBySlug(trimmed);
+  if (bySlug) return bySlug;
+  return fetchTenantById(trimmed);
+}
+
 export async function createTenantWithCoach(input: {
   email: string;
   passwordHash: string;

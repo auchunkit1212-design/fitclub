@@ -161,6 +161,25 @@ export async function fetchUserByEmail(
   return getDemoUser(normalized);
 }
 
+/** 伺服器登入專用：以 service role 讀取用戶與 password_hash，避免 RLS 阻擋舊帳號登入 */
+export async function fetchUserByEmailForAuth(
+  email: string
+): Promise<RegistryUser | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("*")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return mapUser(data as UserRow, true);
+
+  const { getDemoUser } = await import("@/lib/demo-users");
+  return getDemoUser(normalized);
+}
+
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
   const { data, error } = await supabase
     .from("users_registry")

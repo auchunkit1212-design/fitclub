@@ -10,7 +10,14 @@ import { getDemoUser } from "@/lib/demo-users";
 import { isIosSafariBrowser } from "@/lib/ios-pwa";
 import { goTo } from "@/lib/navigate";
 import { applyBrandToSession } from "@/lib/branding";
-import { registryUserToSession, initUserRegistry } from "@/lib/registry";
+import { buildSessionFromRegistryUser } from "@/lib/auth";
+import {
+  createAdminSession,
+  fetchUserByEmail,
+  registryUserToSession,
+  initUserRegistry,
+} from "@/lib/registry";
+import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
 import { getSession, saveSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import type { UserSession } from "@/lib/types";
@@ -26,11 +33,13 @@ export default function RegisterPage() {
   const [authTab, setAuthTab] = useState<AuthTab>("login");
   const [signupTrack, setSignupTrack] = useState<SignupTrack>("solo");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
   const [name, setName] = useState("");
   const [gymName, setGymName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [showInviteField, setShowInviteField] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIosBanner, setShowIosBanner] = useState(false);
@@ -66,19 +75,59 @@ export default function RegisterPage() {
     setTimeout(() => goTo(router, "/"), 1200);
   };
 
-  const syncSupabaseAuthClient = async (userEmail: string, userPassword: string) => {
+  const syncSupabaseAuthOnRegister = async (
+    userEmail: string,
+    userPassword: string
+  ) => {
     try {
       await supabase.auth.signUp({ email: userEmail, password: userPassword });
-    } catch {
-      // Cookie session 仍可用
+    } catch (err) {
+      console.warn("[register] Supabase Auth signUp skipped:", err);
     }
+  };
+
+  const tryLegacyPasswordlessLogin = async (normalized: string): Promise<boolean> => {
+    if (loginPassword.trim()) return false;
+
+    if (normalized === SUPER_ADMIN_EMAIL) {
+      finishSession(createAdminSession(normalized), "🎉 歡迎 最高總裁");
+      return true;
+    }
+
+    try {
+      const user = await fetchUserByEmail(normalized);
+      if (user && !user.hasPassword) {
+        const session = await buildSessionFromRegistryUser(user);
+        finishSession(session, `🎉 歡迎 ${session.name}`);
+        return true;
+      }
+    } catch (legacyErr) {
+      console.error("Legacy passwordless login failed:", legacyErr);
+    }
+
+    const demo = getDemoUser(normalized);
+    if (demo) {
+      const session = applyBrandToSession(registryUserToSession(demo), {
+        gymName: demo.appTitle ?? demo.gym,
+        branding: {
+          appTitle: demo.appTitle ?? demo.gym,
+          themeColor: demo.themeColor ?? "emerald",
+          logo: demo.logo,
+        },
+        broadcast: "",
+      });
+      finishSession(session, `🎉 歡迎 ${demo.name}`);
+      return true;
+    }
+
+    return false;
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
 
-    if (password.length < 6) {
+    if (signupPassword.length < 6) {
       showToast("⚠️ 請設定至少 6 位密碼。");
       return;
     }
@@ -93,7 +142,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           role: isCoach ? "coach" : "student",
           email,
-          password,
+          password: signupPassword,
           name,
           gymName: isCoach ? gymName : undefined,
           inviteCode:
@@ -114,14 +163,15 @@ export default function RegisterPage() {
         return;
       }
 
-      await syncSupabaseAuthClient(email.trim().toLowerCase(), password);
+      await syncSupabaseAuthOnRegister(email.trim().toLowerCase(), signupPassword);
       finishSession(
         data.session,
         isCoach
           ? `🎉 品牌「${data.gymName ?? gymName}」已開通！`
           : "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。"
       );
-    } catch {
+    } catch (err) {
+      console.error("Register failed:", err);
       showToast("❌ 連線失敗，請稍後再試。");
     } finally {
       setLoading(false);
@@ -132,10 +182,12 @@ export default function RegisterPage() {
     e.preventDefault();
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
+      setLoginError("請先輸入 Email。");
       showToast("⚠️ 請先輸入 Email。");
       return;
     }
 
+    setLoginError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -144,7 +196,7 @@ export default function RegisterPage() {
         credentials: "include",
         body: JSON.stringify({
           email: normalized,
-          password: password || undefined,
+          password: loginPassword.trim() || undefined,
         }),
       });
       const data = (await res.json()) as {
@@ -157,23 +209,24 @@ export default function RegisterPage() {
         return;
       }
 
-      const demo = getDemoUser(normalized);
-      if (demo && !password) {
-        const session = applyBrandToSession(registryUserToSession(demo), {
-          gymName: demo.appTitle ?? demo.gym,
-          branding: {
-            appTitle: demo.appTitle ?? demo.gym,
-            themeColor: demo.themeColor ?? "emerald",
-            logo: demo.logo,
-          },
-          broadcast: "",
-        });
-        finishSession(session, `🎉 歡迎 ${demo.name}`);
+      const apiError = data.error ?? "登入失敗";
+      console.error("Login failed:", apiError);
+
+      if (await tryLegacyPasswordlessLogin(normalized)) {
         return;
       }
 
-      showToast(`❌ ${data.error ?? "登入失敗"}`);
-    } catch {
+      setLoginError(apiError);
+      showToast(`❌ ${apiError}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "連線失敗";
+      console.error("Login failed:", message, err);
+
+      if (await tryLegacyPasswordlessLogin(normalized)) {
+        return;
+      }
+
+      setLoginError(message);
       showToast("❌ 連線失敗，請檢查網絡後再試。");
     } finally {
       setLoading(false);
@@ -213,7 +266,10 @@ export default function RegisterPage() {
             <button
               key={tab}
               type="button"
-              onClick={() => setAuthTab(tab)}
+              onClick={() => {
+                setAuthTab(tab);
+                setLoginError(null);
+              }}
               className={`py-2.5 rounded-lg text-sm font-bold transition-all ${btnClass} ${
                 authTab === tab
                   ? "bg-white text-zinc-900 shadow-sm"
@@ -241,12 +297,20 @@ export default function RegisterPage() {
             />
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={loginPassword}
+              onChange={(e) => {
+                setLoginPassword(e.target.value);
+                setLoginError(null);
+              }}
               placeholder="密碼（舊學員若未設定可留空）"
               autoComplete="current-password"
               className="w-full rounded-xl border border-zinc-200 px-3 py-3"
             />
+            {loginError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                {loginError}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -327,8 +391,8 @@ export default function RegisterPage() {
 
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
                 placeholder="密碼（至少 6 位，散客必填）"
                 required
                 minLength={6}
@@ -349,7 +413,7 @@ export default function RegisterPage() {
                     <input
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
-                      placeholder="教練 Tenant slug 邀請碼"
+                      placeholder="請輸入教練專屬邀請碼 (若無教練請留空)"
                       className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm"
                     />
                   )}

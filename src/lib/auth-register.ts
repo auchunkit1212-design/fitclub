@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   createTenantWithCoach,
   ensureAiSoloTenant,
-  fetchTenantBySlug,
+  fetchTenantByInviteCode,
 } from "@/lib/tenant";
 import type { Tenant, UserSession } from "@/lib/types";
 import { loginWithCredentials } from "@/lib/auth";
@@ -86,7 +86,7 @@ export async function registerPublicUser(
   const invite = input.inviteCode?.trim();
 
   if (invite) {
-    const invited = await fetchTenantBySlug(invite);
+    const invited = await fetchTenantByInviteCode(invite);
     if (!invited) {
       throw new Error("邀請碼無效，請確認後再試。");
     }
