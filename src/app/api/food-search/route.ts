@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchFoodWithOpenAi } from "@/lib/food-search-ai";
+import { FoodSearchError, searchFoodWithOpenAi } from "@/lib/food-search-ai";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -25,11 +25,12 @@ export async function POST(request: Request) {
 
   try {
     const items = await searchFoodWithOpenAi(query);
-    return NextResponse.json({
-      items,
-      source: process.env.OPENAI_API_KEY ? "openai" : "mock",
-    });
+    return NextResponse.json({ items, source: "openai" });
   } catch (error) {
+    if (error instanceof FoodSearchError) {
+      console.error("[food-search]", error.message);
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error("[food-search]", error);
     return NextResponse.json({ error: "搜尋失敗，請稍後再試" }, { status: 500 });
   }
