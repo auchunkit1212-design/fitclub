@@ -92,7 +92,7 @@ self.addEventListener("push", (event) => {
     title: "Nutrition Coach 提醒",
     body: "💧 記得飲水，或者去記錄你嘅飲食！",
     url: "/",
-    tag: "fitclub-reminder",
+    tag: "nutrition-coach-reminder",
   };
 
   let payload = fallback;
@@ -109,7 +109,7 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       icon: "/logo.png",
       badge: "/logo.png",
-      tag: payload.tag || "fitclub-reminder",
+      tag: payload.tag || "nutrition-coach-reminder",
       renotify: true,
       data: { url: payload.url || "/" },
     })

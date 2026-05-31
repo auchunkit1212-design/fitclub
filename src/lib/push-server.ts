@@ -227,7 +227,7 @@ export async function sendTestPushToAll(): Promise<CronSendResult> {
       title: "推送測試",
       body: "📲 推送測試成功！每晚 10 點提醒已就緒。",
       url: "/",
-      tag: "fitclub-test-push",
+      tag: "nutrition-coach-test-push",
     },
   ];
 

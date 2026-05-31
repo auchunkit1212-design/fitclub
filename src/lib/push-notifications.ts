@@ -138,7 +138,7 @@ export async function showLocalTestNotification(): Promise<void> {
     body: "💧 飲水 / 🍽️ 記錄飲食提醒測試成功！",
     icon: "/logo.png",
     badge: "/logo.png",
-    tag: "fitclub-test",
+    tag: "nutrition-coach-test",
     data: { url: "/add-meal" },
   });
 }

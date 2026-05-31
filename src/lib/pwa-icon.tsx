@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
+import { BRAND_NAME } from "@/lib/brand";
 
-export function createFitClubIcon(size: number) {
+export function createNutritionCoachIcon(size: number) {
   return new ImageResponse(
     (
       <div
@@ -21,11 +22,13 @@ export function createFitClubIcon(size: number) {
             alignItems: "center",
             color: "white",
             fontWeight: 800,
+            textAlign: "center",
+            padding: size * 0.08,
           }}
         >
-          <span style={{ fontSize: size * 0.28 }}>FC</span>
-          <span style={{ fontSize: size * 0.1, marginTop: size * 0.02 }}>
-            Gym
+          <span style={{ fontSize: size * 0.22 }}>NC</span>
+          <span style={{ fontSize: size * 0.07, marginTop: size * 0.02 }}>
+            Coach
           </span>
         </div>
       </div>
@@ -33,3 +36,6 @@ export function createFitClubIcon(size: number) {
     { width: size, height: size }
   );
 }
+
+/** @deprecated */
+export const createFitClubIcon = createNutritionCoachIcon;
