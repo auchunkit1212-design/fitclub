@@ -132,8 +132,9 @@ export interface FoodSearchItem {
   protein: number;
   carbs: number;
   fats: number;
+  weightG?: number;
   servingLabel: string;
-  source: "edamam" | "mock";
+  source: "openai" | "edamam" | "mock";
 }
 
 export const DEFAULT_PROFILE: UserProfile = {

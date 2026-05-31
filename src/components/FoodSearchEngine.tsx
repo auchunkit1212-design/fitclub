@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
 
 const btnClass =
@@ -13,6 +14,7 @@ interface FoodSearchEngineProps {
     protein: number;
     carbs: number;
     fats: number;
+    fromSearch: boolean;
   }) => void;
 }
 
@@ -21,6 +23,9 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
   const [results, setResults] = useState<FoodSearchItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastSource, setLastSource] = useState<string | null>(null);
 
   const loadFavorites = useCallback(async () => {
     try {
@@ -37,14 +42,38 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
   }, [loadFavorites]);
 
   const search = async () => {
-    if (!query.trim()) return;
+    const q = query.trim();
+    if (!q || loading) return;
     setLoading(true);
+    setError(null);
+    setResults([]);
+    setSelectedId(null);
     try {
-      const res = await fetch(
-        `/api/food/search?q=${encodeURIComponent(query.trim())}`
-      );
-      const data = (await res.json()) as { items?: FoodSearchItem[] };
+      const res = await fetch("/api/food-search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ query: q }),
+      });
+      const data = (await res.json()) as {
+        items?: FoodSearchItem[];
+        source?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(data.error ?? "搜尋失敗");
+        return;
+      }
       setResults(data.items ?? []);
+      setLastSource(data.source ?? null);
+      if ((data.items ?? []).length === 0) {
+        setError("搵唔到相關食物，請換個關鍵字再試");
+      }
+    } catch {
+      setError("網絡錯誤，請稍後再試");
     } finally {
       setLoading(false);
     }
@@ -59,14 +88,8 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
     loadFavorites();
   };
 
-  const quickAdd = (item: {
-    name: string;
-    brand?: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-  }) => {
+  const selectResult = (item: FoodSearchItem) => {
+    setSelectedId(item.id);
     const desc = item.brand ? `${item.brand} ${item.name}` : item.name;
     onAddToMeal({
       description: desc,
@@ -74,58 +97,131 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
       protein: item.protein,
       carbs: item.carbs,
       fats: item.fats,
+      fromSearch: true,
+    });
+  };
+
+  const quickAddFavorite = (item: FavoriteFood) => {
+    onAddToMeal({
+      description: item.name,
+      calories: item.calories,
+      protein: item.protein,
+      carbs: item.carbs,
+      fats: item.fats,
+      fromSearch: true,
     });
   };
 
   return (
     <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
-      <h2 className="font-semibold text-zinc-800">🔍 巨型食物搜尋引擎</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-zinc-800">🔍 巨型食物搜尋引擎</h2>
+        {lastSource === "openai" && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+            AI 估算
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-zinc-500">
+        輸入「冰室叉燒飯」、「茶走」、「雞胸肉」等，AI 即時估算標準一人份營養素
+      </p>
       <div className="flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder="搜尋品牌 / 食物名稱..."
-          className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm"
+          placeholder="搜尋食物名稱..."
+          disabled={loading}
+          className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm disabled:opacity-60"
         />
         <button
           type="button"
           onClick={search}
-          disabled={loading}
+          disabled={loading || !query.trim()}
           className={`shrink-0 px-4 py-2.5 rounded-xl bg-zinc-900 text-white text-sm font-semibold disabled:opacity-60 ${btnClass}`}
         >
-          {loading ? "..." : "搜尋"}
+          {loading ? "分析中..." : "搜尋"}
         </button>
       </div>
 
-      {results.length > 0 && (
-        <ul className="space-y-2 max-h-48 overflow-y-auto">
-          {results.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-2 p-2 rounded-xl bg-zinc-50 border border-zinc-100"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">
-                  {item.name}
-                  {item.brand && (
-                    <span className="text-zinc-400 font-normal"> · {item.brand}</span>
+      {loading && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-violet-50 border border-violet-100">
+          <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-violet-800 font-medium">
+            AI 正在分析「{query.trim()}」的營養素...
+          </p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+          {error}
+        </p>
+      )}
+
+      {results.length > 0 && !loading && (
+        <ul className="space-y-2">
+          {results.map((item) => {
+            const selected = selectedId === item.id;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => selectResult(item)}
+                  className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${btnClass} ${
+                    selected
+                      ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                      : "border-zinc-100 bg-zinc-50 hover:border-violet-200 hover:bg-violet-50/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-zinc-900 truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {item.servingLabel}
+                        {item.weightG ? ` · 約 ${item.weightG}g` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-lg font-black text-emerald-600">
+                      {item.calories}
+                      <span className="text-xs font-semibold ml-0.5">kcal</span>
+                    </span>
+                  </div>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {[
+                      ["蛋白", item.protein, "bg-sky-100 text-sky-800"],
+                      ["碳水", item.carbs, "bg-amber-100 text-amber-800"],
+                      ["脂肪", item.fats, "bg-rose-100 text-rose-800"],
+                    ].map(([label, val, cls]) => (
+                      <span
+                        key={String(label)}
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}
+                      >
+                        {label} {val}g
+                      </span>
+                    ))}
+                  </div>
+                  {selected && (
+                    <p className="text-xs text-emerald-700 font-medium mt-2">
+                      ✓ 已帶入表單，撳「發布記錄」即可儲存
+                    </p>
                   )}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {item.calories} kcal · P{item.protein} C{item.carbs} F{item.fats} ·{" "}
-                  {item.servingLabel}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => quickAdd(item)}
-                className={`w-9 h-9 rounded-full bg-emerald-600 text-white font-bold text-lg ${btnClass}`}
-              >
-                +
-              </button>
-            </li>
-          ))}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveFavorite(item);
+                  }}
+                  className="mt-1 text-[11px] text-zinc-400 hover:text-amber-600 px-1"
+                >
+                  ⭐ 加入常用
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -146,7 +242,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => quickAdd(f)}
+                  onClick={() => quickAddFavorite(f)}
                   className={`w-9 h-9 rounded-full bg-amber-500 text-white font-bold text-lg ${btnClass}`}
                 >
                   +

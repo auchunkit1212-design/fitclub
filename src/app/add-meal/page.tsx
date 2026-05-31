@@ -61,6 +61,7 @@ export default function AddMealPage() {
   const [goalFats, setGoalFats] = useState(65);
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
+  const [macrosFromSearch, setMacrosFromSearch] = useState(false);
 
   useEffect(() => {
     const parsed = getSession();
@@ -175,18 +176,30 @@ export default function AddMealPage() {
     const currentSession = getSession();
     if (currentSession) saveSession(currentSession);
 
-    // 自動 AI 估算（儲存前）
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const aiEst = estimateMacros(
-      description.trim(),
-      carbsPortion,
-      proteinPortion,
-      hasVeggies
-    );
-    setCalories(aiEst.calories);
-    setProtein(aiEst.protein);
-    setCarbs(aiEst.carbs);
-    setFats(aiEst.fats);
+    let finalCalories = calories;
+    let finalProtein = protein;
+    let finalCarbs = carbs;
+    let finalFats = fats;
+
+    if (macrosFromSearch && calories > 0) {
+      // 巨型食物搜尋引擎已帶入 AI 估算，直接沿用表單數值
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const aiEst = estimateMacros(
+        description.trim(),
+        carbsPortion,
+        proteinPortion,
+        hasVeggies
+      );
+      finalCalories = aiEst.calories;
+      finalProtein = aiEst.protein;
+      finalCarbs = aiEst.carbs;
+      finalFats = aiEst.fats;
+      setCalories(aiEst.calories);
+      setProtein(aiEst.protein);
+      setCarbs(aiEst.carbs);
+      setFats(aiEst.fats);
+    }
 
     let imageToUpload = imageBase64;
     if (imageBase64) {
@@ -224,10 +237,10 @@ export default function AddMealPage() {
       email,
       mealType,
       description: description.trim(),
-      calories: aiEst.calories,
-      protein: aiEst.protein,
-      carbs: aiEst.carbs,
-      fats: aiEst.fats,
+      calories: finalCalories,
+      protein: finalProtein,
+      carbs: finalCarbs,
+      fats: finalFats,
     };
 
     const mealPayload = {
@@ -383,6 +396,7 @@ export default function AddMealPage() {
             setProtein(item.protein);
             setCarbs(item.carbs);
             setFats(item.fats);
+            setMacrosFromSearch(item.fromSearch);
           }}
         />
 
@@ -410,7 +424,10 @@ export default function AddMealPage() {
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setMacrosFromSearch(false);
+              }}
               placeholder="例如：牛肉叉燒拉麵、茶餐廳乾炒牛河..."
               rows={3}
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base resize-none"
@@ -561,7 +578,14 @@ export default function AddMealPage() {
         </section>
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">手動調整營養素</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-zinc-800">手動調整營養素</h2>
+            {macrosFromSearch && calories > 0 && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                來自 AI 搜尋
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {(
               [
@@ -591,7 +615,9 @@ export default function AddMealPage() {
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
           {saveLoading
-            ? "AI 正在火速分析..."
+            ? macrosFromSearch
+              ? "正在儲存..."
+              : "AI 正在火速分析..."
             : imageCompressing
               ? "壓縮相片中..."
               : "發布記錄"}
