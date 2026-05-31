@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       name?: string;
       gymName?: string;
       inviteCode?: string;
+      soloStudent?: boolean;
     };
 
     if (body.role !== "coach" && body.role !== "student") {
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
       name: body.name ?? "",
       gymName: body.gymName,
       inviteCode: body.inviteCode,
+      soloStudent: body.soloStudent,
     });
 
     const response = NextResponse.json({

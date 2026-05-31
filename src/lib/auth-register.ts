@@ -22,6 +22,8 @@ export interface PublicRegisterInput {
   name: string;
   gymName?: string;
   inviteCode?: string;
+  /** 明確標記 B2C 散客註冊（無邀請碼） */
+  soloStudent?: boolean;
 }
 
 async function syncSupabaseAuthUser(email: string, password: string): Promise<void> {
@@ -47,7 +49,10 @@ export async function registerPublicUser(
   const password = input.password;
   const name = input.name.trim();
 
-  if (!email || !password || password.length < 6) {
+  if (!email) {
+    throw new Error("請填寫 Email。");
+  }
+  if (!password || password.length < 6) {
     throw new Error("請填寫 Email，密碼至少 6 位。");
   }
   if (!name) {
