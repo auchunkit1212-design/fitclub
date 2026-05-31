@@ -1,5 +1,6 @@
 import { resolveBrandForUser } from "@/lib/branding";
 import { syncTenantBranding } from "@/lib/tenant";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
@@ -211,7 +212,7 @@ export async function insertUser(
   user: Omit<RegistryUser, "logo" | "appTitle" | "themeColor" | "broadcast">,
   coachSession?: UserSession
 ): Promise<void> {
-  const gymTitle = user.gym || coachSession?.brandName || "健康管理";
+  const gymTitle = user.gym || coachSession?.brandName || "Nutrition Coach";
   const { error } = await supabase.from("users_registry").insert({
     email: user.email.trim().toLowerCase(),
     name: user.name,
@@ -380,6 +381,43 @@ export async function resolveBranding(
   };
 }
 
+export async function updateCoachBrandingAdmin(
+  coachEmail: string,
+  payload: {
+    appTitle: string;
+    themeColor: ThemeColor;
+    logo?: string;
+    broadcast: string;
+    tenantId?: string;
+  }
+): Promise<void> {
+  const admin = getSupabaseAdmin();
+  const email = coachEmail.trim().toLowerCase();
+
+  const { error } = await admin
+    .from("users_registry")
+    .update({
+      app_title: payload.appTitle,
+      theme_color: payload.themeColor,
+      logo: payload.logo ?? null,
+      broadcast: payload.broadcast,
+      gym: payload.appTitle,
+    })
+    .eq("email", email)
+    .eq("role", "coach");
+
+  if (error) throw error;
+
+  if (payload.tenantId) {
+    await syncTenantBranding(payload.tenantId, {
+      gymName: payload.appTitle,
+      logoUrl: payload.logo,
+      themeColor: payload.themeColor,
+    });
+  }
+}
+
+/** @deprecated 請改用 API /api/coach/branding（service role） */
 export async function updateCoachBranding(
   coachEmail: string,
   payload: {
@@ -428,7 +466,7 @@ export async function updateCoachLogo(
   if (tenantId) {
     const coach = await fetchUserByEmail(coachEmail);
     await syncTenantBranding(tenantId, {
-      gymName: coach?.appTitle ?? coach?.gym ?? "健康管理",
+      gymName: coach?.appTitle ?? coach?.gym ?? "Nutrition Coach",
       logoUrl: logo,
     });
   }

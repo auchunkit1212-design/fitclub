@@ -197,6 +197,19 @@ export default function AddMealPage() {
     const currentSession = getSession();
     if (currentSession) saveSession(currentSession);
 
+    // 自動 AI 估算（儲存前）
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    const aiEst = estimateMacros(
+      description.trim(),
+      carbsPortion,
+      proteinPortion,
+      hasVeggies
+    );
+    setCalories(aiEst.calories);
+    setProtein(aiEst.protein);
+    setCarbs(aiEst.carbs);
+    setFats(aiEst.fats);
+
     let imageToUpload = imageBase64;
     if (imageBase64) {
       try {
@@ -233,10 +246,10 @@ export default function AddMealPage() {
       email,
       mealType,
       description: description.trim(),
-      calories: Number(calories) || 0,
-      protein: Number(protein) || 0,
-      carbs: Number(carbs) || 0,
-      fats: Number(fats) || 0,
+      calories: aiEst.calories,
+      protein: aiEst.protein,
+      carbs: aiEst.carbs,
+      fats: aiEst.fats,
     };
 
     const mealPayload = {
@@ -605,10 +618,10 @@ export default function AddMealPage() {
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
           {saveLoading
-            ? imageBase64
-              ? "壓縮並上傳中..."
-              : "儲存中..."
-            : "儲存記錄"}
+            ? "AI 正在火速分析..."
+            : imageCompressing
+              ? "壓縮相片中..."
+              : "發布記錄"}
         </button>
       </main>
     </div>

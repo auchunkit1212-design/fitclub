@@ -46,26 +46,37 @@ export async function fetchStudentNutritionTargets(
 }
 
 export async function upsertStudentNutritionTargets(
-  targets: StudentNutritionTargets
+  targets: StudentNutritionTargets,
+  options?: { useServiceRole?: boolean }
 ): Promise<StudentNutritionTargets> {
-  const row = {
+  const client = options?.useServiceRole ? getSupabaseAdmin() : supabase;
+
+  const row: Record<string, unknown> = {
     student_email: targets.studentEmail.trim().toLowerCase(),
-    target_calories: targets.targetCalories,
-    target_protein: targets.targetProtein,
-    target_carbs: targets.targetCarbs,
-    target_fats: targets.targetFats,
+    target_calories: Math.round(targets.targetCalories),
+    target_protein: Math.round(targets.targetProtein),
+    target_carbs: Math.round(targets.targetCarbs),
+    target_fats: Math.round(targets.targetFats),
     locked: targets.locked,
     set_by_coach_email: targets.setByCoachEmail ?? null,
     updated_at: new Date().toISOString(),
   };
+  if (targets.tenantId) {
+    row.tenant_id = targets.tenantId;
+  }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("student_nutrition_targets")
     .upsert(row, { onConflict: "student_email" })
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw toReadableError(
+      error,
+      "student_nutrition_targets 寫入失敗（請執行 phase4-social-ai.sql 或 fix-tenants-branding.sql）"
+    );
+  }
   return mapTargets(data);
 }
 
@@ -80,6 +91,7 @@ function mapTargets(row: Record<string, unknown>): StudentNutritionTargets {
     setByCoachEmail: row.set_by_coach_email
       ? String(row.set_by_coach_email)
       : undefined,
+    tenantId: row.tenant_id ? String(row.tenant_id) : undefined,
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
   };
 }

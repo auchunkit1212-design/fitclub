@@ -49,7 +49,7 @@ export function PushReminderToggle() {
         setMessage("✅ 已開啟系統通知，訂閱已存入 Supabase。");
       } catch {
         const payload = subscriptionToPayload(subscription);
-        console.info("[FitClub] PushSubscription（請存入 Supabase）:", payload);
+        console.info("[Nutrition Coach] PushSubscription（請存入 Supabase）:", payload);
         setMessage(
           "✅ 已開啟通知。Supabase 表未建立，訂閱已印在 Console（F12）供你複製。"
         );
@@ -140,7 +140,7 @@ export function PushReminderToggle() {
 
       {permission === "denied" && (
         <p className="text-xs text-red-600">
-          你之前拒絕咗通知。請去 設定 → Safari/Chrome → 通知 → 允許 FitClub。
+          你之前拒絕咗通知。請去 設定 → Safari/Chrome → 通知 → 允許 Nutrition Coach。
         </p>
       )}
 

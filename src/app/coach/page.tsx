@@ -11,11 +11,10 @@ import {
   fetchUsersForSession,
   filterStudentsForSession,
   resolveBranding,
-  updateCoachBranding,
   updateCoachLogo,
 } from "@/lib/db";
 import { applyBrandToSession } from "@/lib/branding";
-import { saveSession } from "@/lib/session";
+import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/session";
@@ -104,13 +103,27 @@ export default function CoachPage() {
 
     setPublishing(true);
     try {
-      await updateCoachBranding(session.email, {
-        appTitle: appTitle.trim() || DEFAULT_BRANDING.appTitle,
-        themeColor,
-        logo,
-        broadcast: broadcast.trim(),
-        tenantId: session.tenantId,
+      const res = await fetch("/api/coach/branding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          appTitle: appTitle.trim() || DEFAULT_BRANDING.appTitle,
+          themeColor,
+          logo,
+          broadcast: broadcast.trim(),
+          tenantId: session.tenantId,
+        }),
       });
+      const data = (await res.json()) as { error?: string; hint?: string };
+      if (!res.ok) {
+        console.error("[coach] branding publish failed:", data);
+        alert(data.error ?? "雲端發布失敗，請稍後再試。");
+        return;
+      }
       const updated = applyBrandToSession(session, {
         gymName: appTitle.trim(),
         branding: { appTitle: appTitle.trim(), themeColor, logo },
@@ -119,7 +132,8 @@ export default function CoachPage() {
       });
       saveSession(updated);
       alert("品牌已同步到雲端！");
-    } catch {
+    } catch (err) {
+      console.error("[coach] branding publish error:", err);
       alert("雲端發布失敗，請稍後再試。");
     } finally {
       setPublishing(false);

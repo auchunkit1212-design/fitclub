@@ -212,12 +212,6 @@ export function getMealAiComment(log: MealLog): string {
   return "整體尚可，建議控制醬料同飲品糖分。";
 }
 
-export function getMealStatus(log: MealLog): "優良" | "危險" {
-  if (log.calories >= 700) return "危險";
-  if (log.calories <= 500 && log.protein >= 20) return "優良";
-  return "危險";
-}
-
 export function generateCoachReport(logs: MealLog[]): string {
   if (logs.length === 0) {
     return "暫時未有學員飲食打卡。等學員記低第一餐，AI 先可以出整合報告。";
@@ -225,8 +219,8 @@ export function generateCoachReport(logs: MealLog[]): string {
 
   const totalCalories = logs.reduce((sum, log) => sum + log.calories, 0);
   const avgCalories = Math.round(totalCalories / logs.length);
-  const highRisk = logs.filter((log) => log.calories >= 700);
-  const goodLogs = logs.filter((log) => log.calories <= 500 && log.protein >= 20);
+  const highRisk = logs.filter((log) => log.calories > 750);
+  const goodLogs = logs.filter((log) => log.calories < 400);
 
   const riskLines =
     highRisk.length > 0

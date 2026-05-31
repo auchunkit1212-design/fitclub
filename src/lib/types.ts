@@ -98,6 +98,7 @@ export interface StudentNutritionTargets {
   targetFats: number;
   locked: boolean;
   setByCoachEmail?: string;
+  tenantId?: string;
   updatedAt?: string;
 }
 
@@ -141,8 +142,8 @@ export const DEFAULT_PROFILE: UserProfile = {
 };
 
 export const DEFAULT_BRANDING: CoachBranding = {
-  appTitle: "健康管理",
+  appTitle: "Nutrition Coach",
   themeColor: "emerald",
 };
 
-export const DEFAULT_GYM_NAME = "您的健身房";
+export const DEFAULT_GYM_NAME = "Nutrition Coach";

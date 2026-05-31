@@ -1,5 +1,5 @@
-const CACHE_VERSION = "fitclub-pwa-v5";
-const STATIC_CACHE = "fitclub-static-v5";
+const CACHE_VERSION = "nutrition-coach-pwa-v6";
+const STATIC_CACHE = "nutrition-coach-static-v6";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
 const PRECACHE_URLS = ["/logo.png", "/manifest.json"];
@@ -89,7 +89,7 @@ self.addEventListener("fetch", (event) => {
 /** 收到伺服器推送（Web Push）時顯示系統通知 */
 self.addEventListener("push", (event) => {
   const fallback = {
-    title: "FitClub 提醒",
+    title: "Nutrition Coach 提醒",
     body: "💧 記得飲水，或者去記錄你嘅飲食！",
     url: "/",
     tag: "fitclub-reminder",

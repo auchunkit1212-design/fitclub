@@ -11,6 +11,7 @@ import { goTo } from "@/lib/navigate";
 import { registryUserToSession } from "@/lib/registry";
 import { applyBrandToSession } from "@/lib/branding";
 import { getSession, saveSession } from "@/lib/session";
+import { BRAND_NAME } from "@/lib/brand";
 import { initUserRegistry } from "@/lib/registry";
 import type { UserSession } from "@/lib/types";
 
@@ -119,7 +120,7 @@ export default function RegisterPage() {
             </div>
           )}
           <h1 className="text-xl font-bold text-zinc-900">
-            {brand.gymName} 健康管理
+            {brand.gymName || BRAND_NAME}
           </h1>
           <p className="text-xs text-zinc-500 leading-relaxed">
             專屬飲食打卡系統

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { getMealStatus } from "@/lib/ai-mock";
+import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import {
   buildMealExportRows,
   downloadMealsCsv,
@@ -137,11 +137,7 @@ export function CoachMealHistoryPanel({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 h-fit px-2 py-0.5 rounded text-[10px] font-bold ${
-                      status === "優良"
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`shrink-0 h-fit px-2 py-0.5 rounded text-[10px] font-bold ${mealStatusStyles(status)}`}
                   >
                     {status}
                   </span>
