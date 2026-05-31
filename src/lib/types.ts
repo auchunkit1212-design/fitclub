@@ -72,6 +72,8 @@ export interface UserSession {
   tenantSlug?: string;
   brandName?: string;
   brandLogo?: string;
+  /** 無真人教練的 B2C 散客 */
+  isSoloStudent?: boolean;
   isLoggedIn: boolean;
 }
 

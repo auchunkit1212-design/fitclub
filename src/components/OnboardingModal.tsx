@@ -4,6 +4,7 @@ import { useState } from "react";
 import { upsertStudentBodyProfile } from "@/lib/db";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import type { StudentBodyProfile, StudentGender } from "@/lib/types";
+import type { FitnessGoal } from "@/lib/ai-solo-coach";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -13,6 +14,8 @@ interface OnboardingModalProps {
   initial?: Partial<StudentBodyProfile> | null;
   onComplete: (profile: StudentBodyProfile) => void;
   themeBtn?: string;
+  /** B2C 散客：額外收集減脂/增肌目標並生成 AI 聖旨 */
+  soloMode?: boolean;
 }
 
 function logOnboardingError(
@@ -27,6 +30,7 @@ export function OnboardingModal({
   initial,
   onComplete,
   themeBtn = "bg-emerald-600",
+  soloMode = false,
 }: OnboardingModalProps) {
   const [heightCm, setHeightCm] = useState(
     initial?.heightCm ? String(initial.heightCm) : ""
@@ -44,6 +48,7 @@ export function OnboardingModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
+  const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>("cut");
 
   const buildProfile = (
     normalizedEmail: string,
@@ -194,6 +199,27 @@ export function OnboardingModal({
       }
 
       const profile: StudentBodyProfile = data.profile ?? profilePayload;
+
+      if (soloMode) {
+        const aiRes = await fetch("/api/student/ai-targets", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionRequestHeaders(),
+          },
+          body: JSON.stringify({ fitnessGoal }),
+        });
+        if (!aiRes.ok) {
+          const aiData = (await aiRes.json()) as { error?: string };
+          setWarning(
+            aiData.error
+              ? `身體檔案已儲存，但 AI 聖旨生成失敗：${aiData.error}`
+              : "身體檔案已儲存，AI 聖旨稍後再試。"
+          );
+        }
+      }
+
       onComplete(profile);
     } catch (e) {
       const message = e instanceof Error ? e.message : "儲存失敗，請稍後再試。";
@@ -216,7 +242,9 @@ export function OnboardingModal({
           <p className="text-emerald-100 text-sm font-medium">新手村 · 歡迎設定</p>
           <h2 className="text-xl font-bold mt-1">建立你嘅身體檔案</h2>
           <p className="text-sm text-white/90 mt-2 leading-relaxed">
-            填寫以下資料先可以進入主頁，AI 先可以準確估算外食熱量同每日目標。
+            {soloMode
+              ? "大猩猩 AI 私教會根據你的數據，自動生成專屬卡路里與 Macros 聖旨。"
+              : "填寫以下資料先可以進入主頁，AI 先可以準確估算外食熱量同每日目標。"}
           </p>
         </div>
 
@@ -283,6 +311,36 @@ export function OnboardingModal({
             />
           </div>
 
+          {soloMode && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-500">
+                你的主要目標
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["cut", "🔥 減脂"],
+                    ["bulk", "💪 增肌"],
+                    ["maintain", "⚖️ 維持"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFitnessGoal(value)}
+                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${btnClass} ${
+                      fitnessGoal === value
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                        : "border-zinc-200 bg-white text-zinc-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {warning && (
             <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2">
               {warning}
@@ -301,7 +359,13 @@ export function OnboardingModal({
             onClick={handleSubmit}
             className={`w-full ${themeBtn} text-white font-bold py-4 rounded-2xl disabled:opacity-60 ${btnClass}`}
           >
-            {saving ? "儲存中..." : "完成設定，進入主頁"}
+            {saving
+              ? soloMode
+                ? "AI 正在生成聖旨..."
+                : "儲存中..."
+              : soloMode
+                ? "完成設定，啟動 AI 私教"
+                : "完成設定，進入主頁"}
           </button>
         </div>
       </div>

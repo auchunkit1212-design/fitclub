@@ -1,4 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  AI_GORILLA_COACH_EMAIL,
+  AI_SOLO_TENANT_NAME,
+  AI_SOLO_TENANT_SLUG,
+} from "@/lib/registry-constants";
 import type { Tenant } from "@/lib/types";
 
 type TenantRow = {
@@ -59,10 +64,12 @@ export async function createTenantWithCoach(input: {
   email: string;
   passwordHash: string;
   gymName: string;
+  coachName?: string;
 }): Promise<{ tenant: Tenant; coachEmail: string }> {
   const supabase = getSupabaseAdmin();
   const email = input.email.trim().toLowerCase();
   const slug = generateTenantSlug(input.gymName);
+  const coachName = input.coachName?.trim() || input.gymName.trim();
 
   const { data: tenantRow, error: tenantError } = await supabase
     .from("tenants")
@@ -80,7 +87,7 @@ export async function createTenantWithCoach(input: {
 
   const { error: coachError } = await supabase.from("users_registry").insert({
     email,
-    name: input.gymName.trim(),
+    name: coachName,
     role: "coach",
     gym: input.gymName.trim(),
     tenant_id: tenant.id,
@@ -93,6 +100,32 @@ export async function createTenantWithCoach(input: {
   if (coachError) throw coachError;
 
   return { tenant, coachEmail: email };
+}
+
+/** 取得或建立散客 AI 私教 Tenant（#003） */
+export async function ensureAiSoloTenant(): Promise<Tenant> {
+  const existing = await fetchTenantBySlug(AI_SOLO_TENANT_SLUG);
+  if (existing) return existing;
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tenants")
+    .insert({
+      slug: AI_SOLO_TENANT_SLUG,
+      gym_name: AI_SOLO_TENANT_NAME,
+      owner_email: AI_GORILLA_COACH_EMAIL,
+      plan: "b2c",
+      theme_color: "emerald",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    const retry = await fetchTenantBySlug(AI_SOLO_TENANT_SLUG);
+    if (retry) return retry;
+    throw error;
+  }
+  return mapTenant(data as TenantRow);
 }
 
 export async function createPartnerTenantWithCoach(input: {

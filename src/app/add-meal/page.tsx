@@ -335,6 +335,7 @@ export default function AddMealPage() {
       <OnboardingModal
         email={session.email}
         initial={bodyProfile ?? undefined}
+        soloMode={Boolean(session.isSoloStudent)}
         onComplete={(saved) => {
           setBodyProfile(saved);
           setGoalCalories(computeTargetProfile(saved).targetCalories);

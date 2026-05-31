@@ -402,6 +402,7 @@ export default function StudentDashboard() {
         email={session.email}
         initial={bodyProfile ?? undefined}
         themeBtn={theme.btn}
+        soloMode={Boolean(session.isSoloStudent)}
         onComplete={(saved) => {
           setBodyProfile(saved);
           setBodyForm(bodyProfileToFormValues(saved));
@@ -411,6 +412,14 @@ export default function StudentDashboard() {
               weeklyFrequency: settings.weeklyFrequency,
             })
           );
+          if (session.isSoloStudent) {
+            fetch("/api/coach/student-targets", { credentials: "include" })
+              .then((r) => r.json())
+              .then((d: { targets?: StudentNutritionTargets | null }) => {
+                if (d.targets?.locked) setCoachTargets(d.targets);
+              })
+              .catch(() => undefined);
+          }
         }}
       />
     );
@@ -565,9 +574,16 @@ export default function StudentDashboard() {
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
           <div className="bg-zinc-900 text-amber-300 px-4 py-3 rounded-xl text-sm font-medium border border-amber-500/40">
-            📜 教練聖旨已鎖定目標：{coachTargets.targetCalories} kcal · 蛋白{" "}
-            {coachTargets.targetProtein}g · 碳水 {coachTargets.targetCarbs}g · 脂肪{" "}
-            {coachTargets.targetFats}g
+            📜{" "}
+            {session.isSoloStudent ? "AI 大猩猩聖旨" : "教練聖旨"}已鎖定目標：
+            {coachTargets.targetCalories} kcal · 蛋白 {coachTargets.targetProtein}g · 碳水{" "}
+            {coachTargets.targetCarbs}g · 脂肪 {coachTargets.targetFats}g
+          </div>
+        )}
+
+        {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
+          <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
+            🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！
           </div>
         )}
 
@@ -581,7 +597,7 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {activeTab === "dashboard" && isStudent && broadcast.trim() && (
+        {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
           <div className="bg-red-600 text-white px-4 py-3 rounded-xl shadow-md animate-pulse text-sm font-medium">
             📣 教練突發警告: {broadcast}
           </div>
@@ -590,12 +606,18 @@ export default function StudentDashboard() {
         {activeTab === "dashboard" && isStudent && (
           <section className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-4 shadow-md">
             <p className="text-sm font-semibold text-amber-100 mb-1">
-              🤖 專屬教練 AI 點評
+              🤖 {session.isSoloStudent ? "大猩猩 AI 私教" : "專屬教練 AI 點評"}
             </p>
             <p className="text-sm leading-relaxed">
-              你已綁定【{session.gym}】，負責教練【{session.coach || "專業教練組"}】。
-              今日{todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"}，記得跟【
-              {settings.mealSchedule}】食！
+              {session.isSoloStudent
+                ? `你已加入【${session.gym}】散客計劃。今日${
+                    todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"
+                  }，跟 AI 聖旨食就啱！`
+                : `你已綁定【${session.gym}】，負責教練【${
+                    session.coach || "專業教練組"
+                  }】。今日${todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"}，記得跟【${
+                    settings.mealSchedule
+                  }】食！`}
             </p>
           </section>
         )}
@@ -668,11 +690,16 @@ export default function StudentDashboard() {
               <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
                 <h2 className="font-semibold text-zinc-800 mb-3">今日餐單</h2>
                 <ul className="space-y-2">
-                  {todayLogs.map((log) => (
+                  {todayLogs.map((log) => {
+                    const reaction = coachReactions.find(
+                      (r) => r.mealLogId === log.id
+                    );
+                    return (
                     <li
                       key={log.id}
-                      className="flex gap-3 p-2 rounded-xl bg-zinc-50 border border-zinc-100"
+                      className="p-2 rounded-xl bg-zinc-50 border border-zinc-100"
                     >
+                      <div className="flex gap-3">
                       {getMealImageSrc(log) && (
                         <img
                           src={getMealImageSrc(log)}
@@ -685,11 +712,19 @@ export default function StudentDashboard() {
                           {log.mealType} · {log.description}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {log.calories} kcal · 蛋白 {log.protein}g
+                          {log.calories} kcal · 蛋白 {log.protein}g · 碳水 {log.carbs}g · 脂肪{" "}
+                          {log.fats}g
                         </p>
                       </div>
+                      </div>
+                      {reaction && (
+                        <p className="text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-2 mt-2 leading-relaxed">
+                          {reaction.sticker}
+                        </p>
+                      )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </section>
             )}

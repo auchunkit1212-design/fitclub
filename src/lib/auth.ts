@@ -6,7 +6,11 @@ import {
   registryUserToSession,
 } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
-import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+import {
+  SUPER_ADMIN_EMAIL,
+} from "@/lib/registry-constants";
+import { fetchTenantById } from "@/lib/tenant";
+import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
 import type { UserSession } from "@/lib/types";
 
 export async function loginWithCredentials(
@@ -38,6 +42,14 @@ export async function loginWithCredentials(
   const registry = await fetchUsersForSession(session);
   const brand = await resolveBrandForUser(session, registry);
   session = applyBrandToSession(session, brand);
-  session.tenantSlug = brand.tenantSlug;
+
+  if (user.tenantId) {
+    const tenant = await fetchTenantById(user.tenantId);
+    session.tenantSlug = tenant?.slug ?? session.tenantSlug;
+    session.isSoloStudent = isAiSoloTenantSlug(tenant?.slug);
+  } else if (user.role === "student" && !user.coach && !user.addedBy) {
+    session.isSoloStudent = true;
+  }
+
   return session;
 }
