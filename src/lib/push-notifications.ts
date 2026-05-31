@@ -136,8 +136,8 @@ export async function showLocalTestNotification(): Promise<void> {
   const registration = await navigator.serviceWorker.ready;
   await registration.showNotification("Nutrition Coach 測試", {
     body: "💧 飲水 / 🍽️ 記錄飲食提醒測試成功！",
-    icon: "/logo.png",
-    badge: "/logo.png",
+    icon: "/gorilla-logo.png",
+    badge: "/gorilla-logo.png",
     tag: "nutrition-coach-test",
     data: { url: "/add-meal" },
   });

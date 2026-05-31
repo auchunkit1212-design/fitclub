@@ -1,7 +1,8 @@
-import { createNutritionCoachIcon } from "@/lib/pwa-icon";
+import { gorillaLogoResponse, readGorillaLogoBytes } from "@/lib/gorilla-logo";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function GET() {
-  return createNutritionCoachIcon(192);
+  const body = await readGorillaLogoBytes();
+  return gorillaLogoResponse(body);
 }

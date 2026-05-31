@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   if (!logo) {
     const fallback = await fetch(
-      new URL("/logo.png", request.nextUrl.origin).toString()
+      new URL("/gorilla-logo.png", request.nextUrl.origin).toString()
     );
     const bytes = await fallback.arrayBuffer();
     return new NextResponse(bytes, {
@@ -64,5 +64,5 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.redirect(new URL("/logo.png", request.nextUrl.origin));
+  return NextResponse.redirect(new URL("/gorilla-logo.png", request.nextUrl.origin));
 }

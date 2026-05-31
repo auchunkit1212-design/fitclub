@@ -3,7 +3,7 @@ import { resolveBrandForUser } from "@/lib/branding";
 import { fetchUsersForSession } from "@/lib/db";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { DEFAULT_BRANDING } from "@/lib/types";
-import { BRAND_NAME } from "@/lib/brand";
+import { BRAND_NAME, APP_LOGO_PATH } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   let name = DEFAULT_BRANDING.appTitle;
   let themeColor = "#059669";
-  let iconUrl = `${origin}/logo.png`;
+  let iconUrl = `${origin}${APP_LOGO_PATH}`;
 
   if (session?.isLoggedIn) {
     try {
