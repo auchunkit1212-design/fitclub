@@ -3,6 +3,7 @@ import { resolveBrandForUser } from "@/lib/branding";
 import { fetchUsersForSession } from "@/lib/db";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { DEFAULT_BRANDING } from "@/lib/types";
+import { BRAND_NAME } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,9 +44,9 @@ export async function GET(request: NextRequest) {
   }
 
   const manifest = {
-    name: `${name} 健康管理`,
-    short_name: name.slice(0, 12),
-    description: `${name} 專屬飲食打卡同教練管理`,
+    name: `${name} · ${BRAND_NAME}`,
+    short_name: name.slice(0, 12) || BRAND_NAME.slice(0, 12),
+    description: `${name} · Coach! what to eat? 專屬飲食打卡同教練管理`,
     start_url: "/register",
     scope: "/",
     id: "/",

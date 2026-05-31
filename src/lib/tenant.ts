@@ -97,15 +97,16 @@ export async function createTenantWithCoach(input: {
 
 export async function syncTenantBranding(
   tenantId: string,
-  payload: { gymName: string; logoUrl?: string }
+  payload: { gymName: string; logoUrl?: string; themeColor?: string }
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from("tenants")
-    .update({
-      gym_name: payload.gymName,
-      logo_url: payload.logoUrl ?? null,
-    })
-    .eq("id", tenantId);
+  const update: Record<string, string | null> = {
+    gym_name: payload.gymName,
+    logo_url: payload.logoUrl ?? null,
+  };
+  if (payload.themeColor) {
+    update.theme_color = payload.themeColor;
+  }
+  const { error } = await supabase.from("tenants").update(update).eq("id", tenantId);
   if (error) throw error;
 }

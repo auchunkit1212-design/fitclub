@@ -6,7 +6,9 @@ import {
   BodyProfileFields,
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
+import { GorillaMascot } from "@/components/GorillaMascot";
 import { BottomNav } from "@/components/BottomNav";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -357,7 +359,7 @@ export default function StudentDashboard() {
   );
 
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
-  const title = branding?.appTitle ?? "健身飲食追蹤";
+  const title = branding?.appTitle ?? BRAND_NAME;
 
   if (!session) {
     return (
@@ -494,15 +496,13 @@ export default function StudentDashboard() {
         className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-6 rounded-b-3xl shadow-lg`}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {branding.logo && (
-              <img
-                src={branding.logo}
-                alt="Logo"
-                className="w-8 h-8 rounded-full object-cover bg-white shrink-0"
-              />
-            )}
+          <div className="flex items-center gap-3 min-w-0">
+            <GorillaMascot
+              themeColor={branding?.themeColor ?? "emerald"}
+              logoUrl={branding?.logo}
+            />
             <div className="min-w-0">
+              <p className="text-white/80 text-xs">{BRAND_TAGLINE}</p>
               <p className="text-white/80 text-sm">
                 {session.role === "coach"
                   ? "教練主頁"
@@ -510,7 +510,7 @@ export default function StudentDashboard() {
                     ? "老闆主頁"
                     : "學員主頁"}
               </p>
-              <h1 className="text-2xl font-bold mt-1 truncate">{title}</h1>
+              <h1 className="text-2xl font-bold mt-0.5 truncate">{title}</h1>
             </div>
           </div>
           <button
