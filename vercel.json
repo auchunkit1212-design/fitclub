@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/coach-crm",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/ai-coach",
+      "schedule": "0 14 * * *"
+    }
+  ]
+}

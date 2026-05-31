@@ -1,16 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { buildLogSummary } from "@/lib/ai-mock";
+import { generateCoachReport } from "@/lib/ai-mock";
+import { CoachActivityWall } from "@/components/CoachActivityWall";
+import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
+import { useBranding } from "@/components/BrandingProvider";
 import {
-  getCoachBranding,
-  getCoachBroadcast,
-  getMealLogs,
-  saveCoachBranding,
-  saveCoachBroadcast,
-} from "@/lib/storage";
-import type { CoachBranding, MealLog, ThemeColor } from "@/lib/types";
+  fetchMealLogsForSession,
+  fetchUsersForSession,
+  filterStudentsForSession,
+  resolveBranding,
+  updateCoachLogo,
+} from "@/lib/db";
+import { applyBrandToSession } from "@/lib/branding";
+import { saveSession, getSessionRequestHeaders } from "@/lib/session";
+import { compressFileImage } from "@/lib/image";
+import { PageHeader } from "@/components/PageHeader";
+import { getSession } from "@/lib/session";
+import type {
+  CoachBranding,
+  MealLog,
+  RegistryUser,
+  ThemeColor,
+  UserSession,
+} from "@/lib/types";
+import { DEFAULT_BRANDING } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -23,158 +38,286 @@ const THEME_OPTIONS: { value: ThemeColor; label: string }[] = [
 
 export default function CoachPage() {
   const router = useRouter();
+  const brand = useBranding();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [session, setSession] = useState<UserSession | null>(null);
   const [appTitle, setAppTitle] = useState("");
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
+  const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
-  const [copyId, setCopyId] = useState<string | null>(null);
+  const [students, setStudents] = useState<RegistryUser[]>([]);
+  const [aiReport, setAiReport] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [toast, setToast] = useState("");
 
-  useEffect(() => {
-    const branding = getCoachBranding();
-    setAppTitle(branding.appTitle);
-    setThemeColor(branding.themeColor);
-    setBroadcast(getCoachBroadcast());
-    setLogs(getMealLogs());
-  }, []);
-
-  const handlePublish = () => {
-    const branding: CoachBranding = {
-      appTitle: appTitle.trim() || "健身飲食追蹤",
-      themeColor,
-    };
-    saveCoachBranding(branding);
-    saveCoachBroadcast(broadcast.trim());
-    alert("已發布品牌設定同緊急廣播！");
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(""), 3000);
   };
 
-  const handleCopy = async (log: MealLog) => {
-    const text = buildLogSummary(log);
+  useEffect(() => {
+    const load = async () => {
+      const current = getSession();
+      if (!current || (current.role !== "coach" && current.role !== "admin")) {
+        setLoading(false);
+        router.push("/register");
+        return;
+      }
+
+      setSession(current);
+
+      try {
+        const registry = await fetchUsersForSession(current);
+        const mealLogs = await fetchMealLogsForSession(current, registry);
+        setLogs(mealLogs);
+        setStudents(filterStudentsForSession(current, registry));
+
+        if (current.role === "coach") {
+          const resolved = await resolveBranding(current, registry);
+          setAppTitle(resolved.branding.appTitle);
+          setThemeColor(resolved.branding.themeColor);
+          setLogo(resolved.branding.logo);
+          setBroadcast(resolved.broadcast);
+        } else {
+          setAppTitle(DEFAULT_BRANDING.appTitle);
+          setThemeColor(DEFAULT_BRANDING.themeColor);
+        }
+      } catch {
+        alert("無法從 Supabase 載入教練數據。");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [router]);
+
+  const handlePublish = async () => {
+    if (!session || session.role !== "coach") {
+      alert("請用教練帳號登入後再發布品牌設定。");
+      return;
+    }
+
+    setPublishing(true);
     try {
-      await navigator.clipboard.writeText(text);
-      setCopyId(log.id);
-      setTimeout(() => setCopyId(null), 2000);
-    } catch {
-      alert("複製失敗，請檢查瀏覽器權限。");
+      const res = await fetch("/api/coach/branding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          appTitle: appTitle.trim() || DEFAULT_BRANDING.appTitle,
+          themeColor,
+          logo,
+          broadcast: broadcast.trim(),
+          tenantId: session.tenantId,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; hint?: string };
+      if (!res.ok) {
+        console.error("[coach] branding publish failed:", data);
+        alert(data.error ?? "雲端發布失敗，請稍後再試。");
+        return;
+      }
+      const updated = applyBrandToSession(session, {
+        gymName: appTitle.trim(),
+        branding: { appTitle: appTitle.trim(), themeColor, logo },
+        broadcast: broadcast.trim(),
+        tenantSlug: session.tenantSlug,
+      });
+      saveSession(updated);
+      alert("品牌已同步到雲端！");
+    } catch (err) {
+      console.error("[coach] branding publish error:", err);
+      alert("雲端發布失敗，請稍後再試。");
+    } finally {
+      setPublishing(false);
     }
   };
 
+  const handleLogoPick = () => logoInputRef.current?.click();
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session || session.role !== "coach") return;
+
+    try {
+      const compressed = await compressFileImage(file);
+      setLogo(compressed);
+      await updateCoachLogo(session.email, compressed, session.tenantId);
+      alert("Logo 已上傳到 Supabase 雲端！");
+    } catch {
+      alert("Logo 處理或上傳失敗。");
+    }
+    e.target.value = "";
+  };
+
+  const generateAIReport = async () => {
+    if (!session) return;
+    setIsGenerating(true);
+    setAiReport(null);
+    try {
+      const registry = await fetchUsersForSession(session);
+      const freshLogs = await fetchMealLogsForSession(session, registry);
+      setLogs(freshLogs);
+      setAiReport(generateCoachReport(freshLogs));
+    } catch {
+      alert("無法從 Supabase 拉取學員飲食記錄。");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-500">
+        從雲端載入緊...
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-50 pb-8 max-w-lg mx-auto">
-      <header className="bg-zinc-900 text-white px-4 py-5">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className={`text-sm text-white/80 mb-3 px-3 py-1.5 rounded-lg bg-white/10 ${btnClass}`}
-        >
-          ← 返回學員主頁
-        </button>
-        <h1 className="text-xl font-bold">教練白標後台</h1>
-        <p className="text-white/70 text-sm mt-1">自訂 App 品牌同檢視學員記錄</p>
-      </header>
+    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+      <PageHeader
+        title={`${brand.gymName} · 教練後台`}
+        subtitle="白標品牌 · 雲端同步"
+        variant="dark"
+        backLabel="← 返回主頁"
+        onBack={() => router.push("/")}
+      />
 
       <main className="px-4 py-4 space-y-4">
-        <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">品牌中心</h2>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              App 標題
-            </label>
-            <input
-              type="text"
-              value={appTitle}
-              onChange={(e) => setAppTitle(e.target.value)}
-              placeholder="例如：阿強健身室飲食計劃"
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              主題色
-            </label>
-            <select
-              value={themeColor}
-              onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-            >
-              {THEME_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              緊急廣播訊息
-            </label>
-            <textarea
-              value={broadcast}
-              onChange={(e) => setBroadcast(e.target.value)}
-              placeholder="例如：聽日記得帶水壺，高溫警告！"
-              rows={3}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
-            />
-          </div>
-
+        <section className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
+          <h2 className="text-sm font-bold text-indigo-200">
+            🤖 AI 數據智能整合中心
+          </h2>
           <button
             type="button"
-            onClick={handlePublish}
-            className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl ${btnClass}`}
+            disabled={isGenerating}
+            onClick={generateAIReport}
+            className={`w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
-            發布
+            {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
           </button>
-        </section>
-
-        <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-          <h2 className="font-semibold text-zinc-800 mb-3">
-            學員飲食記錄 ({logs.length})
-          </h2>
-
-          {logs.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-6">
-              暫時未有記錄，等學員記低第一餐先！
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {logs.map((log) => (
-                <li
-                  key={log.id}
-                  className="border border-zinc-100 rounded-xl p-3 bg-zinc-50"
-                >
-                  <div className="flex gap-3">
-                    {log.imageBase64 && (
-                      <img
-                        src={log.imageBase64}
-                        alt=""
-                        className="w-12 h-12 rounded-lg object-cover shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">
-                        {log.mealType} · {log.description}
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {new Date(log.date).toLocaleString("zh-HK")} ·{" "}
-                        {log.calories} kcal
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(log)}
-                    className={`mt-2 w-full text-sm font-medium py-2 rounded-lg border border-zinc-200 bg-white text-zinc-700 ${btnClass}`}
-                  >
-                    {copyId === log.id ? "✅ 已複製！" : "📋 一鍵複製"}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {aiReport && (
+            <pre className="bg-white/10 p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap border border-white/10">
+              {aiReport}
+            </pre>
           )}
         </section>
+
+        {session?.role === "coach" && (
+          <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
+            <h2 className="font-semibold text-zinc-800">品牌中心（雲端）</h2>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                App 標題
+              </label>
+              <input
+                type="text"
+                value={appTitle}
+                onChange={(e) => setAppTitle(e.target.value)}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
+                健身房 Logo
+              </label>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleLogoPick}
+                onKeyDown={(e) => e.key === "Enter" && handleLogoPick()}
+                className={`flex items-center gap-3 border-2 border-dashed border-zinc-300 rounded-xl p-3 ${btnClass}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-zinc-100 overflow-hidden shrink-0">
+                  {logo ? (
+                    <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-zinc-400 flex items-center justify-center h-full">
+                      無
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-zinc-600">撳一下上傳（即時寫入雲端）</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                主題色
+              </label>
+              <select
+                value={themeColor}
+                onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
+              >
+                {THEME_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                緊急廣播訊息
+              </label>
+              <textarea
+                value={broadcast}
+                onChange={(e) => setBroadcast(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={publishing}
+              onClick={handlePublish}
+              className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+            >
+              {publishing ? "發布緊..." : "發布到雲端"}
+            </button>
+          </section>
+        )}
+
+        {session?.role === "coach" && students.length > 0 && (
+          <CoachActivityWall
+            logs={logs}
+            students={students}
+            onToast={showToast}
+          />
+        )}
+
+        <CoachMealHistoryPanel
+          logs={logs}
+          students={students}
+          gymName={brand.gymName}
+        />
       </main>
+
+      {toast && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

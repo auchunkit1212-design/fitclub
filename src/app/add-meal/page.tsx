@@ -1,15 +1,34 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { estimateMacros } from "@/lib/ai-mock";
-import { getMealLogs, saveMealLogs } from "@/lib/storage";
-import type { MealLog } from "@/lib/types";
+import { FoodSearchEngine } from "@/components/FoodSearchEngine";
+import { OnboardingModal } from "@/components/OnboardingModal";
+import { NutritionDashboard } from "@/components/NutritionDashboard";
+import { PageHeader } from "@/components/PageHeader";
+import { SnackLabelScanner } from "@/components/SnackLabelScanner";
+import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
+import {
+  computeTargetProfile,
+  isBodyProfileComplete,
+} from "@/lib/body-profile";
+import {
+  fetchStudentBodyProfile,
+  fetchUsersForSession,
+} from "@/lib/db";
+import { compressDataUrl, compressFileImage } from "@/lib/image";
+import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
+import { initUserRegistry } from "@/lib/registry";
+import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
+import { errorMessage } from "@/lib/errors";
+import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
+import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
+import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
 const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
-const CARBS_OPTIONS = ["細拳", "中拳", "大拳"];
-const PROTEIN_OPTIONS = ["細掌", "中掌", "大掌"];
-const VEGGIE_OPTIONS = ["有", "無"];
+const CARBS_OPTIONS = [PORTION_NONE, "細拳", "中拳", "大拳"];
+const PROTEIN_OPTIONS = [PORTION_NONE, "細掌", "中掌", "大掌"];
+const VEGGIE_OPTIONS = [PORTION_NONE, "有"];
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -28,47 +47,100 @@ export default function AddMealPage() {
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
   const [fats, setFats] = useState(0);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [imageCompressing, setImageCompressing] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackPerPiece, setSnackPerPiece] = useState(80);
   const [snackQty, setSnackQty] = useState(1);
+  const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(null);
+  const [profileChecked, setProfileChecked] = useState(false);
+  const [todayLogs, setTodayLogs] = useState<MealLog[]>([]);
+  const [goalCalories, setGoalCalories] = useState(2000);
+  const [goalProtein, setGoalProtein] = useState(120);
+  const [goalCarbs, setGoalCarbs] = useState(200);
+  const [goalFats, setGoalFats] = useState(65);
+  const [showNutritionDash, setShowNutritionDash] = useState(false);
+  const [session, setSession] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    const parsed = getSession();
+    if (!parsed?.email) {
+      router.push("/register");
+      return;
+    }
+    const active: UserSession = { ...parsed, isLoggedIn: true };
+    setSession(active);
+
+    (async () => {
+      const envStatus = getSupabasePublicEnvStatus();
+      if (!envStatus.ok) {
+        console.error("[add-meal] Supabase env missing", envStatus);
+      } else {
+        console.log("[add-meal] Supabase env ok", envStatus.urlPreview);
+      }
+
+      try {
+        await initUserRegistry();
+        const registry = await fetchUsersForSession(active);
+        const logs = await getMealLogs(active, registry);
+        setTodayLogs(logs.filter((l) => isToday(l.date)));
+
+        if (active.role === "student") {
+          const body = await fetchStudentBodyProfile(active.email);
+          setBodyProfile(body);
+          if (body && isBodyProfileComplete(body)) {
+            const targets = computeTargetProfile(body);
+            setGoalCalories(targets.targetCalories);
+            setGoalProtein(targets.targetProtein);
+          }
+          const tRes = await fetch("/api/coach/student-targets");
+          const tData = (await tRes.json()) as {
+            targets?: {
+              locked: boolean;
+              targetCalories: number;
+              targetProtein: number;
+              targetCarbs: number;
+              targetFats: number;
+            };
+          };
+          if (tData.targets?.locked) {
+            setGoalCalories(tData.targets.targetCalories);
+            setGoalProtein(tData.targets.targetProtein);
+            setGoalCarbs(tData.targets.targetCarbs);
+            setGoalFats(tData.targets.targetFats);
+          }
+        }
+      } finally {
+        setProfileChecked(true);
+      }
+    })();
+  }, [router]);
+
+  const needsOnboarding =
+    session?.role === "student" &&
+    profileChecked &&
+    !isBodyProfileComplete(bodyProfile);
+
+  const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
 
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setImageBase64(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const runFakeAi = () => {
-    if (!description.trim()) {
-      alert("請先填寫食物描述！");
-      return;
+    setImageCompressing(true);
+    try {
+      const compressed = await compressFileImage(file);
+      setImageBase64(compressed);
+    } catch (err) {
+      console.error("[add-meal] image compress failed", err);
+      alert("相片壓縮失敗，請換一張較細的相片或再試一次。");
+    } finally {
+      setImageCompressing(false);
+      e.target.value = "";
     }
-    setAiLoading(true);
-    setTimeout(() => {
-      const est = estimateMacros(
-        description,
-        carbsPortion,
-        proteinPortion,
-        hasVeggies
-      );
-      setCalories(est.calories);
-      setProtein(est.protein);
-      setCarbs(est.carbs);
-      setFats(est.fats);
-      setAiLoading(false);
-    }, 1000);
   };
 
   const applySnackTotal = () => {
@@ -79,44 +151,241 @@ export default function AddMealPage() {
     setFats(Math.round(total * 0.04));
   };
 
-  const handleSave = () => {
+  const readSessionEmail = (): string | null => {
+    const s = getSession();
+    return s?.email?.trim().toLowerCase() || null;
+  };
+
+  const handleSave = async () => {
     if (!description.trim()) {
       alert("請填寫食物描述！");
       return;
     }
-    const log: MealLog = {
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
+    if (saveLoading) return;
+
+    const email = readSessionEmail();
+    if (!email) {
+      alert("請先登入再記錄飲食。");
+      router.push("/register");
+      return;
+    }
+
+    setSaveLoading(true);
+
+    const currentSession = getSession();
+    if (currentSession) saveSession(currentSession);
+
+    // 自動 AI 估算（儲存前）
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    const aiEst = estimateMacros(
+      description.trim(),
+      carbsPortion,
+      proteinPortion,
+      hasVeggies
+    );
+    setCalories(aiEst.calories);
+    setProtein(aiEst.protein);
+    setCarbs(aiEst.carbs);
+    setFats(aiEst.fats);
+
+    let imageToUpload = imageBase64;
+    if (imageBase64) {
+      try {
+        imageToUpload = await compressDataUrl(imageBase64);
+        setImageBase64(imageToUpload);
+      } catch (err) {
+        console.error("[add-meal] pre-upload compress failed", err);
+        alert("相片壓縮失敗，請重新選擇相片。");
+        setSaveLoading(false);
+        return;
+      }
+    }
+
+    let uploadedImageUrl: string | undefined;
+    if (imageToUpload) {
+      try {
+        uploadedImageUrl = await uploadMealImageFromClient(email, imageToUpload);
+        console.log("[add-meal] Storage upload ok (anon client)", uploadedImageUrl);
+      } catch (storageErr) {
+        console.error("[add-meal] Storage upload failed (anon client)", storageErr);
+        const msg = errorMessage(storageErr, "Storage failed");
+        const skipPhoto = window.confirm(
+          `相片無法上傳至 food-images：\n${msg}\n\n是否仍要儲存飲食記錄（不含相片）？`
+        );
+        if (!skipPhoto) {
+          setSaveLoading(false);
+          return;
+        }
+        uploadedImageUrl = undefined;
+      }
+    }
+
+    const basePayload = {
+      email,
       mealType,
       description: description.trim(),
-      imageBase64,
-      calories: Number(calories) || 0,
-      protein: Number(protein) || 0,
-      carbs: Number(carbs) || 0,
-      fats: Number(fats) || 0,
-      createdAt: new Date().toISOString(),
+      calories: aiEst.calories,
+      protein: aiEst.protein,
+      carbs: aiEst.carbs,
+      fats: aiEst.fats,
     };
-    const logs = getMealLogs();
-    saveMealLogs([log, ...logs]);
-    router.push("/");
+
+    const mealPayload = {
+      email,
+      mealType: basePayload.mealType,
+      description: basePayload.description,
+      calories: basePayload.calories,
+      protein: basePayload.protein,
+      carbs: basePayload.carbs,
+      fats: basePayload.fats,
+    };
+
+    const saveDirect = async (imageUrl?: string) => {
+      await saveMealLog({ ...mealPayload, imageUrl });
+    };
+
+    const trySave = async (imageUrl?: string) => {
+      let res: Response | null = null;
+      try {
+        res = await fetch("/api/meals/log", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionRequestHeaders(),
+          },
+          credentials: "include",
+          body: JSON.stringify({ ...basePayload, imageUrl }),
+        });
+      } catch (networkErr) {
+        console.warn("[add-meal] API network error, fallback direct save", networkErr);
+        await saveDirect(imageUrl);
+        router.push("/");
+        return;
+      }
+
+      if (res.ok) {
+        router.push("/");
+        return;
+      }
+
+      let errBody: {
+        error?: string;
+        code?: string;
+        detail?: string;
+        hint?: string;
+      } = {};
+      try {
+        errBody = (await res.json()) as typeof errBody;
+      } catch {
+        errBody = { error: `HTTP ${res.status}` };
+      }
+      console.error("[add-meal] API error", { status: res.status, ...errBody });
+
+      try {
+        console.warn("[add-meal] fallback direct Supabase save");
+        await saveDirect(imageUrl);
+        router.push("/");
+      } catch (directErr) {
+        console.error("[add-meal] direct save failed", directErr);
+        throw new Error(
+          errorMessage(
+            directErr,
+            errBody.error ??
+              (errBody.code === "DB_ERROR"
+                ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
+                : `儲存失敗 (HTTP ${res.status})`)
+          )
+        );
+      }
+    };
+
+    try {
+      await trySave(uploadedImageUrl);
+    } catch (err) {
+      console.error("[add-meal] save failed", err);
+      alert(errorMessage(err, "上傳失敗，請檢查 Supabase 連線"));
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
+  if (!profileChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-500">
+        載入中...
+      </div>
+    );
+  }
+
+  if (needsOnboarding && session?.email) {
+    return (
+      <OnboardingModal
+        email={session.email}
+        initial={bodyProfile ?? undefined}
+        onComplete={(saved) => {
+          setBodyProfile(saved);
+          setGoalCalories(computeTargetProfile(saved).targetCalories);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-50 pb-8 max-w-lg mx-auto">
-      <header className="bg-white border-b border-zinc-200 px-4 py-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className={`text-zinc-600 text-sm font-medium px-3 py-2 rounded-lg bg-zinc-100 ${btnClass}`}
-          >
-            ← 返回
-          </button>
-          <h1 className="text-lg font-bold">記錄飲食</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+      {showNutritionDash && (
+        <NutritionDashboard
+          logs={todayLogs}
+          goalCalories={goalCalories}
+          goalProtein={goalProtein}
+          goalCarbs={goalCarbs}
+          goalFats={goalFats}
+          exerciseCalories={exerciseDaily}
+          onClose={() => setShowNutritionDash(false)}
+          onExerciseChange={async (kcal) => {
+            if (!session?.email || !bodyProfile) return;
+            const res = await fetch("/api/student/profile", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                heightCm: bodyProfile.heightCm,
+                weightKg: bodyProfile.weightKg,
+                age: bodyProfile.age,
+                gender: bodyProfile.gender,
+                targetWeightKg: bodyProfile.targetWeightKg,
+                exerciseCaloriesDaily: kcal,
+              }),
+            });
+            const data = (await res.json()) as { profile?: StudentBodyProfile };
+            if (data.profile) setBodyProfile(data.profile);
+          }}
+        />
+      )}
+
+      <PageHeader
+        title="記錄飲食"
+        onBack={() => router.push("/")}
+        backLabel="← 返回"
+      />
 
       <main className="px-4 py-4 space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowNutritionDash(true)}
+          className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
+        >
+          📊 高級營養分析
+        </button>
+
+        <FoodSearchEngine
+          onAddToMeal={(item) => {
+            setDescription(item.description);
+            setCalories(item.calories);
+            setProtein(item.protein);
+            setCarbs(item.carbs);
+            setFats(item.fats);
+          }}
+        />
+
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
@@ -142,7 +411,7 @@ export default function AddMealPage() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="例如：乾炒牛河、少飯、凍奶茶走甜..."
+              placeholder="例如：牛肉叉燒拉麵、茶餐廳乾炒牛河..."
               rows={3}
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base resize-none"
             />
@@ -162,11 +431,17 @@ export default function AddMealPage() {
             <div
               role="button"
               tabIndex={0}
-              onClick={handleImageClick}
-              onKeyDown={(e) => e.key === "Enter" && handleImageClick()}
-              className={`border-2 border-dashed border-zinc-300 rounded-2xl p-6 text-center ${btnClass}`}
+              onClick={imageCompressing ? undefined : handleImageClick}
+              onKeyDown={(e) =>
+                !imageCompressing && e.key === "Enter" && handleImageClick()
+              }
+              className={`border-2 border-dashed border-zinc-300 rounded-2xl p-6 text-center ${
+                imageCompressing ? "opacity-70 pointer-events-none" : btnClass
+              }`}
             >
-              {imageBase64 ? (
+              {imageCompressing ? (
+                <p className="text-zinc-600 font-medium">壓縮相片中...</p>
+              ) : imageBase64 ? (
                 <img
                   src={imageBase64}
                   alt="已上傳食物"
@@ -174,7 +449,7 @@ export default function AddMealPage() {
                 />
               ) : (
                 <p className="text-zinc-500">
-                  📷 撳一下上傳相片（儲存喺記憶體，唔寫入硬碟）
+                  📷 撳一下拍照或選擇相片（自動壓縮至 1MB 內）
                 </p>
               )}
             </div>
@@ -183,6 +458,9 @@ export default function AddMealPage() {
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-800">快速份量估算</h2>
+          <p className="text-xs text-zinc-500">
+            AI 已啟用外食隱形熱量修正（湯底、紅油、用油）
+          </p>
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-xs text-zinc-500">碳水（拳頭大小）</label>
@@ -228,14 +506,9 @@ export default function AddMealPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={aiLoading}
-            onClick={runFakeAi}
-            className={`w-full bg-violet-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
-          >
-            {aiLoading ? "AI 分析緊..." : "🤖 啟動 AI 多模態估算"}
-          </button>
+          <p className="text-xs text-zinc-500">
+            儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）
+          </p>
         </section>
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
@@ -249,6 +522,9 @@ export default function AddMealPage() {
           </button>
           {snackOpen && (
             <div className="mt-4 space-y-3 pt-3 border-t border-zinc-100">
+              <SnackLabelScanner
+                onApplyPerPiece={(perPiece) => setSnackPerPiece(perPiece)}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-zinc-500">每件卡路里</label>
@@ -311,9 +587,14 @@ export default function AddMealPage() {
         <button
           type="button"
           onClick={handleSave}
-          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg ${btnClass}`}
+          disabled={saveLoading || imageCompressing}
+          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
-          儲存記錄
+          {saveLoading
+            ? "AI 正在火速分析..."
+            : imageCompressing
+              ? "壓縮相片中..."
+              : "發布記錄"}
         </button>
       </main>
     </div>
