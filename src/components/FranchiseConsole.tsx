@@ -8,10 +8,15 @@ import {
   fetchMealLogsForSession,
   insertUser,
 } from "@/lib/db";
+import { getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
+
+function partnerBrandLabel(user: RegistryUser): string {
+  return user.tenantName ?? user.appTitle ?? user.gym ?? "未設定品牌";
+}
 
 interface FranchiseConsoleProps {
   session: UserSession;
@@ -30,7 +35,7 @@ export function FranchiseConsole({
 }: FranchiseConsoleProps) {
   const [newStaffEmail, setNewStaffEmail] = useState("");
   const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffGym, setNewStaffGym] = useState("銅鑼灣分店");
+  const [newBrandName, setNewBrandName] = useState("");
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
   const [aiReport, setAiReport] = useState<string | null>(null);
@@ -46,8 +51,8 @@ export function FranchiseConsole({
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStaffEmail.trim() || !newStaffName.trim()) {
-      onToast("⚠️ 請輸入完整 Email 與名字！");
+    if (!newStaffEmail.trim() || !newStaffName.trim() || !newBrandName.trim()) {
+      onToast("⚠️ 請輸入品牌名稱、教練姓名與 Email！");
       return;
     }
     setSubmitting(true);
@@ -56,18 +61,41 @@ export function FranchiseConsole({
         onToast("🚨 該 Email 已經登記過！");
         return;
       }
-      await insertUser({
-        email: newStaffEmail.trim().toLowerCase(),
-        name: newStaffName.trim(),
-        role: "coach",
-        gym: newStaffGym,
-        addedBy: session.email,
+
+      const res = await fetch("/api/admin/partner-coach", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          brandName: newBrandName.trim(),
+          coachName: newStaffName.trim(),
+          coachEmail: newStaffEmail.trim().toLowerCase(),
+        }),
       });
+
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        hint?: string;
+        tenant?: { gymName: string };
+      };
+
+      if (!res.ok) {
+        onToast(`❌ ${data.error ?? "建立失敗"}${data.hint ? `（${data.hint}）` : ""}`);
+        return;
+      }
+
       const updated = await fetchAllUsers();
       onRegistryChange(updated);
       setNewStaffEmail("");
       setNewStaffName("");
-      onToast(`👑 已授權教練：${newStaffName}`);
+      setNewBrandName("");
+      onToast(
+        `👑 已新增合作品牌「${data.tenant?.gymName ?? newBrandName.trim()}」教練：${newStaffName.trim()}`
+      );
     } catch {
       onToast("❌ 雲端寫入失敗，請稍後再試。");
     } finally {
@@ -87,14 +115,18 @@ export function FranchiseConsole({
         onToast("🚨 該學員 Email 已被登記！");
         return;
       }
-      await insertUser({
-        email: newStudentEmail.trim().toLowerCase(),
-        name: newStudentName.trim(),
-        role: "student",
-        gym: session.gym,
-        coach: session.name,
-        addedBy: session.email,
-      });
+      await insertUser(
+        {
+          email: newStudentEmail.trim().toLowerCase(),
+          name: newStudentName.trim(),
+          role: "student",
+          gym: session.brandName ?? session.gym,
+          coach: session.name,
+          addedBy: session.email,
+          tenantId: session.tenantId,
+        },
+        session
+      );
       const updated = await fetchAllUsers();
       onRegistryChange(updated);
       setNewStudentEmail("");
@@ -147,9 +179,19 @@ export function FranchiseConsole({
       {session.role === "admin" && (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-900 border-l-4 border-zinc-900 pl-2">
-            🛠️ 加封分店教練 / 老闆
+            🛠️ 新增合作 Gym 品牌 / 自由教練
           </h2>
+          <p className="text-xs text-zinc-500">
+            每次新增會自動建立獨立 Tenant，教練帳號綁定該品牌並擁有教練後台權限。
+          </p>
           <form onSubmit={handleAddStaff} className="space-y-3 text-sm">
+            <input
+              type="text"
+              value={newBrandName}
+              onChange={(e) => setNewBrandName(e.target.value)}
+              placeholder="請輸入 Gym 品牌名稱或自由教練（例如: Oxygym 或 自由教練-Alan）"
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+            />
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
@@ -158,44 +200,43 @@ export function FranchiseConsole({
                 placeholder="教練姓名"
                 className="rounded-xl border border-zinc-200 px-3 py-2.5"
               />
-              <select
-                value={newStaffGym}
-                onChange={(e) => setNewStaffGym(e.target.value)}
-                className="rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                <option>銅鑼灣分店</option>
-                <option>旺角分店</option>
-                <option>荃灣分店</option>
-              </select>
+              <input
+                type="email"
+                value={newStaffEmail}
+                onChange={(e) => setNewStaffEmail(e.target.value)}
+                placeholder="教練登入 Email"
+                className="rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2.5"
+              />
             </div>
-            <input
-              type="email"
-              value={newStaffEmail}
-              onChange={(e) => setNewStaffEmail(e.target.value)}
-              placeholder="教練登入 Email"
-              className="w-full rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2.5"
-            />
             <button
               type="submit"
               disabled={submitting}
               className={`w-full py-3 bg-zinc-900 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              {submitting ? "寫入雲端緊..." : "🚀 授權並加入名單"}
+              {submitting ? "建立 Tenant 緊..." : "🚀 建立品牌並授權教練"}
             </button>
           </form>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {staffList.map((staff) => (
-              <div
-                key={staff.email}
-                className="p-2.5 bg-zinc-50 rounded-xl flex justify-between text-xs"
-              >
-                <div>
-                  <p className="font-semibold">{staff.name}</p>
-                  <p className="text-zinc-500 font-mono">{staff.email}</p>
+            {staffList.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-3">
+                暫未有合作教練，請用上方表單新增。
+              </p>
+            ) : (
+              staffList.map((staff) => (
+                <div
+                  key={staff.email}
+                  className="p-2.5 bg-zinc-50 rounded-xl flex justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{staff.name}</p>
+                    <p className="text-zinc-500 font-mono truncate">{staff.email}</p>
+                  </div>
+                  <span className="shrink-0 text-right text-blue-700 font-medium max-w-[45%] truncate">
+                    {partnerBrandLabel(staff)}
+                  </span>
                 </div>
-                <span className="text-blue-700 font-medium">{staff.gym}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       )}
@@ -215,7 +256,7 @@ export function FranchiseConsole({
 
           <section className="bg-white rounded-2xl border border-blue-100 p-4 space-y-3 shadow-sm">
             <h2 className="font-semibold text-blue-900 border-l-4 border-blue-600 pl-2">
-              🎟️ 登記分店學員 Email
+              🎟️ 登記學員 Email
             </h2>
             <form onSubmit={handleAddStudent} className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
@@ -228,9 +269,10 @@ export function FranchiseConsole({
                 />
                 <input
                   type="text"
-                  value={session.gym}
+                  value={session.brandName ?? session.gym}
                   disabled
-                  className="rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2.5"
+                  className="rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2.5 truncate"
+                  title={session.brandName ?? session.gym}
                 />
               </div>
               <input
@@ -266,13 +308,15 @@ export function FranchiseConsole({
               {studentList.map((student) => (
                 <li
                   key={student.email}
-                  className="p-2.5 bg-zinc-50 rounded-xl flex justify-between text-xs"
+                  className="p-2.5 bg-zinc-50 rounded-xl flex justify-between gap-2 text-xs"
                 >
-                  <div>
-                    <p className="font-semibold">{student.name}</p>
-                    <p className="text-zinc-500 font-mono">{student.email}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{student.name}</p>
+                    <p className="text-zinc-500 font-mono truncate">{student.email}</p>
                   </div>
-                  <span className="text-emerald-700 font-medium">{student.gym}</span>
+                  <span className="shrink-0 text-emerald-700 font-medium max-w-[45%] truncate">
+                    {partnerBrandLabel(student)}
+                  </span>
                 </li>
               ))}
             </ul>

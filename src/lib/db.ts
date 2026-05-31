@@ -67,6 +67,32 @@ function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
   return user;
 }
 
+async function attachTenantNames(users: RegistryUser[]): Promise<RegistryUser[]> {
+  const tenantIds = users
+    .map((u) => u.tenantId)
+    .filter((id): id is string => Boolean(id));
+  if (tenantIds.length === 0) return users;
+
+  try {
+    const unique = Array.from(new Set(tenantIds));
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id, gym_name")
+      .in("id", unique);
+    if (error) throw error;
+    const names = new Map(
+      (data ?? []).map((row) => [String(row.id), String(row.gym_name)])
+    );
+    return users.map((u) => ({
+      ...u,
+      tenantName: u.tenantId ? names.get(u.tenantId) ?? u.appTitle ?? u.gym : undefined,
+    }));
+  } catch (err) {
+    console.warn("[db] fetch tenant names failed", err);
+    return users;
+  }
+}
+
 function mapMeal(row: MealRow): MealLog {
   return {
     id: row.id,
@@ -143,7 +169,7 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
 
   if (error) throw error;
   const rows = (data as UserRow[]).map((row) => mapUser(row));
-  if (rows.length > 0) return rows;
+  if (rows.length > 0) return attachTenantNames(rows);
 
   const { getDemoRegistry } = await import("@/lib/demo-users");
   return getDemoRegistry();

@@ -51,6 +51,7 @@ export interface RegistryUser {
   coach?: string;
   addedBy?: string;
   tenantId?: string;
+  tenantName?: string;
   logo?: string;
   appTitle?: string;
   themeColor?: ThemeColor;

@@ -95,6 +95,64 @@ export async function createTenantWithCoach(input: {
   return { tenant, coachEmail: email };
 }
 
+export async function createPartnerTenantWithCoach(input: {
+  brandName: string;
+  coachEmail: string;
+  coachName: string;
+  addedByAdminEmail: string;
+}): Promise<{ tenant: Tenant; coachEmail: string }> {
+  const supabase = getSupabaseAdmin();
+  const brandName = input.brandName.trim();
+  const email = input.coachEmail.trim().toLowerCase();
+  const coachName = input.coachName.trim();
+  const slug = generateTenantSlug(brandName);
+
+  const { data: tenantRow, error: tenantError } = await supabase
+    .from("tenants")
+    .insert({
+      slug,
+      gym_name: brandName,
+      owner_email: email,
+      plan: "trial",
+    })
+    .select("*")
+    .single();
+
+  if (tenantError) throw tenantError;
+  const tenant = mapTenant(tenantRow as TenantRow);
+
+  const { error: coachError } = await supabase.from("users_registry").insert({
+    email,
+    name: coachName,
+    role: "coach",
+    gym: brandName,
+    tenant_id: tenant.id,
+    added_by: input.addedByAdminEmail.trim().toLowerCase(),
+    app_title: brandName,
+    theme_color: "emerald",
+  });
+
+  if (coachError) throw coachError;
+
+  return { tenant, coachEmail: email };
+}
+
+export async function fetchTenantNamesByIds(
+  ids: string[]
+): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return new Map();
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("id, gym_name")
+    .in("id", unique);
+
+  if (error) throw error;
+  return new Map((data ?? []).map((row) => [String(row.id), String(row.gym_name)]));
+}
+
 export async function syncTenantBranding(
   tenantId: string,
   payload: { gymName: string; logoUrl?: string; themeColor?: string }
