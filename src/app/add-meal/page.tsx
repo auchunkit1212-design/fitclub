@@ -47,7 +47,6 @@ export default function AddMealPage() {
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
   const [fats, setFats] = useState(0);
-  const [aiLoading, setAiLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [imageCompressing, setImageCompressing] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
@@ -142,27 +141,6 @@ export default function AddMealPage() {
       setImageCompressing(false);
       e.target.value = "";
     }
-  };
-
-  const runFakeAi = () => {
-    if (!description.trim()) {
-      alert("請先填寫食物描述！");
-      return;
-    }
-    setAiLoading(true);
-    setTimeout(() => {
-      const est = estimateMacros(
-        description,
-        carbsPortion,
-        proteinPortion,
-        hasVeggies
-      );
-      setCalories(est.calories);
-      setProtein(est.protein);
-      setCarbs(est.carbs);
-      setFats(est.fats);
-      setAiLoading(false);
-    }, 1000);
   };
 
   const applySnackTotal = () => {
@@ -528,14 +506,9 @@ export default function AddMealPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={aiLoading}
-            onClick={runFakeAi}
-            className={`w-full bg-violet-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
-          >
-            {aiLoading ? "AI 分析緊..." : "🤖 啟動 AI 多模態估算"}
-          </button>
+          <p className="text-xs text-zinc-500">
+            儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）
+          </p>
         </section>
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">

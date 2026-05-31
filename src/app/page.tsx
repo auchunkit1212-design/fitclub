@@ -8,7 +8,7 @@ import {
 } from "@/components/BodyProfileFields";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { BottomNav } from "@/components/BottomNav";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -493,38 +493,43 @@ export default function StudentDashboard() {
       )}
 
       <header
-        className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-6 rounded-b-3xl shadow-lg`}
+        className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5 rounded-b-3xl shadow-lg overflow-hidden`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <GorillaMascot
-              themeColor={branding?.themeColor ?? "emerald"}
-              logoUrl={branding?.logo}
-            />
-            <div className="min-w-0">
-              <p className="text-white/80 text-xs">{BRAND_TAGLINE}</p>
-              <p className="text-white/80 text-sm">
-                {session.role === "coach"
-                  ? "教練主頁"
-                  : session.role === "admin"
-                    ? "老闆主頁"
-                    : "學員主頁"}
-              </p>
-              <h1 className="text-2xl font-bold mt-0.5 truncate">{title}</h1>
-            </div>
+        <div className="flex items-start gap-2.5 min-w-0">
+          <GorillaMascot
+            themeColor={branding?.themeColor ?? "emerald"}
+            logoUrl={
+              isCustomBrandLogo(branding?.logo) ? branding?.logo : undefined
+            }
+            size="sm"
+          />
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="text-white/75 text-[10px] leading-tight line-clamp-1">
+              {BRAND_TAGLINE}
+            </p>
+            <p className="text-white/85 text-xs mt-0.5">
+              {session.role === "coach"
+                ? "教練主頁"
+                : session.role === "admin"
+                  ? "老闆主頁"
+                  : "學員主頁"}
+            </p>
+            <h1 className="text-base sm:text-lg font-bold leading-snug line-clamp-2 break-words mt-0.5">
+              {title}
+            </h1>
+            <p className="text-white/80 text-[11px] mt-1.5 truncate">
+              {settings.nickname || session.name} · {session.gym} · 今日{" "}
+              {todayLogs.length} 餐
+            </p>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className={`shrink-0 text-[11px] bg-white/15 px-2 py-1 rounded-lg ${btnClass}`}
+            className={`shrink-0 self-start text-[10px] bg-white/15 px-2 py-1.5 rounded-lg whitespace-nowrap ${btnClass}`}
           >
             🚪 登出
           </button>
         </div>
-        <p className="text-white/90 text-sm mt-2">
-          {settings.nickname || session.name} · {session.gym} · 今日已記錄{" "}
-          {todayLogs.length} 餐
-        </p>
       </header>
 
       <main className="px-4 -mt-4 space-y-4">

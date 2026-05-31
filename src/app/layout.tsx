@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   description: "Nutrition Coach 專屬飲食打卡同教練管理 — Coach! what to eat?",
   applicationName: BRAND_NAME,
   manifest: "/api/manifest",
-  icons: {
-    icon: [{ url: "/logo.png", type: "image/png" }],
-    apple: [{ url: "/logo.png", type: "image/png" }],
+    icons: {
+    icon: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
   },
   appleWebApp: {
     capable: true,
