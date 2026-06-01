@@ -34,7 +34,7 @@ export function GorillaMascot({
       <img
         src={APP_LOGO_PATH}
         alt="Nutrition Coach"
-        className={`${dim} object-contain shrink-0 rounded-2xl ${className}`}
+        className={`${dim} object-contain shrink-0 ${className}`}
       />
     );
   }
