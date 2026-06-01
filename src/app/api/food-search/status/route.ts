@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
-import { isFatSecretConfigured } from "@/lib/food-search/fatsecret";
+import { diagnoseFatSecret, isFatSecretConfigured } from "@/lib/food-search/fatsecret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** 檢查 FatSecret 是否已在伺服器環境變數中設定（部署後用於除錯） */
+/** 檢查 FatSecret OAuth + 搜尋是否正常（部署除錯用） */
 export async function GET() {
+  const configured = isFatSecretConfigured();
+  if (!configured) {
+    return NextResponse.json({
+      fatSecretConfigured: false,
+      ok: false,
+      message: "Set FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET in environment variables.",
+    });
+  }
+
+  const diagnostics = await diagnoseFatSecret();
   return NextResponse.json({
-    fatSecretConfigured: isFatSecretConfigured(),
+    fatSecretConfigured: true,
+    ok: diagnostics.tokenOk && diagnostics.searchOk,
+    ...diagnostics,
   });
 }

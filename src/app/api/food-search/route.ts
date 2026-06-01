@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** 主力路由：FatSecret 優先 → 茶餐廳 JSON → AI → 本地估算 */
+/** FatSecret OAuth 2.0 優先 → 茶餐廳 JSON → AI → 本地估算 */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
   }
 
   const fatSecretConfigured = isFatSecretConfigured();
+  let fatSecretError: string | undefined;
 
   try {
-    // 1) FatSecret 第一優先
     if (fatSecretConfigured) {
       try {
         const fatSecretItems = await searchFoodWithFatSecret(query);
@@ -50,17 +50,23 @@ export async function POST(request: Request) {
             fatSecretConfigured: true,
           });
         }
-        console.warn("[food-search] FatSecret returned 0 items for:", query);
+        fatSecretError =
+          "FatSecret search returned no foods for this query. Check /api/food-search/status on your deployment.";
+        console.warn("[food-search]", fatSecretError, { query });
       } catch (err) {
-        console.error("[food-search] FatSecret error", err);
+        fatSecretError =
+          err instanceof FoodSearchError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "FatSecret request failed";
+        console.error("[food-search] FatSecret error", fatSecretError);
       }
     } else {
-      console.warn(
-        "[food-search] FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET not set"
-      );
+      fatSecretError = "FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET not set on server";
+      console.warn("[food-search]", fatSecretError);
     }
 
-    // 2) 茶餐廳本地庫
     const hkItems = searchHkFoodDatabase(query);
     if (hkItems.length > 0) {
       return NextResponse.json({
@@ -68,10 +74,10 @@ export async function POST(request: Request) {
         source: "hk" as const,
         lang,
         fatSecretConfigured,
+        warning: fatSecretError,
       });
     }
 
-    // 3) AI 估算（FatSecret 無結果時仍嘗試）
     try {
       const aiItems = await searchFoodWithAI(query, lang);
       if (aiItems.length > 0) {
@@ -80,13 +86,13 @@ export async function POST(request: Request) {
           source: aiItems[0]?.source ?? "gemini",
           lang,
           fatSecretConfigured,
+          warning: fatSecretError,
         });
       }
     } catch (err) {
       console.warn("[food-search] AI unavailable", err);
     }
 
-    // 4) 本地規則（最後保底，避免完全搜不到）
     const localItems = await searchFoodLocally(query, lang);
     if (localItems.length > 0) {
       return NextResponse.json({
@@ -94,20 +100,23 @@ export async function POST(request: Request) {
         source: "local" as const,
         lang,
         fatSecretConfigured,
-        warning: fatSecretConfigured
-          ? "FatSecret returned no results; showing estimated macros. Redeploy after setting API keys."
-          : undefined,
+        warning:
+          fatSecretError ??
+          (fatSecretConfigured
+            ? "Using estimated macros."
+            : "FatSecret not configured; using estimated macros."),
       });
     }
 
     return NextResponse.json(
       {
         error: fatSecretConfigured
-          ? "搵唔到相關食物，請換個關鍵字再試"
-          : "食物資料庫未連線，請聯絡管理員設定 FatSecret API",
+          ? fatSecretError ?? "搵唔到相關食物，請換個關鍵字再試"
+          : "食物資料庫未連線，請設定 FatSecret API 環境變數",
         items: [] as FoodSearchItem[],
         source: "local" as const,
         fatSecretConfigured,
+        fatSecretError,
       },
       { status: 404 }
     );
