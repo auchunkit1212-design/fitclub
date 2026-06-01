@@ -43,8 +43,8 @@ export function GorillaMascot({
           </mask>
         </defs>
 
-        {/* 底圖：新吉祥物 SVG */}
-        <image href="/new-gorilla.svg" x="0" y="0" width="128" height="128" preserveAspectRatio="xMidYMid meet" />
+        {/* 底圖：優先新吉祥物，現階段先用現有 gorilla.svg 避免破圖 */}
+        <image href="/gorilla.svg" x="0" y="0" width="128" height="128" preserveAspectRatio="xMidYMid meet" />
 
         {/* 背心底色：純白 */}
         <path

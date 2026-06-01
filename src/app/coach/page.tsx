@@ -202,14 +202,14 @@ export default function CoachPage() {
 
       <main className="px-4 py-4 space-y-4">
         <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
-          <h2 className="text-sm font-bold text-[#5fa718]">
+          <h2 className="text-sm font-bold text-emerald-700">
             🤖 AI 數據智能整合中心
           </h2>
           <button
             type="button"
             disabled={isGenerating}
             onClick={generateAIReport}
-            className={`w-full py-3 bg-[#7ED321] text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
+            className={`w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
             {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
           </button>
@@ -307,7 +307,7 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-[#7ED321] text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {publishing ? "發布緊..." : "發布到雲端"}
             </button>

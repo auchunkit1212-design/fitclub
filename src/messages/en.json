@@ -20,10 +20,94 @@
     "adminHome": "Admin Home",
     "studentHome": "Student Home"
   },
+  "common": {
+    "loading": "Loading...",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "calories": "Calories",
+    "search": "Search",
+    "total": "Total",
+    "quantity": "Qty",
+    "yes": "Yes"
+  },
   "addMeal": {
     "title": "Log Meal",
     "uploadPhoto": "Upload Photo",
-    "calculateCalories": "Calculate Calories",
-    "publish": "Publish Log"
+    "uploadPhotoHint": "Tap to take or choose a photo (auto-compressed under 1MB)",
+    "compressingPhoto": "Compressing photo...",
+    "uploadedPhotoAlt": "Uploaded food photo",
+    "calculateCalories": "Snack Calculator",
+    "publish": "Publish Log",
+    "saving": "Saving...",
+    "aiAnalyzing": "AI is analyzing...",
+    "advancedNutrition": "Advanced Nutrition",
+    "mealType": "Meal type",
+    "description": "Food description",
+    "descriptionPlaceholder": "e.g. char siu ramen, fried noodles...",
+    "quickPortion": "Quick portion estimate",
+    "quickPortionHint": "AI adjusts hidden calories for dining out (broth, chili oil, cooking oil)",
+    "carbsPortion": "Carbs (fist size)",
+    "proteinPortion": "Protein (palm size)",
+    "veggies": "Vegetables",
+    "autoEstimateHint": "Calories and macros are estimated automatically when you save",
+    "perPieceCalories": "Calories per piece",
+    "applyTotalCalories": "Apply total calories",
+    "manualMacros": "Adjust macros manually",
+    "fromAiSearch": "From AI search",
+    "caloriesKcal": "Calories (kcal)",
+    "proteinG": "Protein (g)",
+    "carbsG": "Carbs (g)",
+    "fatG": "Fat (g)",
+    "mealTypes": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "afternoonTea": "Afternoon tea",
+      "lateNight": "Late night",
+      "snack": "Snack"
+    },
+    "portions": {
+      "none": "None (0)",
+      "carbsSmall": "Small fist",
+      "carbsMedium": "Medium fist",
+      "carbsLarge": "Large fist",
+      "proteinSmall": "Small palm",
+      "proteinMedium": "Medium palm",
+      "proteinLarge": "Large palm"
+    },
+    "errors": {
+      "descriptionRequired": "Please enter a food description.",
+      "loginRequired": "Please log in before logging a meal.",
+      "compressFailed": "Photo compression failed. Try a smaller image."
+    }
+  },
+  "foodSearch": {
+    "title": "Food Search",
+    "hint": "Try \"char siu rice\", \"milk tea\", or \"chicken breast\" — AI estimates standard serving macros",
+    "placeholder": "Search food name...",
+    "searching": "Searching...",
+    "analyzing": "AI is analyzing nutrients for",
+    "searchFailed": "Search failed",
+    "notFound": "No matching foods. Try another keyword.",
+    "noResultsDropdown": "No matching foods. Try a different keyword.",
+    "typeToSearch": "Type at least 2 characters to search",
+    "minCharsHint": "Keep typing to see suggestions…",
+    "networkError": "Network error. Please try again.",
+    "sourceHk": "HK café database",
+    "sourceLocal": "Smart estimate",
+    "addedHint": "Added to form — tap Publish Log to save",
+    "addFavorite": "Add to favorites",
+    "favorites": "Favorites / History",
+    "usedTimes": "Used {count} times",
+    "aboutG": "about {g}g"
+  },
+  "snackScanner": {
+    "scanning": "Reading nutrition label...",
+    "scanButton": "Scan nutrition label",
+    "perServing": "Per serving {cal} kcal ({size}) · {count} servings",
+    "perPiece": "→ About {cal} kcal per piece (applied)",
+    "engineOpenAi": "Engine: GPT-4o Vision",
+    "engineMock": "Engine: demo mode"
   }
 }

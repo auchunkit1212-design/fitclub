@@ -8,6 +8,13 @@ body {
   overflow-x: hidden;
 }
 
+:root {
+  --brand-primary: #059669;
+  --brand-primary-hover: #047857;
+  --brand-primary-dark: #065f46;
+  --brand-primary-light: #ecfdf5;
+}
+
 body {
   @apply bg-white text-gray-900 antialiased;
 }

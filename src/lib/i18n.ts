@@ -37,10 +37,20 @@ export function getLanguageInstruction(lang: AppLanguage): string {
   return "請使用香港地道廣東話（如：卡路里、飯盒、克）和繁體中文回覆。";
 }
 
-export function t(lang: AppLanguage, key: string, fallback?: string): string {
+export function t(
+  lang: AppLanguage,
+  key: string,
+  fallback?: string,
+  vars?: Record<string, string | number>
+): string {
   const value = resolvePath(messages[lang], key);
-  if (typeof value === "string") return value;
-  return fallback ?? key;
+  let text = typeof value === "string" ? value : fallback ?? key;
+  if (vars) {
+    for (const [name, val] of Object.entries(vars)) {
+      text = text.replaceAll(`{${name}}`, String(val));
+    }
+  }
+  return text;
 }
 
 function resolvePath(obj: Record<string, unknown>, key: string): unknown {

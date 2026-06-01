@@ -12,7 +12,7 @@ import {
 type I18nContextValue = {
   lang: AppLanguage;
   setLang: (lang: AppLanguage) => void;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<I18nContextValue>({
@@ -43,7 +43,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     () => ({
       lang,
       setLang,
-      t: (key: string, fallback?: string) => translate(lang, key, fallback),
+      t: (key: string, fallback?: string, vars?: Record<string, string | number>) =>
+        translate(lang, key, fallback, vars),
     }),
     [lang]
   );

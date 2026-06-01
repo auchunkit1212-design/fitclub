@@ -314,7 +314,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 bg-[#7ED321] text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {loading ? "驗證緊..." : "登入"}
             </button>
@@ -424,7 +424,7 @@ export default function RegisterPage() {
                 type="submit"
                 disabled={loading}
                 className={`w-full py-3.5 rounded-xl font-bold text-white disabled:opacity-60 ${
-                  signupTrack === "coach" ? "bg-[#7ED321]" : "bg-[#7ED321]"
+                  signupTrack === "coach" ? "bg-emerald-600" : "bg-emerald-600"
                 } ${btnClass}`}
               >
                 {loading
@@ -440,7 +440,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-sm text-zinc-500 mt-5">
         Gym 老闆？{" "}
-        <Link href="/sas-register" className="text-[#5fa718] font-semibold underline">
+        <Link href="/sas-register" className="text-emerald-700 font-semibold underline">
           免費開通品牌空間
         </Link>
       </p>

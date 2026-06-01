@@ -33,7 +33,7 @@ export function BottomNav({
           onClick={() => onTabChange("dashboard")}
           className={`${
             activeTab === "dashboard"
-              ? "bg-[#7ED321] text-white"
+              ? "bg-emerald-600 text-white"
               : "bg-gray-100 text-gray-700"
           } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
         >
@@ -46,7 +46,7 @@ export function BottomNav({
             onClick={() => onTabChange("settings")}
             className={`${
               activeTab === "settings"
-                ? "bg-[#7ED321] text-white"
+                ? "bg-emerald-600 text-white"
                 : "bg-gray-100 text-gray-700"
             } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
           >
@@ -56,7 +56,7 @@ export function BottomNav({
           <button
             type="button"
             onClick={() => router.push("/coach")}
-            className={`bg-[#7ED321] text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            className={`bg-emerald-600 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
             👨‍🏫 {t("nav.coach", "教練")}
           </button>
@@ -74,7 +74,7 @@ export function BottomNav({
           <button
             type="button"
             onClick={() => router.push("/coach/records")}
-            className={`bg-[#7ED321] text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            className={`bg-emerald-600 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
             📋 學員記錄
           </button>

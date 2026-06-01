@@ -12,7 +12,7 @@ interface SnackLabelScannerProps {
 }
 
 export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<NutritionLabelResult | null>(null);
@@ -42,14 +42,14 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
         result?: NutritionLabelResult;
         error?: string;
       };
-      if (!res.ok) throw new Error(data.error ?? "掃描失敗");
+      if (!res.ok) throw new Error(data.error ?? t("foodSearch.searchFailed", "掃描失敗"));
 
       setResult(data.result ?? null);
       if (data.result) {
         onApplyPerPiece(data.result.caloriesPerPiece, data.result);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "掃描失敗");
+      setError(err instanceof Error ? err.message : t("foodSearch.searchFailed", "掃描失敗"));
     } finally {
       setScanning(false);
       e.target.value = "";
@@ -70,26 +70,35 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
         type="button"
         disabled={scanning}
         onClick={() => inputRef.current?.click()}
-        className={`w-full bg-[#7ED321] text-white font-semibold py-3 rounded-xl disabled:opacity-60 ${btnClass}`}
+        className={`w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl disabled:opacity-60 ${btnClass}`}
       >
-        {scanning ? "AI 辨識標籤中..." : "📸 拍攝營養標籤"}
+        {scanning
+          ? t("snackScanner.scanning", "AI 辨識標籤中...")
+          : t("snackScanner.scanButton", "📸 拍攝營養標籤")}
       </button>
       {error && (
         <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">{error}</p>
       )}
       {result && (
-        <div className="text-xs bg-[#7ED321]/10 text-gray-800 rounded-xl p-3 space-y-1 border border-[#7ED321]/30">
+        <div className="text-xs bg-emerald-50 text-gray-800 rounded-xl p-3 space-y-1 border border-emerald-200">
           <p className="font-semibold">{result.productName}</p>
           <p>
-            每份 {result.caloriesPerServing} kcal（{result.servingSize}）· 共{" "}
-            {result.servingsPerPackage} 份
+            {t("snackScanner.perServing", "每份 {cal} kcal（{size}）· 共 {count} 份", {
+              cal: result.caloriesPerServing,
+              size: result.servingSize,
+              count: result.servingsPerPackage,
+            })}
           </p>
-          <p className="font-bold text-[#5fa718]">
-            → 每件約 {result.caloriesPerPiece} kcal（已填入）
+          <p className="font-bold text-emerald-700">
+            {t("snackScanner.perPiece", "→ 每件約 {cal} kcal（已填入）", {
+              cal: result.caloriesPerPiece,
+            })}
           </p>
           {result.notes && <p className="text-gray-600">{result.notes}</p>}
-          <p className="text-[10px] text-[#5fa718]">
-            引擎：{result.source === "openai" ? "GPT-4o Vision" : "示範模式"}
+          <p className="text-[10px] text-emerald-700">
+            {result.source === "openai"
+              ? t("snackScanner.engineOpenAi", "引擎：GPT-4o Vision")
+              : t("snackScanner.engineMock", "引擎：示範模式")}
           </p>
         </div>
       )}

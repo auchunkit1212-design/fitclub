@@ -371,7 +371,7 @@ export default function StudentDashboard() {
         <button
           type="button"
           onClick={() => goTo(router, "/register")}
-          className={`px-4 py-2 rounded-xl bg-[#7ED321] text-white text-sm font-medium ${btnClass}`}
+          className={`px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium ${btnClass}`}
         >
           去登入
         </button>
@@ -389,7 +389,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => goTo(router, "/register")}
-              className={`px-4 py-2 rounded-xl bg-[#7ED321] text-white text-sm font-medium ${btnClass}`}
+              className={`px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium ${btnClass}`}
             >
               返回登入
             </button>
@@ -496,7 +496,7 @@ export default function StudentDashboard() {
                   router.push("/add-meal");
                 }
               }}
-              className="px-3 py-1.5 text-xs rounded-lg bg-[#7ED321] text-white active:scale-95 active:opacity-80 transition-all cursor-pointer"
+              className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 text-white active:scale-95 active:opacity-80 transition-all cursor-pointer"
             >
               即刻做
             </button>
@@ -548,7 +548,7 @@ export default function StudentDashboard() {
               <p className="font-semibold text-zinc-900">
                 👋 歡迎，{settings.nickname || session.name}
               </p>
-              <span className="text-[10px] font-bold uppercase bg-[#7ED321] text-white px-2 py-0.5 rounded">
+              <span className="text-[10px] font-bold uppercase bg-emerald-600 text-white px-2 py-0.5 rounded">
                 {session.role === "admin"
                   ? "總控制台"
                   : session.role === "coach"
@@ -573,7 +573,7 @@ export default function StudentDashboard() {
           )}
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
-          <div className="bg-white text-gray-800 px-4 py-3 rounded-xl text-sm font-medium border border-[#7ED321]/40 shadow-sm">
+          <div className="bg-white text-gray-800 px-4 py-3 rounded-xl text-sm font-medium border border-emerald-300 shadow-sm">
             📜{" "}
             {session.isSoloStudent ? "AI 大猩猩聖旨" : "教練聖旨"}已鎖定目標：
             {coachTargets.targetCalories} kcal · 蛋白 {coachTargets.targetProtein}g · 碳水{" "}
@@ -582,13 +582,13 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
-          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
+          <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
             🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && coachReactions.length > 0 && (
-          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl text-sm shadow-sm">
+          <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl text-sm shadow-sm">
             {coachReactions.slice(0, 3).map((r) => (
               <p key={r.id} className="font-medium">
                 教練回覆咗你 {r.sticker}
@@ -598,13 +598,13 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
-          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl shadow-md text-sm font-medium">
+          <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-md text-sm font-medium">
             📣 教練突發警告: {broadcast}
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && (
-          <section className="bg-[#7ED321] text-white rounded-2xl p-4 shadow-md">
+          <section className="bg-emerald-600 text-white rounded-2xl p-4 shadow-md">
             <p className="text-sm font-semibold text-amber-100 mb-1">
               🤖 {session.isSoloStudent ? "大猩猩 AI 私教" : "專屬教練 AI 點評"}
             </p>
@@ -637,7 +637,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => setShowNutritionDash(true)}
-              className={`w-full bg-[#7ED321] text-white font-bold py-4 rounded-2xl shadow-md ${btnClass}`}
+              className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-md ${btnClass}`}
             >
               📊 高級營養分析
             </button>
