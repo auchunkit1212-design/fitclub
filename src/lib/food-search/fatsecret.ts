@@ -7,7 +7,9 @@ const API_URL = "https://platform.fatsecret.com/rest/server.api";
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
 export function isFatSecretConfigured(): boolean {
-  return Boolean(process.env.FATSECRET_CLIENT_ID && process.env.FATSECRET_CLIENT_SECRET);
+  const id = process.env.FATSECRET_CLIENT_ID?.trim();
+  const secret = process.env.FATSECRET_CLIENT_SECRET?.trim();
+  return Boolean(id && secret);
 }
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -20,8 +22,8 @@ async function getFatSecretAccessToken(): Promise<string> {
     return tokenCache.token;
   }
 
-  const clientId = process.env.FATSECRET_CLIENT_ID;
-  const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
+  const clientId = process.env.FATSECRET_CLIENT_ID?.trim();
+  const clientSecret = process.env.FATSECRET_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
     throw new FoodSearchError(
       "FatSecret 尚未設定，請聯絡管理員加入 FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET",
@@ -232,17 +234,7 @@ async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
 }
 
 async function searchHitToItem(food: FatSecretSearchFood): Promise<FoodSearchItem | null> {
-  try {
-    const detail = await fetchFoodDetail(food.food_id);
-    if (detail) {
-      detail.name = food.food_name;
-      if (food.brand_name) detail.brand = food.brand_name;
-      return detail;
-    }
-  } catch (err) {
-    console.warn("[fatsecret] food.get skipped", food.food_id, err);
-  }
-
+  // 先用搜尋摘要（1 次 API 即可），失敗再 food.get.v4（避免 serverless 逾時）
   if (food.food_description) {
     const macros = parseDescriptionMacros(food.food_description);
     if (macros) {
@@ -261,6 +253,17 @@ async function searchHitToItem(food: FatSecretSearchFood): Promise<FoodSearchIte
       if (food.brand_name) item.brand = food.brand_name;
       return item;
     }
+  }
+
+  try {
+    const detail = await fetchFoodDetail(food.food_id);
+    if (detail) {
+      detail.name = food.food_name;
+      if (food.brand_name) detail.brand = food.brand_name;
+      return detail;
+    }
+  } catch (err) {
+    console.warn("[fatsecret] food.get skipped", food.food_id, err);
   }
 
   return null;
@@ -292,13 +295,10 @@ async function searchFoodWithFatSecretOnce(query: string): Promise<FoodSearchIte
   const foods = sortSearchFoods(extractSearchFoods(searchData));
   if (foods.length === 0) return [];
 
-  const items: FoodSearchItem[] = [];
-  for (const food of foods.slice(0, 5)) {
-    const item = await searchHitToItem(food);
-    if (item) items.push(item);
-  }
-
-  return items;
+  const settled = await Promise.all(
+    foods.slice(0, 5).map((food) => searchHitToItem(food))
+  );
+  return settled.filter((item): item is FoodSearchItem => item !== null);
 }
 
 /** FatSecret foods.search 主力查詢（以 food.get.v4 取得精確份量） */

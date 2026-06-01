@@ -33,6 +33,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,12 +60,14 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
       if (trimmed.length < MIN_QUERY_LENGTH) {
         setResults([]);
         setLastSource(null);
+        setSearchError(null);
         setLoading(false);
         return;
       }
 
       const seq = ++searchSeq.current;
       setLoading(true);
+      setSearchError(null);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -88,11 +91,22 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         if (!res.ok) {
           setResults([]);
           setLastSource(null);
+          if (res.status === 401) {
+            setSearchError(
+              t("foodSearch.loginRequired", "請先登入後再搜尋食物")
+            );
+          } else {
+            setSearchError(
+              data.error ??
+                t("foodSearch.searchFailed", "搜尋失敗，請稍後再試")
+            );
+          }
           return;
         }
 
         const items = data.items ?? [];
         setResults(items);
+        setSearchError(null);
         const primarySource =
           items[0]?.source ?? data.source ?? null;
         setLastSource(primarySource);
@@ -100,6 +114,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         if (seq !== searchSeq.current) return;
         setResults([]);
         setLastSource(null);
+        setSearchError(t("foodSearch.searchFailed", "搜尋失敗，請稍後再試"));
       } finally {
         if (seq === searchSeq.current) setLoading(false);
       }
@@ -267,7 +282,11 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
               </div>
             )}
 
-            {showEmpty && (
+            {showEmpty && searchError && (
+              <p className="px-3 py-3 text-sm text-amber-700">{searchError}</p>
+            )}
+
+            {showEmpty && !searchError && (
               <p className="px-3 py-3 text-sm text-gray-500">
                 {t(
                   "foodSearch.noResultsDropdown",
