@@ -2,7 +2,7 @@ const CACHE_VERSION = "nutrition-coach-pwa-v6";
 const STATIC_CACHE = "nutrition-coach-static-v6";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
-const PRECACHE_URLS = ["/logo.png", "/manifest.json"];
+const PRECACHE_URLS = ["/gorilla-logo.png", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -39,6 +39,7 @@ function isNavigationRequest(request) {
 function isStaticAsset(pathname) {
   return (
     pathname.startsWith("/_next/static/") ||
+    pathname === "/gorilla-logo.png" ||
     pathname === "/logo.png" ||
     pathname === "/manifest.json"
   );
@@ -107,8 +108,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/gorilla-logo.png",
+      badge: "/gorilla-logo.png",
       tag: payload.tag || "nutrition-coach-reminder",
       renotify: true,
       data: { url: payload.url || "/" },

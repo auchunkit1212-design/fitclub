@@ -247,7 +247,7 @@ export default function RegisterPage() {
 
       <div className="text-center mb-5">
         <div className="flex justify-center mb-3">
-          <GorillaMascot themeColor="emerald" size="md" />
+          <GorillaMascot size="lg" />
         </div>
         <p className="text-emerald-300/90 text-xs font-semibold tracking-wide">
           {BRAND_TAGLINE}
