@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchFoodWithAI, searchFoodLocally } from "@/lib/food-search/ai-legacy";
-import { searchFoodWithFatSecret } from "@/lib/food-search/fatsecret";
+import { isFatSecretConfigured, searchFoodWithFatSecret } from "@/lib/food-search/fatsecret";
 import { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
 import { FoodSearchError } from "@/lib/food-search/shared";
 import { normalizeLanguage } from "@/lib/i18n";
@@ -41,10 +41,15 @@ export async function POST(request: Request) {
 
     const hkItems = searchHkFoodDatabase(query);
     let fatSecretItems: FoodSearchItem[] = [];
-    try {
-      fatSecretItems = await searchFoodWithFatSecret(query);
-    } catch (err) {
-      console.warn("[food-search] FatSecret unavailable", err);
+
+    if (isFatSecretConfigured()) {
+      try {
+        fatSecretItems = await searchFoodWithFatSecret(query);
+      } catch (err) {
+        console.warn("[food-search] FatSecret unavailable", err);
+      }
+    } else {
+      console.warn("[food-search] FatSecret credentials missing — set FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET");
     }
 
     if (hasCjk(query)) {

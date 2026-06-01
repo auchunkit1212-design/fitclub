@@ -259,6 +259,57 @@ export function estimateMacros(
   return enforceMacroCalorieConsistency(applyHiddenCalorieFloor(desc, base));
 }
 
+const LEAN_PROTEIN_KEYWORDS = [
+  "chicken breast",
+  "skinless chicken",
+  "雞胸",
+  "turkey breast",
+  "salmon",
+  "tuna",
+  "cod",
+  "shrimp",
+  "prawn",
+  "egg white",
+  "protein shake",
+  "whey",
+];
+
+/** 食物搜尋專用估算（不套用整餐拳頭/手掌份量） */
+export function estimateFoodSearchMacros(description: string): MacroEstimate {
+  const desc = description.toLowerCase().trim();
+
+  if (desc.includes("chicken breast") || desc.includes("skinless chicken") || desc.includes("雞胸")) {
+    return { calories: 165, protein: 31, carbs: 0, fats: 4 };
+  }
+  if (matchesAny(desc, LEAN_PROTEIN_KEYWORDS)) {
+    return { calories: 180, protein: 28, carbs: 0, fats: 6 };
+  }
+  if (desc.includes("chicken") || desc.includes("雞")) {
+    return { calories: 200, protein: 26, carbs: 0, fats: 9 };
+  }
+  if (desc.includes("beef") || desc.includes("steak") || desc.includes("牛")) {
+    return { calories: 250, protein: 26, carbs: 0, fats: 15 };
+  }
+  if (desc.includes("rice") || desc.includes("飯")) {
+    return { calories: 260, protein: 5, carbs: 58, fats: 1 };
+  }
+  if (
+    desc.includes("latte") ||
+    desc.includes("cappuccino") ||
+    desc.includes("mocha")
+  ) {
+    return { calories: 135, protein: 9, carbs: 12, fats: 6 };
+  }
+  if (desc.includes("burger") || desc.includes("漢堡")) {
+    return { calories: 540, protein: 25, carbs: 45, fats: 28 };
+  }
+  if (matchesAny(desc, FRUIT_KEYWORDS)) {
+    return { calories: 95, protein: 1, carbs: 24, fats: 0 };
+  }
+
+  return estimateMacros(desc, PORTION_NONE, PORTION_NONE, PORTION_NONE);
+}
+
 import { t, type AppLanguage } from "./i18n";
 
 export function generateRoast(

@@ -3,7 +3,7 @@
  * 前端預設走 /api/food-search (FatSecret)；需要 AI 時改 call /api/food-search-ai
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { estimateMacros } from "@/lib/ai-mock";
+import { estimateFoodSearchMacros } from "@/lib/ai-mock";
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
 import type { FoodSearchItem } from "@/lib/types";
 import {
@@ -133,7 +133,7 @@ export async function searchFoodLocally(
 ): Promise<FoodSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
-  const base = estimateMacros(q, "中拳", "中掌", "有");
+  const base = estimateFoodSearchMacros(q);
   return [
     toFoodSearchItem(
       {
@@ -142,7 +142,7 @@ export async function searchFoodLocally(
         protein: base.protein,
         carbs: base.carbs,
         fat: base.fats,
-        weight_g: 350,
+        weight_g: 120,
       },
       "local"
     ),

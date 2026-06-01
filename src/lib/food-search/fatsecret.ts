@@ -6,6 +6,10 @@ const API_URL = "https://platform.fatsecret.com/rest/server.api";
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
+export function isFatSecretConfigured(): boolean {
+  return Boolean(process.env.FATSECRET_CLIENT_ID && process.env.FATSECRET_CLIENT_SECRET);
+}
+
 function asArray<T>(value: T | T[] | undefined): T[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
@@ -118,13 +122,43 @@ function extractSearchFoods(data: {
   return asArray(data.foods?.food ?? data.foods_search?.results?.food);
 }
 
-/** 從搜尋結果摘要解析營養（例：Per 332g - Calories: 110kcal | Fat: 4.48g ...） */
+/** Generic 食物通常比品牌更適合做營養參考 */
+function sortSearchFoods(foods: FatSecretSearchFood[]): FatSecretSearchFood[] {
+  return [...foods].sort((a, b) => {
+    const aGeneric = a.food_type === "Generic" ? 0 : 1;
+    const bGeneric = b.food_type === "Generic" ? 0 : 1;
+    return aGeneric - bGeneric;
+  });
+}
+
+/** 優先選 100g 標準參考份量，其次 API 標記的 default serving */
+function pickBestServing(servings: FatSecretServing[]): FatSecretServing | null {
+  if (servings.length === 0) return null;
+
+  const flagged = servings.find((s) => s.is_default === "1");
+  if (flagged) return flagged;
+
+  const hundredGram = servings.find((s) => {
+    if (s.metric_serving_unit !== "g") return false;
+    const amount = Number(s.metric_serving_amount);
+    return Number.isFinite(amount) && Math.abs(amount - 100) < 2;
+  });
+  if (hundredGram) return hundredGram;
+
+  const anyGram = servings.find((s) => s.metric_serving_unit === "g");
+  if (anyGram) return anyGram;
+
+  return servings[0];
+}
+
+/** 從搜尋摘要解析（food.get 失敗時的保底） */
 function parseDescriptionMacros(description: string): {
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
   weight_g: number;
+  serving_label: string;
 } | null {
   const calories = Number(description.match(/Calories:\s*([\d.]+)/i)?.[1]);
   const fat = Number(description.match(/Fat:\s*([\d.]+)/i)?.[1]);
@@ -134,12 +168,14 @@ function parseDescriptionMacros(description: string): {
 
   if (!Number.isFinite(calories) || calories <= 0) return null;
 
+  const weight = Number.isFinite(weight_g) ? Math.round(weight_g) : 100;
   return {
     calories: Math.round(calories),
     protein: Math.round(Number.isFinite(protein) ? protein : 0),
     carbs: Math.round(Number.isFinite(carbs) ? carbs : 0),
     fat: Math.round(Number.isFinite(fat) ? fat : 0),
-    weight_g: Math.round(Number.isFinite(weight_g) ? weight_g : 100),
+    weight_g: weight,
+    serving_label: weight > 0 ? `${weight}g` : "standard serving",
   };
 }
 
@@ -150,17 +186,16 @@ async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
       brand_name?: string;
       servings?: { serving?: FatSecretServing | FatSecretServing[] };
     };
-  }>("food.get.v4", { food_id: foodId });
+  }>("food.get.v4", {
+    food_id: foodId,
+    flag_default_serving: "true",
+  });
 
   const food = data.food;
   if (!food) return null;
 
   const servings = asArray(food.servings?.serving);
-  const serving =
-    servings.find((s) => s.is_default === "1") ??
-    servings.find((s) => s.metric_serving_unit === "g") ??
-    servings[0];
-
+  const serving = pickBestServing(servings);
   if (!serving) return null;
 
   const calories = Number(serving.calories);
@@ -183,32 +218,47 @@ async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
     },
     "fatsecret"
   );
+  item.servingLabel = serving.serving_description?.trim() || item.servingLabel;
   if (food.brand_name) item.brand = food.brand_name;
   return item;
 }
 
 async function searchHitToItem(food: FatSecretSearchFood): Promise<FoodSearchItem | null> {
+  try {
+    const detail = await fetchFoodDetail(food.food_id);
+    if (detail) {
+      detail.name = food.food_name;
+      if (food.brand_name) detail.brand = food.brand_name;
+      return detail;
+    }
+  } catch (err) {
+    console.warn("[fatsecret] food.get skipped", food.food_id, err);
+  }
+
   if (food.food_description) {
     const macros = parseDescriptionMacros(food.food_description);
     if (macros) {
       const item = toFoodSearchItem(
-        { food_name: food.food_name, ...macros },
+        {
+          food_name: food.food_name,
+          calories: macros.calories,
+          protein: macros.protein,
+          carbs: macros.carbs,
+          fat: macros.fat,
+          weight_g: macros.weight_g,
+        },
         "fatsecret"
       );
+      item.servingLabel = macros.serving_label;
       if (food.brand_name) item.brand = food.brand_name;
       return item;
     }
   }
 
-  const detail = await fetchFoodDetail(food.food_id);
-  if (detail && food.brand_name) {
-    detail.brand = food.brand_name;
-    detail.name = food.food_name;
-  }
-  return detail;
+  return null;
 }
 
-/** FatSecret foods.search 主力查詢 */
+/** FatSecret foods.search 主力查詢（以 food.get.v4 取得精確份量） */
 export async function searchFoodWithFatSecret(query: string): Promise<FoodSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
@@ -222,17 +272,13 @@ export async function searchFoodWithFatSecret(query: string): Promise<FoodSearch
     page_number: "0",
   });
 
-  const foods = extractSearchFoods(searchData);
+  const foods = sortSearchFoods(extractSearchFoods(searchData));
   if (foods.length === 0) return [];
 
   const items: FoodSearchItem[] = [];
   for (const food of foods.slice(0, 5)) {
-    try {
-      const item = await searchHitToItem(food);
-      if (item) items.push(item);
-    } catch (err) {
-      console.warn("[fatsecret] food detail skipped", food.food_id, err);
-    }
+    const item = await searchHitToItem(food);
+    if (item) items.push(item);
   }
 
   return items;

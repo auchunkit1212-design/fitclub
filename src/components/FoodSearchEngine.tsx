@@ -295,6 +295,9 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                      {item.servingLabel && (
+                        <span className="text-gray-400">{item.servingLabel} · </span>
+                      )}
                       {t("common.protein", "蛋白")} {item.protein}g ·{" "}
                       {t("common.carbs", "碳水")} {item.carbs}g · {t("common.fat", "脂肪")}{" "}
                       {item.fats}g
