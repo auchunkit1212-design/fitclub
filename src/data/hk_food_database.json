@@ -106,5 +106,456 @@
     "carbs": 24,
     "fat": 12,
     "weight_g": 65
+  },
+  {
+    "food_name": "沙爹牛肉麵",
+    "aliases": ["沙爹牛肉麵", "沙嗲牛", "沙爹牛麵"],
+    "calories": 680,
+    "protein": 24,
+    "carbs": 75,
+    "fat": 32,
+    "weight_g": 500
+  },
+  {
+    "food_name": "焗豬扒飯",
+    "aliases": ["焗豬扒飯", "焗豬", "一哥焗豬"],
+    "calories": 1150,
+    "protein": 38,
+    "carbs": 125,
+    "fat": 55,
+    "weight_g": 600
+  },
+  {
+    "food_name": "雪菜肉絲米",
+    "aliases": ["雪菜肉絲米", "雪菜米", "雪菜肉絲米粉"],
+    "calories": 380,
+    "protein": 15,
+    "carbs": 55,
+    "fat": 11,
+    "weight_g": 450
+  },
+  {
+    "food_name": "五香肉丁麵",
+    "aliases": ["五香肉丁麵", "肉丁麵"],
+    "calories": 620,
+    "protein": 18,
+    "carbs": 60,
+    "fat": 34,
+    "weight_g": 450
+  },
+  {
+    "food_name": "星洲炒米",
+    "aliases": ["星洲炒米", "星洲炒米粉"],
+    "calories": 780,
+    "protein": 22,
+    "carbs": 85,
+    "fat": 39,
+    "weight_g": 400
+  },
+  {
+    "food_name": "揚州炒飯",
+    "aliases": ["揚州炒飯", "炒飯"],
+    "calories": 850,
+    "protein": 26,
+    "carbs": 95,
+    "fat": 40,
+    "weight_g": 450
+  },
+  {
+    "food_name": "豆腐火腩飯",
+    "aliases": ["豆腐火腩飯", "男人的浪漫", "火腩飯"],
+    "calories": 920,
+    "protein": 28,
+    "carbs": 90,
+    "fat": 50,
+    "weight_g": 500
+  },
+  {
+    "food_name": "粟米肉粒飯",
+    "aliases": ["粟米肉粒飯", "粟米肉粒", "Show me your love"],
+    "calories": 720,
+    "protein": 24,
+    "carbs": 105,
+    "fat": 22,
+    "weight_g": 550
+  },
+  {
+    "food_name": "魚香茄子煲",
+    "aliases": ["魚香茄子煲", "魚香茄子", "茄子煲"],
+    "calories": 810,
+    "protein": 18,
+    "carbs": 25,
+    "fat": 70,
+    "weight_g": 400
+  },
+  {
+    "food_name": "椒鹽豬扒",
+    "aliases": ["椒鹽豬扒", "炸豬扒"],
+    "calories": 580,
+    "protein": 35,
+    "carbs": 20,
+    "fat": 40,
+    "weight_g": 200
+  },
+  {
+    "food_name": "蝦餃",
+    "aliases": ["蝦餃", "水晶蝦餃", "點心蝦餃"],
+    "calories": 160,
+    "protein": 6,
+    "carbs": 16,
+    "fat": 8,
+    "weight_g": 120
+  },
+  {
+    "food_name": "燒賣",
+    "aliases": ["燒賣", "乾蒸燒賣", "豬肉燒賣"],
+    "calories": 220,
+    "protein": 10,
+    "carbs": 14,
+    "fat": 14,
+    "weight_g": 120
+  },
+  {
+    "food_name": "鳳爪",
+    "aliases": ["鳳爪", "豉汁鳳爪"],
+    "calories": 250,
+    "protein": 12,
+    "carbs": 8,
+    "fat": 19,
+    "weight_g": 100
+  },
+  {
+    "food_name": "排骨",
+    "aliases": ["排骨", "豉汁排骨", "點心排骨"],
+    "calories": 280,
+    "protein": 14,
+    "carbs": 5,
+    "fat": 22,
+    "weight_g": 100
+  },
+  {
+    "food_name": "蘿蔔糕",
+    "aliases": ["蘿蔔糕", "煎蘿蔔糕"],
+    "calories": 210,
+    "protein": 5,
+    "carbs": 22,
+    "fat": 11,
+    "weight_g": 150
+  },
+  {
+    "food_name": "馬拉糕",
+    "aliases": ["馬拉糕", "點心馬拉糕"],
+    "calories": 280,
+    "protein": 6,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 100
+  },
+  {
+    "food_name": "叉燒包",
+    "aliases": ["叉燒包", "蠔皇叉燒包"],
+    "calories": 260,
+    "protein": 8,
+    "carbs": 38,
+    "fat": 8,
+    "weight_g": 100
+  },
+  {
+    "food_name": "春卷",
+    "aliases": ["春卷", "炸春卷"],
+    "calories": 300,
+    "protein": 8,
+    "carbs": 24,
+    "fat": 19,
+    "weight_g": 120
+  },
+  {
+    "food_name": "鮮蝦腸粉",
+    "aliases": ["鮮蝦腸粉", "蝦腸", "腸粉"],
+    "calories": 180,
+    "protein": 8,
+    "carbs": 28,
+    "fat": 4,
+    "weight_g": 200
+  },
+  {
+    "food_name": "珍珠雞",
+    "aliases": ["珍珠雞", "糯米雞"],
+    "calories": 450,
+    "protein": 14,
+    "carbs": 65,
+    "fat": 15,
+    "weight_g": 200
+  },
+  {
+    "food_name": "咖喱魚蛋",
+    "aliases": ["咖喱魚蛋", "魚蛋", "街頭魚蛋"],
+    "calories": 150,
+    "protein": 12,
+    "carbs": 15,
+    "fat": 5,
+    "weight_g": 100
+  },
+  {
+    "food_name": "雞蛋仔",
+    "aliases": ["雞蛋仔", "原味雞蛋仔"],
+    "calories": 390,
+    "protein": 9,
+    "carbs": 58,
+    "fat": 13,
+    "weight_g": 150
+  },
+  {
+    "food_name": "格仔餅",
+    "aliases": ["格仔餅", "夾餅", "花生醬格仔餅"],
+    "calories": 550,
+    "protein": 12,
+    "carbs": 60,
+    "fat": 28,
+    "weight_g": 160
+  },
+  {
+    "food_name": "碗仔翅",
+    "aliases": ["碗仔翅", "街頭碗仔翅"],
+    "calories": 180,
+    "protein": 10,
+    "carbs": 26,
+    "fat": 4,
+    "weight_g": 300
+  },
+  {
+    "food_name": "生菜魚肉",
+    "aliases": ["生菜魚肉", "魚肉湯"],
+    "calories": 140,
+    "protein": 14,
+    "carbs": 12,
+    "fat": 4,
+    "weight_g": 350
+  },
+  {
+    "food_name": "炸脾",
+    "aliases": ["炸脾", "炸雞脾"],
+    "calories": 480,
+    "protein": 32,
+    "carbs": 15,
+    "fat": 32,
+    "weight_g": 200
+  },
+  {
+    "food_name": "司華力腸",
+    "aliases": ["司華力腸", "大肉腸", "炸腸"],
+    "calories": 350,
+    "protein": 12,
+    "carbs": 5,
+    "fat": 31,
+    "weight_g": 100
+  },
+  {
+    "food_name": "豬腸粉",
+    "aliases": ["豬腸粉", "混醬腸粉", "滑腸粉"],
+    "calories": 320,
+    "protein": 6,
+    "carbs": 50,
+    "fat": 10,
+    "weight_g": 250
+  },
+  {
+    "food_name": "雞尾包",
+    "aliases": ["雞尾包"],
+    "calories": 380,
+    "protein": 7,
+    "carbs": 45,
+    "fat": 19,
+    "weight_g": 100
+  },
+  {
+    "food_name": "菠蘿包",
+    "aliases": ["菠蘿包", "無牛油菠蘿包"],
+    "calories": 290,
+    "protein": 6,
+    "carbs": 48,
+    "fat": 8,
+    "weight_g": 90
+  },
+  {
+    "food_name": "腸仔包",
+    "aliases": ["腸仔包", "熱狗包"],
+    "calories": 280,
+    "protein": 9,
+    "carbs": 32,
+    "fat": 13,
+    "weight_g": 90
+  },
+  {
+    "food_name": "老婆餅",
+    "aliases": ["老婆餅"],
+    "calories": 320,
+    "protein": 4,
+    "carbs": 45,
+    "fat": 14,
+    "weight_g": 80
+  },
+  {
+    "food_name": "芝麻糊",
+    "aliases": ["芝麻糊", "黑芝麻糊", "糖水"],
+    "calories": 280,
+    "protein": 7,
+    "carbs": 35,
+    "fat": 13,
+    "weight_g": 300
+  },
+  {
+    "food_name": "紅豆沙",
+    "aliases": ["紅豆沙", "陳皮紅豆沙"],
+    "calories": 240,
+    "protein": 8,
+    "carbs": 48,
+    "fat": 2,
+    "weight_g": 300
+  },
+  {
+    "food_name": "綠豆沙",
+    "aliases": ["綠豆沙", "海帶綠豆沙"],
+    "calories": 220,
+    "protein": 7,
+    "carbs": 45,
+    "fat": 1,
+    "weight_g": 300
+  },
+  {
+    "food_name": "楊枝甘露",
+    "aliases": ["楊枝甘露"],
+    "calories": 310,
+    "protein": 4,
+    "carbs": 45,
+    "fat": 12,
+    "weight_g": 350
+  },
+  {
+    "food_name": "豆腐花",
+    "aliases": ["豆腐花", "豆花"],
+    "calories": 150,
+    "protein": 8,
+    "carbs": 22,
+    "fat": 3,
+    "weight_g": 300
+  },
+  {
+    "food_name": "鴛鴦",
+    "aliases": ["鴛鴦", "凍鴛鴦", "熱鴛鴦"],
+    "calories": 290,
+    "protein": 5,
+    "carbs": 45,
+    "fat": 10,
+    "weight_g": 350
+  },
+  {
+    "food_name": "好立克",
+    "aliases": ["好立克", "凍好立克"],
+    "calories": 220,
+    "protein": 6,
+    "carbs": 42,
+    "fat": 3,
+    "weight_g": 350
+  },
+  {
+    "food_name": "阿華田",
+    "aliases": ["阿華田", "凍阿華田"],
+    "calories": 230,
+    "protein": 5,
+    "carbs": 45,
+    "fat": 4,
+    "weight_g": 350
+  },
+  {
+    "food_name": "咸檸七",
+    "aliases": ["咸檸七", "鹹檸七"],
+    "calories": 160,
+    "protein": 0,
+    "carbs": 40,
+    "fat": 0,
+    "weight_g": 400
+  },
+  {
+    "food_name": "檸水",
+    "aliases": ["檸水", "凍檸水"],
+    "calories": 120,
+    "protein": 0,
+    "carbs": 30,
+    "fat": 0,
+    "weight_g": 400
+  },
+  {
+    "food_name": "豬扒包",
+    "aliases": ["豬扒包", "澳門豬扒包"],
+    "calories": 520,
+    "protein": 22,
+    "carbs": 45,
+    "fat": 28,
+    "weight_g": 200
+  },
+  {
+    "food_name": "牛腩麵",
+    "aliases": ["牛腩麵", "清湯腩"],
+    "calories": 480,
+    "protein": 26,
+    "carbs": 58,
+    "fat": 16,
+    "weight_g": 500
+  },
+  {
+    "food_name": "魚蛋米",
+    "aliases": ["魚蛋米", "魚蛋米粉", "魚蛋粉"],
+    "calories": 350,
+    "protein": 18,
+    "carbs": 55,
+    "fat": 6,
+    "weight_g": 500
+  },
+  {
+    "food_name": "及第粥",
+    "aliases": ["及第粥", "狀元及第粥", "生滾粥"],
+    "calories": 380,
+    "protein": 18,
+    "carbs": 45,
+    "fat": 14,
+    "weight_g": 500
+  },
+  {
+    "food_name": "皮蛋瘦肉粥",
+    "aliases": ["皮蛋瘦肉粥", "瘦肉粥"],
+    "calories": 340,
+    "protein": 16,
+    "carbs": 48,
+    "fat": 9,
+    "weight_g": 500
+  },
+  {
+    "food_name": "炸兩",
+    "aliases": ["炸兩", "腸粉包油條"],
+    "calories": 420,
+    "protein": 8,
+    "carbs": 55,
+    "fat": 18,
+    "weight_g": 200
+  },
+  {
+    "food_name": "白飯",
+    "aliases": ["白飯", "一碗飯", "靚仔"],
+    "calories": 260,
+    "protein": 5,
+    "carbs": 58,
+    "fat": 1,
+    "weight_g": 200
+  },
+  {
+    "food_name": "意粉",
+    "aliases": ["意粉", "意大利粉", "白汁意粉", "肉醬意粉"],
+    "calories": 350,
+    "protein": 12,
+    "carbs": 68,
+    "fat": 3,
+    "weight_g": 250
   }
 ]
+
