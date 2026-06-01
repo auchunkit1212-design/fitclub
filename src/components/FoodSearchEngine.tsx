@@ -80,6 +80,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           items?: FoodSearchItem[];
           source?: string;
           error?: string;
+          fatSecretConfigured?: boolean;
         };
 
         if (seq !== searchSeq.current) return;
@@ -90,8 +91,11 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           return;
         }
 
-        setResults(data.items ?? []);
-        setLastSource(data.source ?? null);
+        const items = data.items ?? [];
+        setResults(items);
+        const primarySource =
+          items[0]?.source ?? data.source ?? null;
+        setLastSource(primarySource);
       } catch {
         if (seq !== searchSeq.current) return;
         setResults([]);
@@ -189,19 +193,21 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         <h2 className="font-semibold text-gray-900">
           🔍 {t("foodSearch.title", "巨型食物搜尋引擎")}
         </h2>
-        {lastSource === "fatsecret" && (
+        {(lastSource === "fatsecret" ||
+          results.some((r) => r.source === "fatsecret")) && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
             FatSecret
           </span>
         )}
-        {lastSource === "hk" && (
+        {lastSource === "hk" && !results.some((r) => r.source === "fatsecret") && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
             {t("foodSearch.sourceHk", "茶餐廳資料庫")}
           </span>
         )}
         {(lastSource === "local" ||
           lastSource === "gemini" ||
-          lastSource === "openai") && (
+          lastSource === "openai") &&
+          !results.some((r) => r.source === "fatsecret") && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
             {t("foodSearch.sourceLocal", "智能估算")}
           </span>
@@ -290,9 +296,16 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                       <span className="text-sm font-medium text-gray-900 truncate">
                         {label}
                       </span>
-                      <span className="shrink-0 text-sm font-semibold text-emerald-600">
-                        {item.calories} kcal
-                      </span>
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        {item.source === "fatsecret" && (
+                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-sky-100 text-sky-800">
+                            FS
+                          </span>
+                        )}
+                        <span className="text-sm font-semibold text-emerald-600">
+                          {item.calories} kcal
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[11px] text-gray-500 mt-0.5 truncate">
                       {item.servingLabel && (

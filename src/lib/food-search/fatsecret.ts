@@ -151,7 +151,7 @@ function pickBestServing(servings: FatSecretServing[]): FatSecretServing | null 
   return servings[0];
 }
 
-/** 從搜尋摘要解析（food.get 失敗時的保底） */
+/** 從搜尋摘要解析（food.get 失敗時的保底；支援 Per 100g / Per 1 slice / Per 1 cake） */
 function parseDescriptionMacros(description: string): {
   calories: number;
   protein: number;
@@ -165,17 +165,25 @@ function parseDescriptionMacros(description: string): {
   const carbs = Number(description.match(/Carbs:\s*([\d.]+)/i)?.[1]);
   const protein = Number(description.match(/Protein:\s*([\d.]+)/i)?.[1]);
   const weight_g = Number(description.match(/Per\s+([\d.]+)\s*g/i)?.[1]);
+  const perLabel = description.match(/Per\s+([^-]+?)\s*-\s*Calories/i)?.[1]?.trim();
 
   if (!Number.isFinite(calories) || calories <= 0) return null;
 
-  const weight = Number.isFinite(weight_g) ? Math.round(weight_g) : 100;
+  const weight = Number.isFinite(weight_g) ? Math.round(weight_g) : 0;
+  const serving_label =
+    perLabel && perLabel.length > 0
+      ? perLabel
+      : weight > 0
+        ? `${weight}g`
+        : "standard serving";
+
   return {
     calories: Math.round(calories),
     protein: Math.round(Number.isFinite(protein) ? protein : 0),
     carbs: Math.round(Number.isFinite(carbs) ? carbs : 0),
     fat: Math.round(Number.isFinite(fat) ? fat : 0),
     weight_g: weight,
-    serving_label: weight > 0 ? `${weight}g` : "standard serving",
+    serving_label,
   };
 }
 
@@ -258,8 +266,17 @@ async function searchHitToItem(food: FatSecretSearchFood): Promise<FoodSearchIte
   return null;
 }
 
-/** FatSecret foods.search 主力查詢（以 food.get.v4 取得精確份量） */
-export async function searchFoodWithFatSecret(query: string): Promise<FoodSearchItem[]> {
+/** 搜尋關鍵字變體（loaf-cake → loaf cake） */
+export function searchQueryVariants(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const variants = [trimmed];
+  const spaced = trimmed.replace(/-/g, " ").replace(/\s+/g, " ").trim();
+  if (spaced && spaced !== trimmed) variants.push(spaced);
+  return Array.from(new Set(variants));
+}
+
+async function searchFoodWithFatSecretOnce(query: string): Promise<FoodSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
 
@@ -282,4 +299,13 @@ export async function searchFoodWithFatSecret(query: string): Promise<FoodSearch
   }
 
   return items;
+}
+
+/** FatSecret foods.search 主力查詢（以 food.get.v4 取得精確份量） */
+export async function searchFoodWithFatSecret(query: string): Promise<FoodSearchItem[]> {
+  for (const variant of searchQueryVariants(query)) {
+    const items = await searchFoodWithFatSecretOnce(variant);
+    if (items.length > 0) return items;
+  }
+  return [];
 }

@@ -303,6 +303,16 @@ export function estimateFoodSearchMacros(description: string): MacroEstimate {
   if (desc.includes("burger") || desc.includes("漢堡")) {
     return { calories: 540, protein: 25, carbs: 45, fats: 28 };
   }
+  if (
+    desc.includes("cake") ||
+    desc.includes("loaf") ||
+    desc.includes("muffin") ||
+    desc.includes("pastry") ||
+    desc.includes("蛋糕") ||
+    desc.includes("包")
+  ) {
+    return { calories: 280, protein: 4, carbs: 39, fats: 12 };
+  }
   if (matchesAny(desc, FRUIT_KEYWORDS)) {
     return { calories: 95, protein: 1, carbs: 24, fats: 0 };
   }
