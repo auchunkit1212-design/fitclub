@@ -235,7 +235,7 @@ export default function RegisterPage() {
 
   return (
     <div
-      className={`max-w-lg mx-auto min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-emerald-950 flex flex-col justify-center px-6 pt-safe ${
+      className={`max-w-lg mx-auto min-h-screen bg-white flex flex-col justify-center px-6 pt-safe ${
         showIosBanner ? "pb-44" : "pb-8"
       }`}
     >
@@ -252,7 +252,7 @@ export default function RegisterPage() {
         <p className="text-emerald-300/90 text-xs font-semibold tracking-wide">
           {BRAND_TAGLINE}
         </p>
-        <h1 className="text-2xl font-black text-white mt-2">{BRAND_NAME}</h1>
+        <h1 className="text-2xl font-black text-gray-900 mt-2">{BRAND_NAME}</h1>
       </div>
 
       <div className="bg-white rounded-3xl p-5 shadow-2xl border border-zinc-100 space-y-4">
@@ -314,7 +314,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 bg-zinc-900 text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full py-3.5 bg-[#7ED321] text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {loading ? "驗證緊..." : "登入"}
             </button>
@@ -424,7 +424,7 @@ export default function RegisterPage() {
                 type="submit"
                 disabled={loading}
                 className={`w-full py-3.5 rounded-xl font-bold text-white disabled:opacity-60 ${
-                  signupTrack === "coach" ? "bg-indigo-600" : "bg-emerald-600"
+                  signupTrack === "coach" ? "bg-[#7ED321]" : "bg-[#7ED321]"
                 } ${btnClass}`}
               >
                 {loading
@@ -438,9 +438,9 @@ export default function RegisterPage() {
         )}
       </div>
 
-      <p className="text-center text-sm text-zinc-400 mt-5">
+      <p className="text-center text-sm text-zinc-500 mt-5">
         Gym 老闆？{" "}
-        <Link href="/sas-register" className="text-emerald-400 font-semibold underline">
+        <Link href="/sas-register" className="text-[#5fa718] font-semibold underline">
           免費開通品牌空間
         </Link>
       </p>

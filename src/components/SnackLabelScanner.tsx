@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import type { NutritionLabelResult } from "@/lib/vision-label";
 
 const btnClass =
@@ -11,6 +12,7 @@ interface SnackLabelScannerProps {
 }
 
 export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
+  const { lang } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<NutritionLabelResult | null>(null);
@@ -34,7 +36,7 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
       const res = await fetch("/api/ai/nutrition-label", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: dataUrl }),
+        body: JSON.stringify({ imageBase64: dataUrl, lang }),
       });
       const data = (await res.json()) as {
         result?: NutritionLabelResult;
@@ -68,7 +70,7 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
         type="button"
         disabled={scanning}
         onClick={() => inputRef.current?.click()}
-        className={`w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl disabled:opacity-60 ${btnClass}`}
+        className={`w-full bg-[#7ED321] text-white font-semibold py-3 rounded-xl disabled:opacity-60 ${btnClass}`}
       >
         {scanning ? "AI 辨識標籤中..." : "📸 拍攝營養標籤"}
       </button>
@@ -76,17 +78,17 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
         <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">{error}</p>
       )}
       {result && (
-        <div className="text-xs bg-indigo-50 text-indigo-900 rounded-xl p-3 space-y-1">
+        <div className="text-xs bg-[#7ED321]/10 text-gray-800 rounded-xl p-3 space-y-1 border border-[#7ED321]/30">
           <p className="font-semibold">{result.productName}</p>
           <p>
             每份 {result.caloriesPerServing} kcal（{result.servingSize}）· 共{" "}
             {result.servingsPerPackage} 份
           </p>
-          <p className="font-bold text-indigo-700">
+          <p className="font-bold text-[#5fa718]">
             → 每件約 {result.caloriesPerPiece} kcal（已填入）
           </p>
-          {result.notes && <p className="text-indigo-700/80">{result.notes}</p>}
-          <p className="text-[10px] text-indigo-500">
+          {result.notes && <p className="text-gray-600">{result.notes}</p>}
+          <p className="text-[10px] text-[#5fa718]">
             引擎：{result.source === "openai" ? "GPT-4o Vision" : "示範模式"}
           </p>
         </div>

@@ -298,6 +298,10 @@ export function CoachActivityWall({
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
             const status = getMealStatus(log);
+            const calories = Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0;
+            const protein = Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0;
+            const carbs = Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0;
+            const fats = Number.isFinite(Number(log.fats)) ? Number(log.fats) : 0;
             return (
               <li
                 key={log.id}
@@ -314,8 +318,8 @@ export function CoachActivityWall({
                     </p>
                     <p className="text-sm text-zinc-700 truncate">{log.description}</p>
                     <p className="text-xs text-zinc-500 mt-1">
-                      {new Date(log.date).toLocaleString("zh-HK")} · {log.calories}{" "}
-                      kcal · P{log.protein} C{log.carbs} F{log.fats}
+                      {new Date(log.date).toLocaleString("zh-HK")} · {calories} kcal · P{protein} C
+                      {carbs} F{fats}
                     </p>
                   </div>
                   <span

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
+import { useI18n } from "@/components/I18nProvider";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
@@ -35,6 +36,7 @@ const btnClass =
 
 export default function AddMealPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [mealType, setMealType] = useState("午餐");
@@ -345,7 +347,7 @@ export default function AddMealPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
       {showNutritionDash && (
         <NutritionDashboard
           logs={todayLogs}
@@ -376,7 +378,7 @@ export default function AddMealPage() {
       )}
 
       <PageHeader
-        title="記錄飲食"
+        title={t("addMeal.title", "記錄飲食")}
         onBack={() => router.push("/")}
         backLabel="← 返回"
       />
@@ -385,7 +387,7 @@ export default function AddMealPage() {
         <button
           type="button"
           onClick={() => setShowNutritionDash(true)}
-          className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
+          className={`w-full bg-[#7ED321] text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
         >
           📊 高級營養分析
         </button>
@@ -437,7 +439,7 @@ export default function AddMealPage() {
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              食物相片
+              {t("addMeal.uploadPhoto", "上傳相片")}
             </label>
             <input
               ref={fileInputRef}
@@ -467,7 +469,7 @@ export default function AddMealPage() {
                 />
               ) : (
                 <p className="text-zinc-500">
-                  📷 撳一下拍照或選擇相片（自動壓縮至 1MB 內）
+                  📷 {t("addMeal.uploadPhoto", "上傳相片")}（自動壓縮至 1MB 內）
                 </p>
               )}
             </div>
@@ -535,7 +537,7 @@ export default function AddMealPage() {
             onClick={() => setSnackOpen(!snackOpen)}
             className={`w-full flex justify-between items-center font-semibold text-zinc-800 ${btnClass}`}
           >
-            <span>🍪 零食計算機</span>
+            <span>🍪 {t("addMeal.calculateCalories", "計算卡路里")}</span>
             <span className="text-zinc-400">{snackOpen ? "▲" : "▼"}</span>
           </button>
           {snackOpen && (
@@ -570,7 +572,7 @@ export default function AddMealPage() {
               <button
                 type="button"
                 onClick={applySnackTotal}
-                className={`w-full bg-amber-500 text-white font-medium py-3 rounded-xl ${btnClass}`}
+                className={`w-full bg-[#7ED321] text-white font-medium py-3 rounded-xl ${btnClass}`}
               >
                 套用總卡路里
               </button>
@@ -621,7 +623,7 @@ export default function AddMealPage() {
               : "AI 正在火速分析..."
             : imageCompressing
               ? "壓縮相片中..."
-              : "發布記錄"}
+              : t("addMeal.publish", "發布記錄")}
         </button>
       </main>
     </div>

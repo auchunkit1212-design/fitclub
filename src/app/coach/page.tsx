@@ -191,25 +191,25 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
       <PageHeader
         title={`${brand.gymName} · 教練後台`}
         subtitle="白標品牌 · 雲端同步"
-        variant="dark"
+        variant="light"
         backLabel="← 返回主頁"
         onBack={() => router.push("/")}
       />
 
       <main className="px-4 py-4 space-y-4">
-        <section className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
-          <h2 className="text-sm font-bold text-indigo-200">
+        <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
+          <h2 className="text-sm font-bold text-[#5fa718]">
             🤖 AI 數據智能整合中心
           </h2>
           <button
             type="button"
             disabled={isGenerating}
             onClick={generateAIReport}
-            className={`w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
+            className={`w-full py-3 bg-[#7ED321] text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
             {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
           </button>
@@ -307,7 +307,7 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-[#7ED321] text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {publishing ? "發布緊..." : "發布到雲端"}
             </button>
@@ -330,7 +330,7 @@ export default function CoachPage() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">
+        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">
           {toast}
         </div>
       )}

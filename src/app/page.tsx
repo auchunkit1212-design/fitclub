@@ -14,6 +14,8 @@ import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
 import {
   computeTargetProfile,
@@ -108,6 +110,7 @@ function ProgressBar({
 
 export default function StudentDashboard() {
   const router = useRouter();
+  const { t } = useI18n();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [branding, setBranding] = useState<CoachBranding | null>(null);
   const [broadcast, setBroadcast] = useState("");
@@ -368,7 +371,7 @@ export default function StudentDashboard() {
         <button
           type="button"
           onClick={() => goTo(router, "/register")}
-          className={`px-4 py-2 rounded-xl bg-zinc-900 text-white text-sm font-medium ${btnClass}`}
+          className={`px-4 py-2 rounded-xl bg-[#7ED321] text-white text-sm font-medium ${btnClass}`}
         >
           去登入
         </button>
@@ -386,7 +389,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => goTo(router, "/register")}
-              className={`px-4 py-2 rounded-xl bg-zinc-900 text-white text-sm font-medium ${btnClass}`}
+              className={`px-4 py-2 rounded-xl bg-[#7ED321] text-white text-sm font-medium ${btnClass}`}
             >
               返回登入
             </button>
@@ -459,13 +462,13 @@ export default function StudentDashboard() {
       )}
 
       {toast && (
-        <div className="fixed top-safe left-4 right-4 bg-zinc-900 text-white px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-lg max-w-lg mx-auto">
+        <div className="fixed top-safe left-4 right-4 bg-white text-gray-900 border border-gray-200 px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-md max-w-lg mx-auto">
           {toast}
         </div>
       )}
 
       {activeNotification && (
-        <div className="fixed top-safe left-4 right-4 max-w-lg mx-auto bg-zinc-900/95 text-white p-4 rounded-2xl z-50 shadow-2xl border border-zinc-700">
+        <div className="fixed top-safe left-4 right-4 max-w-lg mx-auto bg-white text-gray-900 p-4 rounded-2xl z-50 shadow-lg border border-gray-200">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-semibold leading-relaxed">{activeNotification}</p>
             <button
@@ -480,7 +483,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => setActiveNotification(null)}
-              className="px-3 py-1.5 text-xs rounded-lg bg-zinc-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
+              className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
             >
               稍後
             </button>
@@ -493,7 +496,7 @@ export default function StudentDashboard() {
                   router.push("/add-meal");
                 }
               }}
-              className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 active:scale-95 active:opacity-80 transition-all cursor-pointer"
+              className="px-3 py-1.5 text-xs rounded-lg bg-[#7ED321] text-white active:scale-95 active:opacity-80 transition-all cursor-pointer"
             >
               即刻做
             </button>
@@ -502,25 +505,25 @@ export default function StudentDashboard() {
       )}
 
       <header
-        className={`${theme.header} text-white px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5 rounded-b-3xl shadow-lg overflow-hidden`}
+        className={`${theme.header} px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5 rounded-b-3xl overflow-hidden`}
       >
         <div className="flex items-start gap-2.5 min-w-0">
           <GorillaMascot logoUrl={branding?.logo} size="sm" />
           <div className="flex-1 min-w-0 pt-0.5">
-            <p className="text-white/75 text-[10px] leading-tight line-clamp-1">
+            <p className="text-gray-500 text-[10px] leading-tight line-clamp-1">
               {BRAND_TAGLINE}
             </p>
-            <p className="text-white/85 text-xs mt-0.5">
+            <p className="text-gray-600 text-xs mt-0.5">
               {session.role === "coach"
-                ? "教練主頁"
+                ? t("home.coachHome", "教練主頁")
                 : session.role === "admin"
-                  ? "老闆主頁"
-                  : "學員主頁"}
+                  ? t("home.adminHome", "老闆主頁")
+                  : t("home.studentHome", "學員主頁")}
             </p>
-            <h1 className="text-base sm:text-lg font-bold leading-snug line-clamp-2 break-words mt-0.5">
+            <h1 className="text-base sm:text-lg text-gray-900 font-bold leading-snug line-clamp-2 break-words mt-0.5">
               {title}
             </h1>
-            <p className="text-white/80 text-[11px] mt-1.5 truncate">
+            <p className="text-gray-600 text-[11px] mt-1.5 truncate">
               {settings.nickname || session.name} · {session.gym} · 今日{" "}
               {todayLogs.length} 餐
             </p>
@@ -528,10 +531,13 @@ export default function StudentDashboard() {
           <button
             type="button"
             onClick={handleLogout}
-            className={`shrink-0 self-start text-[10px] bg-white/15 px-2 py-1.5 rounded-lg whitespace-nowrap ${btnClass}`}
+            className={`shrink-0 self-start text-[10px] bg-gray-100 text-gray-700 px-2 py-1.5 rounded-lg whitespace-nowrap ${btnClass}`}
           >
-            🚪 登出
+            {t("header.logout", "🚪 登出")}
           </button>
+        </div>
+        <div className="mt-2">
+          <LanguageSwitcher dark />
         </div>
       </header>
 
@@ -542,7 +548,7 @@ export default function StudentDashboard() {
               <p className="font-semibold text-zinc-900">
                 👋 歡迎，{settings.nickname || session.name}
               </p>
-              <span className="text-[10px] font-bold uppercase bg-zinc-900 text-white px-2 py-0.5 rounded">
+              <span className="text-[10px] font-bold uppercase bg-[#7ED321] text-white px-2 py-0.5 rounded">
                 {session.role === "admin"
                   ? "總控制台"
                   : session.role === "coach"
@@ -567,7 +573,7 @@ export default function StudentDashboard() {
           )}
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
-          <div className="bg-zinc-900 text-amber-300 px-4 py-3 rounded-xl text-sm font-medium border border-amber-500/40">
+          <div className="bg-white text-gray-800 px-4 py-3 rounded-xl text-sm font-medium border border-[#7ED321]/40 shadow-sm">
             📜{" "}
             {session.isSoloStudent ? "AI 大猩猩聖旨" : "教練聖旨"}已鎖定目標：
             {coachTargets.targetCalories} kcal · 蛋白 {coachTargets.targetProtein}g · 碳水{" "}
@@ -576,13 +582,13 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
-          <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
+          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
             🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && coachReactions.length > 0 && (
-          <div className="bg-indigo-600 text-white px-4 py-3 rounded-xl text-sm">
+          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl text-sm shadow-sm">
             {coachReactions.slice(0, 3).map((r) => (
               <p key={r.id} className="font-medium">
                 教練回覆咗你 {r.sticker}
@@ -592,13 +598,13 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
-          <div className="bg-red-600 text-white px-4 py-3 rounded-xl shadow-md animate-pulse text-sm font-medium">
+          <div className="bg-[#7ED321] text-white px-4 py-3 rounded-xl shadow-md text-sm font-medium">
             📣 教練突發警告: {broadcast}
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && (
-          <section className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-4 shadow-md">
+          <section className="bg-[#7ED321] text-white rounded-2xl p-4 shadow-md">
             <p className="text-sm font-semibold text-amber-100 mb-1">
               🤖 {session.isSoloStudent ? "大猩猩 AI 私教" : "專屬教練 AI 點評"}
             </p>
@@ -631,7 +637,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => setShowNutritionDash(true)}
-              className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg ${btnClass}`}
+              className={`w-full bg-[#7ED321] text-white font-bold py-4 rounded-2xl shadow-md ${btnClass}`}
             >
               📊 高級營養分析
             </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/I18nProvider";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -21,21 +22,22 @@ export function BottomNav({
   themeBtn,
 }: BottomNavProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const isStudent = role === "student";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-zinc-200 px-4 pt-3 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-200 px-4 pt-3 pb-safe shadow-sm">
       <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => onTabChange("dashboard")}
           className={`${
             activeTab === "dashboard"
-              ? "bg-zinc-900 text-white"
-              : "bg-zinc-100 text-zinc-700"
+              ? "bg-[#7ED321] text-white"
+              : "bg-gray-100 text-gray-700"
           } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
         >
-          🏠 主頁
+          🏠 {t("nav.home", "主頁")}
         </button>
 
         {isStudent ? (
@@ -44,19 +46,19 @@ export function BottomNav({
             onClick={() => onTabChange("settings")}
             className={`${
               activeTab === "settings"
-                ? "bg-zinc-900 text-white"
-                : "bg-zinc-100 text-zinc-700"
+                ? "bg-[#7ED321] text-white"
+                : "bg-gray-100 text-gray-700"
             } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
           >
-            ⚙️ 設定
+            ⚙️ {t("nav.settings", "設定")}
           </button>
         ) : (
           <button
             type="button"
             onClick={() => router.push("/coach")}
-            className={`bg-zinc-800 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            className={`bg-[#7ED321] text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
-            👨‍🏫 教練
+            👨‍🏫 {t("nav.coach", "教練")}
           </button>
         )}
 
@@ -66,13 +68,13 @@ export function BottomNav({
             onClick={() => router.push("/add-meal")}
             className={`${themeBtn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
-            ➕ 飲食
+            ➕ {t("nav.addMeal", "飲食")}
           </button>
         ) : (
           <button
             type="button"
             onClick={() => router.push("/coach/records")}
-            className={`bg-indigo-600 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
+            className={`bg-[#7ED321] text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
           >
             📋 學員記錄
           </button>

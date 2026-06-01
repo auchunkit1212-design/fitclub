@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { APP_LOGO_PATH, resolveTenantLogoUrl } from "@/lib/brand";
+import { useId } from "react";
+import { resolveTenantLogoUrl } from "@/lib/brand";
 
 interface GorillaMascotProps {
   logoUrl?: string;
@@ -13,49 +13,60 @@ interface GorillaMascotProps {
   tenantSlug?: string;
 }
 
-/** 官方大猩猩 PNG + 胸口白背心 + 商戶 Logo 徽章 */
+/** 新版吉祥物：以 clipPath 把商戶 Logo 印在背心區域 */
 export function GorillaMascot({
   logoUrl,
   className = "",
   size = "md",
 }: GorillaMascotProps) {
+  const uid = useId().replace(/:/g, "");
   const dim = size === "sm" ? "w-14 h-14" : "w-[4.5rem] h-[4.5rem]";
   const tenantLogo = resolveTenantLogoUrl(logoUrl);
   const showTenantLogo = Boolean(tenantLogo);
-  const singletClass =
-    size === "sm"
-      ? "w-[46%] h-[24%] top-[63%]"
-      : "w-[44%] h-[22%] top-[62%]";
+  const clipId = `singlet-clip-${uid}`;
+  const maskId = `singlet-mask-${uid}`;
 
   return (
-    <div className={`relative shrink-0 ${dim} ${className}`}>
-      <Image
-        src={APP_LOGO_PATH}
-        alt="Nutrition Coach"
-        width={512}
-        height={512}
-        className="w-full h-full object-contain drop-shadow-sm"
-        priority
-      />
+    <div className={`relative shrink-0 ${dim} ${className}`} aria-label="Gorilla mascot">
+      <svg viewBox="0 0 128 128" className="w-full h-full drop-shadow-sm">
+        <defs>
+          <clipPath id={clipId}>
+            {/* 背心區域：可按新版 SVG 再微調 path */}
+            <path d="M42 66 C47 60, 56 57, 64 57 C72 57, 81 60, 86 66 L83 93 C76 98, 52 98, 45 93 Z" />
+          </clipPath>
+          <mask id={maskId}>
+            <rect x="0" y="0" width="128" height="128" fill="black" />
+            <path
+              d="M42 66 C47 60, 56 57, 64 57 C72 57, 81 60, 86 66 L83 93 C76 98, 52 98, 45 93 Z"
+              fill="white"
+            />
+          </mask>
+        </defs>
 
-      {/* 白背心畫布（疊在官方 logo 胸口位置） */}
-      <div
-        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] ${singletClass}`}
-        aria-hidden
-      />
+        {/* 底圖：新吉祥物 SVG */}
+        <image href="/new-gorilla.svg" x="0" y="0" width="128" height="128" preserveAspectRatio="xMidYMid meet" />
 
-      {showTenantLogo && tenantLogo ? (
-        <div className="pointer-events-none absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 z-10">
-          <Image
-            src={tenantLogo}
-            alt=""
-            width={40}
-            height={40}
-            unoptimized
-            className={`${size === "sm" ? "w-7 h-7" : "w-9 h-9"} rounded-full object-cover border-2 border-white shadow-md`}
-          />
-        </div>
-      ) : null}
+        {/* 背心底色：純白 */}
+        <path
+          d="M42 66 C47 60, 56 57, 64 57 C72 57, 81 60, 86 66 L83 93 C76 98, 52 98, 45 93 Z"
+          fill="#FFFFFF"
+          opacity="0.95"
+        />
+
+        {/* 商戶 Logo 以 clipPath 滿版印花 */}
+        {showTenantLogo && tenantLogo ? (
+          <g clipPath={`url(#${clipId})`} mask={`url(#${maskId})`}>
+            <image
+              href={tenantLogo}
+              x="41"
+              y="56"
+              width="46"
+              height="42"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </g>
+        ) : null}
+      </svg>
     </div>
   );
 }

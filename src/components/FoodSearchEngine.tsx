@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
 
@@ -19,6 +20,7 @@ interface FoodSearchEngineProps {
 }
 
 export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
+  const { lang } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
@@ -56,7 +58,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           ...getSessionRequestHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify({ query: q, lang }),
       });
       const data = (await res.json()) as {
         items?: FoodSearchItem[];
@@ -116,6 +118,16 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
     <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-zinc-800">🔍 巨型食物搜尋引擎</h2>
+        {lastSource === "fatsecret" && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+            FatSecret
+          </span>
+        )}
+        {lastSource === "hk" && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+            茶餐廳資料庫
+          </span>
+        )}
         {lastSource === "local" && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
             智能估算
@@ -138,16 +150,16 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           type="button"
           onClick={search}
           disabled={loading || !query.trim()}
-          className={`shrink-0 px-4 py-2.5 rounded-xl bg-zinc-900 text-white text-sm font-semibold disabled:opacity-60 ${btnClass}`}
+          className={`shrink-0 px-4 py-2.5 rounded-xl bg-[#7ED321] text-white text-sm font-semibold disabled:opacity-60 ${btnClass}`}
         >
           {loading ? "分析中..." : "搜尋"}
         </button>
       </div>
 
       {loading && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-violet-50 border border-violet-100">
-          <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-violet-800 font-medium">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[#7ED321]/10 border border-[#7ED321]/30">
+          <div className="w-5 h-5 border-2 border-[#7ED321] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-[#5fa718] font-medium">
             AI 正在分析「{query.trim()}」的營養素...
           </p>
         </div>
@@ -171,7 +183,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                   className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${btnClass} ${
                     selected
                       ? "border-emerald-500 bg-emerald-50 shadow-sm"
-                      : "border-zinc-100 bg-zinc-50 hover:border-violet-200 hover:bg-violet-50/50"
+                      : "border-zinc-100 bg-zinc-50 hover:border-[#7ED321]/40 hover:bg-[#7ED321]/5"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">

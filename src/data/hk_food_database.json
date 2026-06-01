@@ -1,0 +1,110 @@
+[
+  {
+    "food_name": "茶走",
+    "aliases": ["茶走", "奶茶走甜", "走甜奶茶"],
+    "calories": 95,
+    "protein": 3,
+    "carbs": 8,
+    "fat": 5,
+    "weight_g": 350
+  },
+  {
+    "food_name": "奶茶",
+    "aliases": ["奶茶", "港式奶茶", "絲襪奶茶"],
+    "calories": 310,
+    "protein": 4,
+    "carbs": 48,
+    "fat": 12,
+    "weight_g": 350
+  },
+  {
+    "food_name": "檸茶",
+    "aliases": ["檸茶", "凍檸茶", "檸檬茶"],
+    "calories": 280,
+    "protein": 0,
+    "carbs": 52,
+    "fat": 0,
+    "weight_g": 400
+  },
+  {
+    "food_name": "叉燒飯",
+    "aliases": ["叉燒飯", "叉燒蛋飯", "冰室叉燒飯"],
+    "calories": 820,
+    "protein": 32,
+    "carbs": 95,
+    "fat": 32,
+    "weight_g": 450
+  },
+  {
+    "food_name": "乾炒牛河",
+    "aliases": ["乾炒牛河", "炒牛河", "濕炒牛河"],
+    "calories": 950,
+    "protein": 28,
+    "carbs": 88,
+    "fat": 48,
+    "weight_g": 420
+  },
+  {
+    "food_name": "公仔麵",
+    "aliases": ["公仔麵", "即食麵", "出前一丁"],
+    "calories": 430,
+    "protein": 10,
+    "carbs": 58,
+    "fat": 18,
+    "weight_g": 380
+  },
+  {
+    "food_name": "菠蘿油",
+    "aliases": ["菠蘿油", "菠萝油"],
+    "calories": 420,
+    "protein": 6,
+    "carbs": 42,
+    "fat": 26,
+    "weight_g": 120
+  },
+  {
+    "food_name": "西多士",
+    "aliases": ["西多士", "法式吐司", "花生西多"],
+    "calories": 520,
+    "protein": 14,
+    "carbs": 48,
+    "fat": 30,
+    "weight_g": 180
+  },
+  {
+    "food_name": "雲吞麵",
+    "aliases": ["雲吞麵", "餛飩麵"],
+    "calories": 480,
+    "protein": 22,
+    "carbs": 62,
+    "fat": 16,
+    "weight_g": 400
+  },
+  {
+    "food_name": "燒味飯",
+    "aliases": ["燒味飯", "雙拼飯", "燒鴨飯", "燒肉飯"],
+    "calories": 880,
+    "protein": 38,
+    "carbs": 92,
+    "fat": 36,
+    "weight_g": 480
+  },
+  {
+    "food_name": "常餐",
+    "aliases": ["常餐", "茶餐廳常餐", "B餐"],
+    "calories": 920,
+    "protein": 32,
+    "carbs": 88,
+    "fat": 42,
+    "weight_g": 550
+  },
+  {
+    "food_name": "蛋撻",
+    "aliases": ["蛋撻", "蛋塔"],
+    "calories": 220,
+    "protein": 4,
+    "carbs": 24,
+    "fat": 12,
+    "weight_g": 65
+  }
+]

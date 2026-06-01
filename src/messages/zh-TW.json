@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "home": "首頁",
+    "coach": "教練",
+    "settings": "設定",
+    "addMeal": "飲食"
+  },
+  "header": {
+    "back": "← 返回",
+    "logout": "🚪 登出"
+  },
+  "language": {
+    "label": "語言",
+    "hk": "🇭🇰 廣東話",
+    "tw": "🇹🇼 繁體中文 (台灣)",
+    "en": "🇺🇸 English"
+  },
+  "home": {
+    "coachHome": "教練首頁",
+    "adminHome": "老闆首頁",
+    "studentHome": "學員首頁"
+  },
+  "addMeal": {
+    "title": "記錄飲食",
+    "uploadPhoto": "上傳照片",
+    "calculateCalories": "計算熱量",
+    "publish": "發布紀錄"
+  }
+}

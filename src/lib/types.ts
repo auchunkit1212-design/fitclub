@@ -137,7 +137,7 @@ export interface FoodSearchItem {
   fats: number;
   weightG?: number;
   servingLabel: string;
-  source: "local" | "gemini" | "openai" | "edamam" | "mock";
+  source: "fatsecret" | "hk" | "local" | "gemini" | "openai" | "edamam" | "mock";
 }
 
 export const DEFAULT_PROFILE: UserProfile = {

@@ -17,7 +17,9 @@ export const AI_CALORIE_SYSTEM_PROMPT = `你是香港飲食卡路里估算專家
 2. 合理區間：一碗牛肉叉燒拉麵必須落在 700–900 kcal；茶餐廳乾炒牛河 850–1100 kcal；炸物套餐 +200–350 kcal 油分。
 3. 飲品：全糖奶茶/檸茶 250–350 kcal；走甜仍保留 80–120 kcal。
 4. 嚴禁過低估算：寧可偏高 10% 亦不可低於外食實際常識下限。
-5. 輸出：calories, protein_g, carbs_g, fats_g 整數，並附一句隱形熱量說明。`;
+5. 你是一位嚴謹營養師，輸出必須符合現實常理與生物學。水果類（蘋果、橙、香蕉、莓果等）必須以碳水為主，脂肪通常接近 0。
+6. 必須檢查熱量公式：(碳水g * 4) + (蛋白質g * 4) + (脂肪g * 9) 要與總熱量大致一致（容許約 ±15% 誤差）。
+7. 輸出：calories, protein_g, carbs_g, fats_g 整數，並附一句隱形熱量說明。`;
 
 const HIGH_CAL_KEYWORDS = ["炒飯", "牛河", "乾炒", "焗飯", "公仔麵", "即食麵", "炸"];
 const OUTDOOR_HIDDEN_CAL = [
@@ -39,6 +41,22 @@ const OUTDOOR_HIDDEN_CAL = [
 ];
 const RAMEN_KEYWORDS = ["拉麵", "叉燒", "牛肉", "豚骨", "湯麵"];
 const LOW_RICE_KEYWORDS = ["少飯", "走飯", "少油"];
+const FRUIT_KEYWORDS = [
+  "蘋果",
+  "apple",
+  "橙",
+  "orange",
+  "香蕉",
+  "banana",
+  "士多啤梨",
+  "草莓",
+  "莓",
+  "藍莓",
+  "奇異果",
+  "kiwi",
+  "水果",
+  "fruit",
+];
 
 function matchesAny(text: string, keywords: string[]): boolean {
   return keywords.some((k) => text.includes(k));
@@ -83,20 +101,49 @@ function applyHiddenCalorieFloor(
   };
 }
 
+function enforceMacroCalorieConsistency(estimate: MacroEstimate): MacroEstimate {
+  const protein = Math.max(0, Math.round(estimate.protein));
+  const carbs = Math.max(0, Math.round(estimate.carbs));
+  const fats = Math.max(0, Math.round(estimate.fats));
+  const macroCalories = protein * 4 + carbs * 4 + fats * 9;
+  const calories = Math.max(0, Math.round(estimate.calories));
+  if (macroCalories <= 0) {
+    return { calories, protein, carbs, fats };
+  }
+
+  const lower = Math.round(macroCalories * 0.85);
+  const upper = Math.round(macroCalories * 1.15);
+  if (calories >= lower && calories <= upper) {
+    return { calories, protein, carbs, fats };
+  }
+
+  return {
+    calories: macroCalories,
+    protein,
+    carbs,
+    fats,
+  };
+}
+
 export function estimateMacros(
   description: string,
   carbsPortion: string,
   proteinPortion: string,
   hasVeggies: string
 ): MacroEstimate {
-  const desc = description;
+  const desc = description.toLowerCase();
 
   let calories = 450;
   let protein = 18;
   let carbs = 55;
   let fats = 16;
 
-  if (matchesAny(desc, HIGH_CAL_KEYWORDS)) {
+  if (matchesAny(desc, FRUIT_KEYWORDS)) {
+    calories = 95;
+    protein = 1;
+    carbs = 24;
+    fats = 0;
+  } else if (matchesAny(desc, HIGH_CAL_KEYWORDS)) {
     calories = 920;
     protein = 32;
     carbs = 82;
@@ -129,22 +176,28 @@ export function estimateMacros(
     fats -= 6;
   }
 
-  if (carbsPortion === PORTION_NONE) {
-    carbs = 0;
-    calories -= 180;
-    fats -= 4;
-  } else {
-    if (carbsPortion === "大拳") calories += 80;
-    if (carbsPortion === "細拳") calories -= 60;
+  const isFruitMeal = matchesAny(desc, FRUIT_KEYWORDS);
+
+  if (!isFruitMeal) {
+    if (carbsPortion === PORTION_NONE) {
+      carbs = 0;
+      calories -= 180;
+      fats -= 4;
+    } else {
+      if (carbsPortion === "大拳") calories += 80;
+      if (carbsPortion === "細拳") calories -= 60;
+    }
   }
 
-  if (proteinPortion === PORTION_NONE) {
-    protein = 0;
-    calories -= 120;
-    fats -= 6;
-  } else {
-    if (proteinPortion === "大掌") protein += 18;
-    if (proteinPortion === "細掌") protein -= 10;
+  if (!isFruitMeal) {
+    if (proteinPortion === PORTION_NONE) {
+      protein = 0;
+      calories -= 120;
+      fats -= 6;
+    } else {
+      if (proteinPortion === "大掌") protein += 18;
+      if (proteinPortion === "細掌") protein -= 10;
+    }
   }
 
   if (hasVeggies === PORTION_NONE) {
@@ -154,14 +207,14 @@ export function estimateMacros(
     carbs -= 5;
   }
 
-  const base: MacroEstimate = {
+  const base = {
     calories: Math.max(0, Math.round(calories)),
     protein: Math.max(0, Math.round(protein)),
     carbs: Math.max(0, Math.round(carbs)),
     fats: Math.max(0, Math.round(fats)),
   };
 
-  return applyHiddenCalorieFloor(desc, base);
+  return enforceMacroCalorieConsistency(applyHiddenCalorieFloor(desc, base));
 }
 
 export function generateRoast(

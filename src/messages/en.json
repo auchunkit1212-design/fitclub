@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "home": "Home",
+    "coach": "Coach",
+    "settings": "Settings",
+    "addMeal": "Meal"
+  },
+  "header": {
+    "back": "← Back",
+    "logout": "🚪 Logout"
+  },
+  "language": {
+    "label": "Language",
+    "hk": "🇭🇰 Cantonese",
+    "tw": "🇹🇼 Traditional Chinese (Taiwan)",
+    "en": "🇺🇸 English"
+  },
+  "home": {
+    "coachHome": "Coach Home",
+    "adminHome": "Admin Home",
+    "studentHome": "Student Home"
+  },
+  "addMeal": {
+    "title": "Log Meal",
+    "uploadPhoto": "Upload Photo",
+    "calculateCalories": "Calculate Calories",
+    "publish": "Publish Log"
+  }
+}
