@@ -171,20 +171,20 @@ function parseDescriptionMacros(description: string): {
 
   if (!Number.isFinite(calories) || calories <= 0) return null;
 
-  const weight = Number.isFinite(weight_g) ? Math.round(weight_g) : 0;
+  const weight = Number.isFinite(weight_g) && weight_g > 0 ? Math.round(weight_g) : 0;
   const serving_label =
     perLabel && perLabel.length > 0
       ? perLabel
       : weight > 0
         ? `${weight}g`
-        : "standard serving";
+        : "1 serving";
 
   return {
     calories: Math.round(calories),
     protein: Math.round(Number.isFinite(protein) ? protein : 0),
     carbs: Math.round(Number.isFinite(carbs) ? carbs : 0),
     fat: Math.round(Number.isFinite(fat) ? fat : 0),
-    weight_g: weight,
+    weight_g: weight > 0 ? weight : 100,
     serving_label,
   };
 }

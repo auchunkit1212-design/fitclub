@@ -94,6 +94,9 @@ export async function POST(request: Request) {
         source: "local" as const,
         lang,
         fatSecretConfigured,
+        warning: fatSecretConfigured
+          ? "FatSecret returned no results; showing estimated macros. Redeploy after setting API keys."
+          : undefined,
       });
     }
 

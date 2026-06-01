@@ -34,6 +34,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchWarning, setSearchWarning] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         setResults([]);
         setLastSource(null);
         setSearchError(null);
+        setSearchWarning(null);
         setLoading(false);
         return;
       }
@@ -68,6 +70,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
       const seq = ++searchSeq.current;
       setLoading(true);
       setSearchError(null);
+      setSearchWarning(null);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -84,6 +87,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           source?: string;
           error?: string;
           fatSecretConfigured?: boolean;
+          warning?: string;
         };
 
         if (seq !== searchSeq.current) return;
@@ -110,6 +114,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         const primarySource =
           items[0]?.source ?? data.source ?? null;
         setLastSource(primarySource);
+        setSearchWarning(data.warning ?? null);
       } catch {
         if (seq !== searchSeq.current) return;
         setResults([]);
@@ -231,9 +236,15 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
       <p className="text-xs text-gray-500">
         {t(
           "foodSearch.hint",
-          "輸入「冰室叉燒飯」、「茶走」、「雞胸肉」等，AI 即時估算標準一人份營養素"
+          "Search any food — results from FatSecret when connected, otherwise estimated macros"
         )}
       </p>
+
+      {searchWarning && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          {searchWarning}
+        </p>
+      )}
 
       <div ref={containerRef} className="relative">
         <div className="relative">

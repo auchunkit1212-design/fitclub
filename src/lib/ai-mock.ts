@@ -304,10 +304,20 @@ export function estimateFoodSearchMacros(description: string): MacroEstimate {
     return { calories: 540, protein: 25, carbs: 45, fats: 28 };
   }
   if (
+    desc.includes("brownie") ||
+    desc.includes("cookie") ||
+    desc.includes("donut") ||
+    desc.includes("doughnut") ||
+    desc.includes("chocolate")
+  ) {
+    return { calories: 180, protein: 2, carbs: 26, fats: 7 };
+  }
+  if (
     desc.includes("cake") ||
     desc.includes("loaf") ||
     desc.includes("muffin") ||
     desc.includes("pastry") ||
+    desc.includes("pie") ||
     desc.includes("蛋糕") ||
     desc.includes("包")
   ) {
@@ -317,7 +327,8 @@ export function estimateFoodSearchMacros(description: string): MacroEstimate {
     return { calories: 95, protein: 1, carbs: 24, fats: 0 };
   }
 
-  return estimateMacros(desc, PORTION_NONE, PORTION_NONE, PORTION_NONE);
+  // 勿走 estimateMacros：PORTION_NONE + enforceMacroCalorieConsistency 會把熱量壓成僅脂肪熱量（例如 54 kcal）
+  return { calories: 250, protein: 8, carbs: 30, fats: 10 };
 }
 
 import { t, type AppLanguage } from "./i18n";
