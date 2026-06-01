@@ -56,6 +56,24 @@ const FRUIT_KEYWORDS = [
   "kiwi",
   "水果",
   "fruit",
+  "fruit",
+];
+const DRINK_KEYWORDS = [
+  "latte",
+  "cappuccino",
+  "americano",
+  "coffee",
+  "espresso",
+  "mocha",
+  "奶茶",
+  "檸茶",
+  "茶",
+  "tea",
+  "juice",
+  "smoothie",
+  "啤酒",
+  "beer",
+  "wine",
 ];
 
 function matchesAny(text: string, keywords: string[]): boolean {
@@ -158,6 +176,30 @@ export function estimateMacros(
     protein = 4;
     carbs = desc.includes("走甜") ? 12 : 48;
     fats = desc.includes("走甜") ? 2 : 12;
+  } else if (
+    desc.includes("latte") ||
+    desc.includes("cappuccino") ||
+    desc.includes("mocha")
+  ) {
+    calories = 135;
+    protein = 9;
+    carbs = 12;
+    fats = 6;
+  } else if (desc.includes("americano") || desc.includes("espresso")) {
+    calories = 5;
+    protein = 0;
+    carbs = 1;
+    fats = 0;
+  } else if (desc.includes("coffee") && !desc.includes("cake")) {
+    calories = 120;
+    protein = 4;
+    carbs = 10;
+    fats = 5;
+  } else if (matchesAny(desc, DRINK_KEYWORDS)) {
+    calories = 150;
+    protein = 2;
+    carbs = 28;
+    fats = 2;
   } else if (desc.includes("三文治") || desc.includes("多士")) {
     calories = 420;
     protein = 16;
@@ -217,34 +259,37 @@ export function estimateMacros(
   return enforceMacroCalorieConsistency(applyHiddenCalorieFloor(desc, base));
 }
 
+import { t, type AppLanguage } from "./i18n";
+
 export function generateRoast(
   todayCalories: number,
   targetCalories: number,
   todayProtein: number,
-  targetProtein: number
+  targetProtein: number,
+  lang: AppLanguage = "zh-HK"
 ): string {
   const calRatio = todayCalories / targetCalories;
   const proRatio = todayProtein / targetProtein;
 
   if (todayCalories === 0) {
-    return "仲未食嘢？唔好餓壞個胃呀，記得記低你食咗咩！";
+    return t(lang, "ai.roast.empty", "仲未食嘢？唔好餓壞個胃呀，記得記低你食咗咩！");
   }
   if (calRatio > 1.25) {
-    return "食咁多乾炒牛河唔怪之得減唔到肥啦！聽日試下少油少鹽啦！";
+    return t(lang, "ai.roast.overCalHigh", "食咁多乾炒牛河唔怪之得減唔到肥啦！");
   }
   if (calRatio > 1.05) {
-    return "今日有啲放縱喎，茶餐廳陷阱要小心，唔好再加杯凍奶茶！";
+    return t(lang, "ai.roast.overCalMild", "今日有啲放縱喎，茶餐廳陷阱要小心！");
   }
   if (calRatio < 0.6) {
-    return "食咁少？你係咪想變營養不良？記得食夠蛋白質呀！";
+    return t(lang, "ai.roast.underCal", "食咁少？記得食夠蛋白質呀！");
   }
   if (proRatio < 0.7) {
-    return "蛋白質唔夠喎，加啲雞胸或者蛋啦，唔好淨係食碳水！";
+    return t(lang, "ai.roast.lowProtein", "蛋白質唔夠喎，加啲雞胸或者蛋啦！");
   }
   if (calRatio >= 0.85 && calRatio <= 1.05 && proRatio >= 0.9) {
-    return "今日食得好靚仔！繼續保持，教練見到都笑！";
+    return t(lang, "ai.roast.excellent", "今日食得好靚仔！繼續保持！");
   }
-  return "表現唔錯，再留意下脂肪同鈉就完美啦！";
+  return t(lang, "ai.roast.good", "表現唔錯，再留意下脂肪同鈉就完美啦！");
 }
 
 import type { MealLog } from "./types";

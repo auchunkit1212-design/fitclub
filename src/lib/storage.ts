@@ -88,7 +88,7 @@ export function isToday(isoDate: string): boolean {
 export function getThemeClasses(theme: ThemeColor) {
   const map = {
     emerald: {
-      header: "bg-white border border-gray-200 shadow-sm",
+      header: "",
       accent: "text-emerald-600",
       btn: "bg-emerald-600 hover:bg-emerald-700",
       text: "text-emerald-700",
@@ -96,7 +96,7 @@ export function getThemeClasses(theme: ThemeColor) {
       bar: "bg-emerald-600",
     },
     blue: {
-      header: "bg-white border border-gray-200 shadow-sm",
+      header: "",
       accent: "text-emerald-600",
       btn: "bg-emerald-600 hover:bg-emerald-700",
       text: "text-emerald-700",
@@ -104,7 +104,7 @@ export function getThemeClasses(theme: ThemeColor) {
       bar: "bg-emerald-600",
     },
     black: {
-      header: "bg-white border border-gray-200 shadow-sm",
+      header: "",
       accent: "text-emerald-600",
       btn: "bg-emerald-600 hover:bg-emerald-700",
       text: "text-emerald-700",

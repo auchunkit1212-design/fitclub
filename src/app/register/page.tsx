@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/components/I18nProvider";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GorillaMascot } from "@/components/GorillaMascot";
@@ -30,6 +31,7 @@ type SignupTrack = "solo" | "coach";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [authTab, setAuthTab] = useState<AuthTab>("login");
   const [signupTrack, setSignupTrack] = useState<SignupTrack>("solo");
   const [email, setEmail] = useState("");
@@ -56,13 +58,13 @@ export default function RegisterPage() {
 
   const welcomeText = useMemo(() => {
     if (authTab === "login") {
-      return "歡迎回來！登入後繼續記錄飲食同 AI 分析。";
+      return t("auth.welcome.login", "歡迎回來！登入後繼續記錄飲食同 AI 分析。");
     }
     if (signupTrack === "solo") {
-      return "無教練都可加入 — 大猩猩 AI 私教會幫你設定目標同批閱每一餐。";
+      return t("auth.welcome.solo", "無教練都可加入 — 大猩猩 AI 私教會幫你設定目標同批閱每一餐。");
     }
-    return "開通你的 Gym 品牌空間，開始管理學員飲食。";
-  }, [authTab, signupTrack]);
+    return t("auth.welcome.coach", "開通你的 Gym 品牌空間，開始管理學員飲食。");
+  }, [authTab, signupTrack, t]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -128,7 +130,7 @@ export default function RegisterPage() {
     if (loading) return;
 
     if (signupPassword.length < 6) {
-      showToast("⚠️ 請設定至少 6 位密碼。");
+      showToast(t("auth.errors.passwordMin", "⚠️ 請設定至少 6 位密碼。"));
       return;
     }
 
@@ -159,7 +161,7 @@ export default function RegisterPage() {
       };
 
       if (!res.ok || !data.session) {
-        showToast(`❌ ${data.error ?? "註冊失敗"}`);
+        showToast(`❌ ${data.error ?? t("auth.errors.registerFailed", "註冊失敗")}`);
         return;
       }
 
@@ -167,12 +169,12 @@ export default function RegisterPage() {
       finishSession(
         data.session,
         isCoach
-          ? `🎉 品牌「${data.gymName ?? gymName}」已開通！`
-          : "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。"
+          ? t("auth.toast.brandOpened", "🎉 品牌「{gymName}」已開通！", { gymName: data.gymName ?? gymName })
+          : t("auth.toast.soloReady", "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。")
       );
     } catch (err) {
       console.error("Register failed:", err);
-      showToast("❌ 連線失敗，請稍後再試。");
+      showToast(t("auth.errors.network", "❌ 連線失敗，請稍後再試。"));
     } finally {
       setLoading(false);
     }
@@ -182,8 +184,8 @@ export default function RegisterPage() {
     e.preventDefault();
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      setLoginError("請先輸入 Email。");
-      showToast("⚠️ 請先輸入 Email。");
+      setLoginError(t("auth.errors.emailRequired", "請先輸入 Email。"));
+      showToast(t("auth.errors.emailRequired", "⚠️ 請先輸入 Email。"));
       return;
     }
 
@@ -205,11 +207,11 @@ export default function RegisterPage() {
       };
 
       if (res.ok && data.session) {
-        finishSession(data.session, `🎉 歡迎 ${data.session.name}`);
+        finishSession(data.session, t("auth.toast.welcome", "🎉 歡迎 {name}", { name: data.session.name }));
         return;
       }
 
-      const apiError = data.error ?? "登入失敗";
+      const apiError = data.error ?? t("auth.errors.loginFailed", "登入失敗");
       console.error("Login failed:", apiError);
 
       if (await tryLegacyPasswordlessLogin(normalized)) {
@@ -227,7 +229,7 @@ export default function RegisterPage() {
       }
 
       setLoginError(message);
-      showToast("❌ 連線失敗，請檢查網絡後再試。");
+      showToast(t("auth.errors.networkRetry", "❌ 連線失敗，請檢查網絡後再試。"));
     } finally {
       setLoading(false);
     }
@@ -259,8 +261,8 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-100 rounded-xl">
           {(
             [
-              ["login", "登入 Login"],
-              ["signup", "註冊 Sign Up"],
+              ["login", t("auth.tab.login", "登入 Login")],
+              ["signup", t("auth.tab.signup", "註冊 Sign Up")],
             ] as const
           ).map(([tab, label]) => (
             <button
@@ -291,7 +293,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
+              placeholder={t("auth.placeholder.email", "Email")}
               autoComplete="email"
               className="w-full rounded-xl border border-zinc-200 px-3 py-3"
             />
@@ -302,7 +304,7 @@ export default function RegisterPage() {
                 setLoginPassword(e.target.value);
                 setLoginError(null);
               }}
-              placeholder="密碼（舊學員若未設定可留空）"
+              placeholder={t("auth.placeholder.password", "密碼（舊學員若未設定可留空）")}
               autoComplete="current-password"
               className="w-full rounded-xl border border-zinc-200 px-3 py-3"
             />
@@ -316,7 +318,7 @@ export default function RegisterPage() {
               disabled={loading}
               className={`w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              {loading ? "驗證緊..." : "登入"}
+              {loading ? t("auth.verifying", "驗證緊...") : t("auth.login", "登入")}
             </button>
           </form>
         ) : (
@@ -334,7 +336,7 @@ export default function RegisterPage() {
                     : "border-zinc-200 text-zinc-600"
                 }`}
               >
-                🦍 AI 私教散客
+                {t("auth.signup.trackSolo", "🦍 AI 私教散客")}
               </button>
               <button
                 type="button"
@@ -345,17 +347,17 @@ export default function RegisterPage() {
                     : "border-zinc-200 text-zinc-600"
                 }`}
               >
-                🏢 教練 / 品牌
+                {t("auth.signup.trackCoach", "🏢 教練 / 品牌")}
               </button>
             </div>
 
             {signupTrack === "solo" && (
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
                 <p className="text-sm font-bold text-emerald-900">
-                  註冊 AI 專屬私教（無須教練）
+                  {t("auth.signup.soloTitle", "註冊 AI 專屬私教（無須教練）")}
                 </p>
                 <p className="text-[11px] text-emerald-800/80 mt-0.5">
-                  密碼必填 · 自動接入官方 AI Tenant · 大猩猩全面接管目標同批閱
+                  {t("auth.signup.soloHint", "密碼必填 · 自動接入官方 AI Tenant · 大猩猩全面接管目標同批閱")}
                 </p>
               </div>
             )}
@@ -365,7 +367,7 @@ export default function RegisterPage() {
                 <input
                   value={gymName}
                   onChange={(e) => setGymName(e.target.value)}
-                  placeholder="Gym 品牌名稱（例如 Oxygym）"
+                  placeholder={t("auth.placeholder.gymName", "Gym 品牌名稱（例如 Oxygym）")}
                   required
                   className="w-full rounded-xl border border-zinc-200 px-3 py-3"
                 />
@@ -374,7 +376,7 @@ export default function RegisterPage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={signupTrack === "coach" ? "教練姓名" : "你的姓名"}
+                placeholder={signupTrack === "coach" ? t("auth.signup.nameCoach", "教練姓名") : t("auth.signup.nameStudent", "你的姓名")}
                 required
                 className="w-full rounded-xl border border-zinc-200 px-3 py-3"
               />
@@ -383,7 +385,7 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                placeholder={t("auth.placeholder.email", "Email")}
                 required
                 autoComplete="email"
                 className="w-full rounded-xl border border-zinc-200 px-3 py-3"
@@ -393,7 +395,7 @@ export default function RegisterPage() {
                 type="password"
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
-                placeholder="密碼（至少 6 位，散客必填）"
+                placeholder={t("auth.signup.passwordPlaceholder", "密碼（至少 6 位，散客必填）")}
                 required
                 minLength={6}
                 autoComplete="new-password"
@@ -407,13 +409,13 @@ export default function RegisterPage() {
                     onClick={() => setShowInviteField((v) => !v)}
                     className="text-xs text-zinc-500 underline"
                   >
-                    {showInviteField ? "隱藏教練邀請碼" : "我有教練邀請碼（選填）"}
+                    {showInviteField ? t("auth.invite.hide", "隱藏教練邀請碼") : t("auth.invite.show", "我有教練邀請碼（選填）")}
                   </button>
                   {showInviteField && (
                     <input
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
-                      placeholder="請輸入教練專屬邀請碼 (若無教練請留空)"
+                      placeholder={t("auth.invite.placeholder", "請輸入教練專屬邀請碼 (若無教練請留空)")}
                       className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm"
                     />
                   )}
@@ -428,10 +430,10 @@ export default function RegisterPage() {
                 } ${btnClass}`}
               >
                 {loading
-                  ? "註冊中..."
+                  ? t("auth.signup.registering", "註冊中...")
                   : signupTrack === "solo"
-                    ? "🦍 立即註冊 AI 私教"
-                    : "🚀 建立品牌空間"}
+                    ? t("auth.signup.soloCta", "🦍 立即註冊 AI 私教")
+                    : t("auth.signup.coachCta", "🚀 建立品牌空間")}
               </button>
             </form>
           </>
@@ -439,9 +441,9 @@ export default function RegisterPage() {
       </div>
 
       <p className="text-center text-sm text-zinc-500 mt-5">
-        Gym 老闆？{" "}
+        {t("auth.footer.ownerPrompt", "Gym 老闆？")}{" "}
         <Link href="/sas-register" className="text-emerald-700 font-semibold underline">
-          免費開通品牌空間
+          {t("auth.footer.sasLink", "免費開通品牌空間")}
         </Link>
       </p>
 

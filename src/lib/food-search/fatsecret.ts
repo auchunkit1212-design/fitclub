@@ -96,6 +96,7 @@ type FatSecretSearchFood = {
   food_name: string;
   brand_name?: string;
   food_type?: string;
+  food_description?: string;
 };
 
 type FatSecretServing = {
@@ -108,6 +109,39 @@ type FatSecretServing = {
   fat?: string;
   is_default?: string;
 };
+
+/** FatSecret 回傳格式：新版 `foods.food` 或舊版 `foods_search.results.food` */
+function extractSearchFoods(data: {
+  foods?: { food?: FatSecretSearchFood | FatSecretSearchFood[] };
+  foods_search?: { results?: { food?: FatSecretSearchFood | FatSecretSearchFood[] } };
+}): FatSecretSearchFood[] {
+  return asArray(data.foods?.food ?? data.foods_search?.results?.food);
+}
+
+/** 從搜尋結果摘要解析營養（例：Per 332g - Calories: 110kcal | Fat: 4.48g ...） */
+function parseDescriptionMacros(description: string): {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  weight_g: number;
+} | null {
+  const calories = Number(description.match(/Calories:\s*([\d.]+)/i)?.[1]);
+  const fat = Number(description.match(/Fat:\s*([\d.]+)/i)?.[1]);
+  const carbs = Number(description.match(/Carbs:\s*([\d.]+)/i)?.[1]);
+  const protein = Number(description.match(/Protein:\s*([\d.]+)/i)?.[1]);
+  const weight_g = Number(description.match(/Per\s+([\d.]+)\s*g/i)?.[1]);
+
+  if (!Number.isFinite(calories) || calories <= 0) return null;
+
+  return {
+    calories: Math.round(calories),
+    protein: Math.round(Number.isFinite(protein) ? protein : 0),
+    carbs: Math.round(Number.isFinite(carbs) ? carbs : 0),
+    fat: Math.round(Number.isFinite(fat) ? fat : 0),
+    weight_g: Math.round(Number.isFinite(weight_g) ? weight_g : 100),
+  };
+}
 
 async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
   const data = await fatSecretCall<{
@@ -138,7 +172,7 @@ async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
   let weightG = Number(serving.metric_serving_amount);
   if (!Number.isFinite(weightG) || weightG <= 0) weightG = 100;
 
-  return toFoodSearchItem(
+  const item = toFoodSearchItem(
     {
       food_name: food.food_name ?? "Unknown food",
       calories: Math.round(calories),
@@ -149,6 +183,29 @@ async function fetchFoodDetail(foodId: string): Promise<FoodSearchItem | null> {
     },
     "fatsecret"
   );
+  if (food.brand_name) item.brand = food.brand_name;
+  return item;
+}
+
+async function searchHitToItem(food: FatSecretSearchFood): Promise<FoodSearchItem | null> {
+  if (food.food_description) {
+    const macros = parseDescriptionMacros(food.food_description);
+    if (macros) {
+      const item = toFoodSearchItem(
+        { food_name: food.food_name, ...macros },
+        "fatsecret"
+      );
+      if (food.brand_name) item.brand = food.brand_name;
+      return item;
+    }
+  }
+
+  const detail = await fetchFoodDetail(food.food_id);
+  if (detail && food.brand_name) {
+    detail.brand = food.brand_name;
+    detail.name = food.food_name;
+  }
+  return detail;
 }
 
 /** FatSecret foods.search 主力查詢 */
@@ -157,29 +214,22 @@ export async function searchFoodWithFatSecret(query: string): Promise<FoodSearch
   if (!q) return [];
 
   const searchData = await fatSecretCall<{
-    foods_search?: {
-      results?: { food?: FatSecretSearchFood | FatSecretSearchFood[] };
-    };
+    foods?: { food?: FatSecretSearchFood | FatSecretSearchFood[] };
+    foods_search?: { results?: { food?: FatSecretSearchFood | FatSecretSearchFood[] } };
   }>("foods.search", {
     search_expression: q,
     max_results: "5",
     page_number: "0",
   });
 
-  const foods = asArray(searchData.foods_search?.results?.food);
+  const foods = extractSearchFoods(searchData);
   if (foods.length === 0) return [];
 
   const items: FoodSearchItem[] = [];
   for (const food of foods.slice(0, 5)) {
     try {
-      const detail = await fetchFoodDetail(food.food_id);
-      if (detail) {
-        if (food.brand_name) {
-          detail.brand = food.brand_name;
-          detail.name = food.food_name;
-        }
-        items.push(detail);
-      }
+      const item = await searchHitToItem(food);
+      if (item) items.push(item);
     } catch (err) {
       console.warn("[fatsecret] food detail skipped", food.food_id, err);
     }

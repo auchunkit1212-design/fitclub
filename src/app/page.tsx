@@ -51,28 +51,43 @@ import type {
 import { getMealImageSrc } from "@/lib/meal-display";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
+import {
+  DEFAULT_PERSONAL_SETTINGS,
+  JOB_KEYS,
+  MEAL_SCHEDULE_KEYS,
+  TRAINING_TYPE_KEYS,
+  WATER_REMINDER_KEYS,
+  WEEKLY_FREQUENCY_KEYS,
+  normalizePersonalSettings,
+  type PersonalSettings,
+} from "@/lib/personal-settings";
+
 type ActiveTab = "dashboard" | "settings";
 
-interface PersonalSettings {
-  nickname: string;
-  job: string;
-  mealSchedule: string;
-  trainingType: string;
-  weeklyFrequency: string;
-  waterReminder: string;
-}
+type ActiveNotification = { message: string; action?: "logMeal" } | null;
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-const DEFAULT_SETTINGS: PersonalSettings = {
-  nickname: "",
-  job: "文職 (長坐)",
-  mealSchedule: "一日三餐 (正常)",
-  trainingType: "重訓 (Weight Training)",
-  weeklyFrequency: "3次",
-  waterReminder: "每2小時提示",
-};
+const FREQUENCY_LABEL_KEY = {
+  "1-2": "settings.frequency.low",
+  "3": "settings.frequency.medium",
+  "4-5": "settings.frequency.high",
+  daily: "settings.frequency.daily",
+} as const;
+
+const WATER_LABEL_KEY = {
+  "1h": "settings.water.every1h",
+  "2h": "settings.water.every2h",
+  "4h": "settings.water.every4h",
+  off: "settings.water.off",
+} as const;
+
+const TRAINING_LABEL_KEY = {
+  weight: "settings.training.weightTraining",
+  cardio: "settings.training.cardio",
+  mixed: "settings.training.mixed",
+} as const;
 
 function ProgressBar({
   label,
@@ -110,19 +125,19 @@ function ProgressBar({
 
 export default function StudentDashboard() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [branding, setBranding] = useState<CoachBranding | null>(null);
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
-  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const [activeNotification, setActiveNotification] = useState<ActiveNotification>(null);
   const [session, setSession] = useState<UserSession | null>(null);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
-  const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_PERSONAL_SETTINGS);
   const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(
     null
   );
@@ -169,9 +184,9 @@ export default function StudentDashboard() {
       const activeSession: UserSession = {
         ...parsed,
         role,
-        name: parsed.name || "體驗學員",
+        name: parsed.name || t("home.defaults.trialStudent", "體驗學員"),
         email: parsed.email || "",
-        gym: parsed.gym || "未綁定分店",
+        gym: parsed.gym || t("home.defaults.unboundGym", "未綁定分店"),
         isLoggedIn: true,
       };
 
@@ -179,22 +194,22 @@ export default function StudentDashboard() {
       setProfile(getUserProfile());
 
       try {
-        await withTimeout(initUserRegistry(), 12_000, "雲端初始化逾時");
+        await withTimeout(initUserRegistry(), 12_000, t("errors.cloudInitTimeout", "雲端初始化逾時"));
 
         const registry = await withTimeout(
           fetchUsersForSession(activeSession),
           12_000,
-          "讀取用戶逾時"
+          t("errors.fetchUsersTimeout", "讀取用戶逾時")
         );
         const mealLogs = await withTimeout(
           getMealLogs(activeSession, registry),
           12_000,
-          "讀取餐食逾時"
+          t("errors.fetchMealsTimeout", "讀取餐食逾時")
         );
         const brand = await withTimeout(
           resolveBrandForUser(activeSession, registry),
           12_000,
-          "讀取品牌逾時"
+          t("errors.fetchBrandTimeout", "讀取品牌逾時")
         );
 
         if (cancelled) return;
@@ -260,7 +275,7 @@ export default function StudentDashboard() {
         if (rawSettings) {
           try {
             const settingsParsed = JSON.parse(rawSettings) as Partial<PersonalSettings>;
-            setSettings({ ...DEFAULT_SETTINGS, ...settingsParsed });
+            setSettings(normalizePersonalSettings(settingsParsed));
           } catch {
             // Keep default settings when parse fails
           }
@@ -268,13 +283,13 @@ export default function StudentDashboard() {
       } catch (error) {
         if (cancelled) return;
         const message =
-          error instanceof Error ? error.message : "雲端讀取失敗";
+          error instanceof Error ? error.message : t("errors.cloudLoadFailed", "雲端讀取失敗");
         setLoadError(message);
         setBranding(DEFAULT_BRANDING);
         setBroadcast("");
         setLogs([]);
         setUserRegistry([]);
-        showToast("❌ 雲端讀取失敗，請檢查網絡或 Supabase。");
+        showToast(t("home.errors.cloudLoadFailed", "❌ 雲端讀取失敗，請檢查網絡或 Supabase。"));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -285,19 +300,29 @@ export default function StudentDashboard() {
 
     load();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [router, t, lang]);
+
+  useEffect(() => {
     const timerA = setTimeout(() => {
-      setActiveNotification("⏰ 到時間記錄上一餐啦，唔好漏打卡！");
+      setActiveNotification({
+        message: t("home.notifications.logMeal", "⏰ 到時間記錄上一餐啦，唔好漏打卡！"),
+        action: "logMeal",
+      });
     }, 4000);
     const timerB = setTimeout(() => {
-      setActiveNotification("💧 補水提示：依家飲一大杯水先！");
+      setActiveNotification({
+        message: t("home.notifications.hydration", "💧 補水提示：依家飲一大杯水先！"),
+      });
     }, 12000);
 
     return () => {
-      cancelled = true;
       clearTimeout(timerA);
       clearTimeout(timerB);
     };
-  }, [router]);
+  }, [t, lang]);
 
   const isStudent = session?.role === "student";
 
@@ -337,7 +362,7 @@ export default function StudentDashboard() {
     if (!session?.email || weightSaving) return;
     const w = Number(weightInput);
     if (!w || w < 30 || w > 300) {
-      alert("請輸入有效體重（30–300 kg）");
+      alert(t("home.weight.invalidAlert", "請輸入有效體重（30–300 kg）"));
       return;
     }
     setWeightSaving(true);
@@ -345,10 +370,10 @@ export default function StudentDashboard() {
       await upsertWeightLog(session.email, w);
       const refreshed = await fetchWeightLogsLastDays(session.email, 7);
       setWeightLogs(refreshed);
-      showToast("✅ 今日體重已記錄");
+      showToast(t("home.weight.savedToast", "✅ 今日體重已記錄"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "儲存失敗";
-      alert(`體重儲存失敗：${message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql`);
+      const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
+      alert(t("home.weight.saveFailed", "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql", { message }));
     } finally {
       setWeightSaving(false);
     }
@@ -358,7 +383,8 @@ export default function StudentDashboard() {
     todayCalories,
     targetCalories,
     todayProtein,
-    targetProtein
+    targetProtein,
+    lang
   );
 
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
@@ -367,13 +393,13 @@ export default function StudentDashboard() {
   if (!session) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-zinc-500 px-6 text-center">
-        <p>前往登入頁...</p>
+        <p>{t("auth.redirectingLogin", "前往登入頁...")}</p>
         <button
           type="button"
           onClick={() => goTo(router, "/register")}
           className={`px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium ${btnClass}`}
         >
-          去登入
+          {t("auth.goLogin", "去登入")}
         </button>
       </div>
     );
@@ -382,7 +408,7 @@ export default function StudentDashboard() {
   if (loading || !branding) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-zinc-500 px-6 text-center">
-        <p>從雲端載入緊...</p>
+        <p>{t("common.loadingCloud", "從雲端載入緊...")}</p>
         {loadError && (
           <>
             <p className="text-sm text-red-600">{loadError}</p>
@@ -391,7 +417,7 @@ export default function StudentDashboard() {
               onClick={() => goTo(router, "/register")}
               className={`px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium ${btnClass}`}
             >
-              返回登入
+              {t("auth.backToLogin", "返回登入")}
             </button>
           </>
         )}
@@ -428,8 +454,11 @@ export default function StudentDashboard() {
     );
   }
 
+  const surfaceCard =
+    "w-full rounded-2xl bg-white border border-zinc-100 shadow-sm";
+
   return (
-    <div className="min-h-screen pb-28 max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-28">
       {showNutritionDash && isStudent && (
         <NutritionDashboard
           logs={todayLogs}
@@ -462,51 +491,61 @@ export default function StudentDashboard() {
       )}
 
       {toast && (
-        <div className="fixed top-safe left-4 right-4 bg-white text-gray-900 border border-gray-200 px-4 py-3 rounded-xl z-50 text-sm font-semibold text-center shadow-md max-w-lg mx-auto">
-          {toast}
+        <div className="fixed inset-x-0 top-safe z-50 px-4 pointer-events-none">
+          <div className="mx-auto w-full max-w-lg pointer-events-auto">
+            <div className="bg-white text-gray-900 border border-gray-200 px-4 py-3 rounded-xl text-sm font-semibold text-center shadow-md">
+              {toast}
+            </div>
+          </div>
         </div>
       )}
 
       {activeNotification && (
-        <div className="fixed top-safe left-4 right-4 max-w-lg mx-auto bg-white text-gray-900 p-4 rounded-2xl z-50 shadow-lg border border-gray-200">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold leading-relaxed">{activeNotification}</p>
-            <button
-              type="button"
-              onClick={() => setActiveNotification(null)}
-              className="bg-white/10 text-zinc-300 w-6 h-6 rounded-full active:scale-95 active:opacity-80 transition-all cursor-pointer"
-            >
-              ×
-            </button>
-          </div>
-          <div className="mt-3 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveNotification(null)}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
-            >
-              稍後
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const note = activeNotification;
-                setActiveNotification(null);
-                if (note?.includes("記錄")) {
-                  router.push("/add-meal");
-                }
-              }}
-              className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 text-white active:scale-95 active:opacity-80 transition-all cursor-pointer"
-            >
-              即刻做
-            </button>
+        <div className="fixed inset-x-0 top-safe z-50 px-4 pointer-events-none">
+          <div className="mx-auto w-full max-w-lg pointer-events-auto">
+            <div className="bg-white text-gray-900 p-4 rounded-2xl shadow-lg border border-zinc-100">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold leading-relaxed min-w-0 flex-1">
+                  {activeNotification.message}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveNotification(null)}
+                  className="shrink-0 text-gray-400 hover:text-gray-600 w-6 h-6 rounded-full active:scale-95 transition-all cursor-pointer"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveNotification(null)}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
+                >
+                  {t("home.notifications.later", "稍後")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = activeNotification?.action;
+                    setActiveNotification(null);
+                    if (action === "logMeal") {
+                      router.push("/add-meal");
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 text-white active:scale-95 active:opacity-80 transition-all cursor-pointer"
+                >
+                  {t("home.notifications.actNow", "即刻做")}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <header
-        className={`${theme.header} px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-5 rounded-b-3xl overflow-hidden`}
-      >
+      <div className="w-full max-w-lg mx-auto px-4 pt-safe flex flex-col gap-4">
+      <header className={`${surfaceCard} p-4`}>
         <div className="flex items-start gap-2.5 min-w-0">
           <GorillaMascot logoUrl={branding?.logo} size="sm" />
           <div className="flex-1 min-w-0 pt-0.5">
@@ -524,8 +563,8 @@ export default function StudentDashboard() {
               {title}
             </h1>
             <p className="text-gray-600 text-[11px] mt-1.5 truncate">
-              {settings.nickname || session.name} · {session.gym} · 今日{" "}
-              {todayLogs.length} 餐
+              {settings.nickname || session.name} · {session.gym} ·{" "}
+              {t("home.todayMealCount", "今日 {count} 餐", { count: todayLogs.length })}
             </p>
           </div>
           <button
@@ -536,24 +575,26 @@ export default function StudentDashboard() {
             {t("header.logout", "🚪 登出")}
           </button>
         </div>
-        <div className="mt-2">
-          <LanguageSwitcher dark />
+        <div className="mt-3 pt-3 border-t border-zinc-100">
+          <LanguageSwitcher />
         </div>
       </header>
 
-      <main className="px-4 -mt-4 space-y-4">
+      <main className="flex flex-col gap-4 w-full">
         {activeTab === "dashboard" && (
-          <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 text-sm">
+          <section className={`${surfaceCard} p-4 text-sm`}>
             <div className="flex justify-between items-center">
               <p className="font-semibold text-zinc-900">
-                👋 歡迎，{settings.nickname || session.name}
+                {t("home.welcome", "👋 歡迎，{name}", {
+                  name: settings.nickname || session.name,
+                })}
               </p>
               <span className="text-[10px] font-bold uppercase bg-emerald-600 text-white px-2 py-0.5 rounded">
                 {session.role === "admin"
-                  ? "總控制台"
+                  ? t("roles.admin", "總控制台")
                   : session.role === "coach"
-                    ? "教練"
-                    : "學員"}
+                    ? t("roles.coach", "教練")
+                    : t("roles.student", "學員")}
               </span>
             </div>
             <p className="text-zinc-500 mt-1 font-mono text-xs">{session.email}</p>
@@ -574,16 +615,21 @@ export default function StudentDashboard() {
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
           <div className="bg-white text-gray-800 px-4 py-3 rounded-xl text-sm font-medium border border-emerald-300 shadow-sm">
-            📜{" "}
-            {session.isSoloStudent ? "AI 大猩猩聖旨" : "教練聖旨"}已鎖定目標：
-            {coachTargets.targetCalories} kcal · 蛋白 {coachTargets.targetProtein}g · 碳水{" "}
-            {coachTargets.targetCarbs}g · 脂肪 {coachTargets.targetFats}g
+            {t("home.targets.lockedBanner", "📜 {source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
+              source: session.isSoloStudent
+                ? t("home.targets.lockedSolo", "AI 大猩猩聖旨")
+                : t("home.targets.lockedCoach", "教練聖旨"),
+              calories: coachTargets.targetCalories,
+              protein: coachTargets.targetProtein,
+              carbs: coachTargets.targetCarbs,
+              fats: coachTargets.targetFats,
+            })}
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
           <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-md">
-            🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！
+            {t("home.soloModeBanner", "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
           </div>
         )}
 
@@ -591,7 +637,7 @@ export default function StudentDashboard() {
           <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl text-sm shadow-sm">
             {coachReactions.slice(0, 3).map((r) => (
               <p key={r.id} className="font-medium">
-                教練回覆咗你 {r.sticker}
+                {t("home.coachReplied", "教練回覆咗你 {sticker}", { sticker: r.sticker })}
               </p>
             ))}
           </div>
@@ -599,38 +645,60 @@ export default function StudentDashboard() {
 
         {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
           <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-md text-sm font-medium">
-            📣 教練突發警告: {broadcast}
+            {t("home.broadcastPrefix", "📣 教練突發警告:")} {broadcast}
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && (
           <section className="bg-emerald-600 text-white rounded-2xl p-4 shadow-md">
             <p className="text-sm font-semibold text-amber-100 mb-1">
-              🤖 {session.isSoloStudent ? "大猩猩 AI 私教" : "專屬教練 AI 點評"}
+              🤖{" "}
+              {session.isSoloStudent
+                ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
+                : t("home.aiCoach.coachTitle", "專屬教練 AI 點評")}
             </p>
             <p className="text-sm leading-relaxed">
               {session.isSoloStudent
-                ? `你已加入【${session.gym}】散客計劃。今日${
-                    todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"
-                  }，跟 AI 聖旨食就啱！`
-                : `你已綁定【${session.gym}】，負責教練【${
-                    session.coach || "專業教練組"
-                  }】。今日${todayLogs.length === 0 ? "仲未打卡" : "進度唔錯"}，記得跟【${
-                    settings.mealSchedule
-                  }】食！`}
+                ? t(
+                    "home.aiCoach.soloJoined",
+                    "你已加入【{gym}】散客計劃。今日{status}，跟 AI 聖旨食就啱！",
+                    {
+                      gym: session.gym,
+                      status:
+                        todayLogs.length === 0
+                          ? t("home.aiCoach.notLoggedYet", "仲未打卡")
+                          : t("home.aiCoach.progressGood", "進度唔錯"),
+                    }
+                  )
+                : t(
+                    "home.aiCoach.coachJoined",
+                    "你已綁定【{gym}】，負責教練【{coach}】。今日{status}，記得跟【{mealSchedule}】食！",
+                    {
+                      gym: session.gym,
+                      coach: session.coach || t("home.aiCoach.defaultCoach", "專業教練組"),
+                      status:
+                        todayLogs.length === 0
+                          ? t("home.aiCoach.notLoggedYet", "仲未打卡")
+                          : t("home.aiCoach.progressGood", "進度唔錯"),
+                      mealSchedule: t(`settings.mealSchedules.${settings.mealSchedule}`, settings.mealSchedule),
+                    }
+                  )}
             </p>
           </section>
         )}
 
         {activeTab === "dashboard" && isStudent ? (
           <>
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+            <section className={`${surfaceCard} p-4`}>
               <h2 className={`text-sm font-semibold ${theme.accent} mb-2`}>
-                🤖 AI 教練吐槽
+                {t("home.roastTitle", "🤖 AI 教練吐槽")}
               </h2>
               <p className="text-zinc-800 leading-relaxed">{roast}</p>
               <p className="text-xs text-zinc-500 mt-3">
-                你而家設定：{settings.trainingType} · 每星期 {settings.weeklyFrequency}
+                {t("home.settingsSummary", "你而家設定：{trainingType} · 每星期 {weeklyFrequency}", {
+                  trainingType: t(TRAINING_LABEL_KEY[settings.trainingType], settings.trainingType),
+                  weeklyFrequency: t(FREQUENCY_LABEL_KEY[settings.weeklyFrequency], settings.weeklyFrequency),
+                })}
               </p>
             </section>
 
@@ -639,20 +707,20 @@ export default function StudentDashboard() {
               onClick={() => setShowNutritionDash(true)}
               className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-md ${btnClass}`}
             >
-              📊 高級營養分析
+              📊 {t("home.advancedNutrition", "高級營養分析")}
             </button>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
-              <h2 className="font-semibold text-zinc-800">今日進度</h2>
+            <section className={`${surfaceCard} p-4 space-y-4`}>
+              <h2 className="font-semibold text-zinc-800">{t("home.progress.title", "今日進度")}</h2>
               <ProgressBar
-                label="熱量"
+                label={t("common.calories", "熱量")}
                 current={todayCalories}
                 target={targetCalories}
                 unit=""
                 barClass={theme.bar}
               />
               <ProgressBar
-                label="蛋白質"
+                label={t("common.protein", "蛋白質")}
                 current={todayProtein}
                 target={targetProtein}
                 unit="g"
@@ -660,10 +728,10 @@ export default function StudentDashboard() {
               />
             </section>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-3">
+            <section className={`${surfaceCard} p-4 space-y-3`}>
               <div className="flex justify-between items-center">
-                <h2 className="font-semibold text-zinc-800">體重趨勢</h2>
-                <span className="text-xs text-zinc-400">過去 7 日</span>
+                <h2 className="font-semibold text-zinc-800">{t("home.weight.title", "體重趨勢")}</h2>
+                <span className="text-xs text-zinc-400">{t("home.weight.last7Days", "過去 7 日")}</span>
               </div>
               <WeightTrendChart logs={weightLogs} loading={weightLogsLoading} />
               <div className="flex gap-2 pt-1">
@@ -672,7 +740,7 @@ export default function StudentDashboard() {
                   inputMode="decimal"
                   value={weightInput}
                   onChange={(e) => setWeightInput(e.target.value)}
-                  placeholder="今日體重 (kg)"
+                  placeholder={t("home.weight.placeholder", "今日體重 (kg)")}
                   className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm"
                 />
                 <button
@@ -681,14 +749,14 @@ export default function StudentDashboard() {
                   onClick={handleSaveWeight}
                   className={`shrink-0 px-4 py-2.5 rounded-xl ${theme.btn} text-white text-sm font-semibold disabled:opacity-60 ${btnClass}`}
                 >
-                  {weightSaving ? "儲存中..." : "更新今日體重"}
+                  {weightSaving ? t("home.weight.saving", "儲存中...") : t("home.weight.updateButton", "更新今日體重")}
                 </button>
               </div>
             </section>
 
             {todayLogs.length > 0 && (
-              <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
-                <h2 className="font-semibold text-zinc-800 mb-3">今日餐單</h2>
+              <section className={`${surfaceCard} p-4`}>
+                <h2 className="font-semibold text-zinc-800 mb-3">{t("home.meals.today", "今日餐單")}</h2>
                 <ul className="space-y-2">
                   {todayLogs.map((log) => {
                     const reaction = coachReactions.find(
@@ -712,8 +780,12 @@ export default function StudentDashboard() {
                           {log.mealType} · {log.description}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {log.calories} kcal · 蛋白 {log.protein}g · 碳水 {log.carbs}g · 脂肪{" "}
-                          {log.fats}g
+                          {t("home.meals.macroLine", "{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
+                            calories: log.calories,
+                            protein: log.protein,
+                            carbs: log.carbs,
+                            fats: log.fats,
+                          })}
                         </p>
                       </div>
                       </div>
@@ -730,77 +802,114 @@ export default function StudentDashboard() {
             )}
           </>
         ) : isStudent ? (
-          <section className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-4 space-y-4">
-            <h2 className="font-semibold text-zinc-800">⚙️ 個人化設定</h2>
+          <section className={`${surfaceCard} p-4 space-y-4`}>
+            <h2 className="font-semibold text-zinc-800">{t("settings.title", "⚙️ 個人化設定")}</h2>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500">暱稱</label>
+              <label className="text-xs text-zinc-500">{t("settings.nickname", "暱稱")}</label>
               <input
                 value={settings.nickname}
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, nickname: e.target.value }))
                 }
-                placeholder="你想教練點叫你"
+                placeholder={t("settings.nicknamePlaceholder", "你想教練點叫你")}
                 className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs text-zinc-500">工作型態</label>
+                <label className="text-xs text-zinc-500">{t("settings.job", "工作型態")}</label>
                 <select
                   value={settings.job}
                   onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, job: e.target.value }))
+                    setSettings((prev) => ({
+                      ...prev,
+                      job: e.target.value as PersonalSettings["job"],
+                    }))
                   }
                   className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
                 >
-                  <option value="文職 (長坐)">文職 (長坐)</option>
-                  <option value="外勤 / 零售">外勤 / 零售</option>
-                  <option value="高體力勞動">高體力勞動</option>
+                  {JOB_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {t(`settings.jobs.${key}`, key)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-zinc-500">每星期訓練次數</label>
+                <label className="text-xs text-zinc-500">{t("settings.weeklyFrequency", "每星期訓練次數")}</label>
                 <select
                   value={settings.weeklyFrequency}
                   onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, weeklyFrequency: e.target.value }))
+                    setSettings((prev) => ({
+                      ...prev,
+                      weeklyFrequency: e.target.value as PersonalSettings["weeklyFrequency"],
+                    }))
                   }
                   className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
                 >
-                  <option value="1-2次">1-2次</option>
-                  <option value="3次">3次</option>
-                  <option value="4-5次">4-5次</option>
-                  <option value="日日操">日日操</option>
+                  {WEEKLY_FREQUENCY_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {t(FREQUENCY_LABEL_KEY[key], key)}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500">飲食安排</label>
+              <label className="text-xs text-zinc-500">{t("settings.mealSchedule", "飲食安排")}</label>
               <select
                 value={settings.mealSchedule}
                 onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, mealSchedule: e.target.value }))
+                  setSettings((prev) => ({
+                    ...prev,
+                    mealSchedule: e.target.value as PersonalSettings["mealSchedule"],
+                  }))
                 }
                 className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                <option value="一日三餐 (正常)">一日三餐 (正常)</option>
-                <option value="一日四餐 / 多餐">一日四餐 / 多餐</option>
-                <option value="168斷食 (兩餐)">168斷食 (兩餐)</option>
+                {MEAL_SCHEDULE_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`settings.mealSchedules.${key}`, key)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-500">飲水提醒</label>
+              <label className="text-xs text-zinc-500">{t("settings.waterReminder", "飲水提醒")}</label>
               <select
                 value={settings.waterReminder}
                 onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, waterReminder: e.target.value }))
+                  setSettings((prev) => ({
+                    ...prev,
+                    waterReminder: e.target.value as PersonalSettings["waterReminder"],
+                  }))
                 }
                 className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                <option value="每1小時提示">每1小時提示</option>
-                <option value="每2小時提示">每2小時提示</option>
-                <option value="每4小時提示">每4小時提示</option>
-                <option value="關閉提示">關閉提示</option>
+                {WATER_REMINDER_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(WATER_LABEL_KEY[key], key)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">{t("settings.trainingType", "訓練類型")}</label>
+              <select
+                value={settings.trainingType}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    trainingType: e.target.value as PersonalSettings["trainingType"],
+                  }))
+                }
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              >
+                {TRAINING_TYPE_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(TRAINING_LABEL_KEY[key], key)}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -851,19 +960,20 @@ export default function StudentDashboard() {
                       );
                     }
                   } catch {
-                    showToast("身體數據同步失敗，已儲存本地設定。");
+                    showToast(t("settings.bodySyncFailed", "身體數據同步失敗，已儲存本地設定。"));
                   }
                 }
-                showToast("設定已儲存");
+                showToast(t("settings.saved", "設定已儲存"));
                 setActiveTab("dashboard");
               }}
               className={`w-full ${theme.btn} text-white font-semibold py-3.5 rounded-xl active:scale-95 active:opacity-80 transition-all cursor-pointer`}
             >
-              儲存設定
+              {t("settings.saveButton", "儲存設定")}
             </button>
           </section>
         ) : null}
       </main>
+      </div>
 
       <BottomNav
         activeTab={activeTab}

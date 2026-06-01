@@ -18,10 +18,64 @@
   "home": {
     "coachHome": "Coach Home",
     "adminHome": "Admin Home",
-    "studentHome": "Student Home"
+    "studentHome": "Student Home",
+    "defaults": {
+      "trialStudent": "Trial student",
+      "unboundGym": "Unassigned gym"
+    },
+    "todayMealCount": "Today {count} meals",
+    "welcome": "👋 Welcome, {name}",
+    "advancedNutrition": "📊 Advanced Nutrition",
+    "notifications": {
+      "logMeal": "⏰ Time to log your last meal — don't miss a check-in!",
+      "hydration": "💧 Hydration reminder: drink a big glass of water now!",
+      "later": "Later",
+      "actNow": "Do it now"
+    },
+    "errors": {
+      "cloudLoadFailed": "❌ Cloud load failed. Check your network or Supabase."
+    },
+    "targets": {
+      "lockedSolo": "AI Gorilla Mandate",
+      "lockedCoach": "Coach Mandate",
+      "lockedBanner": "📜 {source} locked targets: {calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g"
+    },
+    "soloModeBanner": "🦍 You're in AI private-coach mode — Gorilla auto-reviews every meal you log!",
+    "coachReplied": "Coach replied {sticker}",
+    "broadcastPrefix": "📣 Coach alert:",
+    "aiCoach": {
+      "soloTitle": "Gorilla AI Coach",
+      "coachTitle": "Your coach AI review",
+      "soloJoined": "You joined [{gym}] solo plan. Today {status} — follow the AI mandate!",
+      "coachJoined": "You're linked to [{gym}], coach [{coach}]. Today {status} — follow [{mealSchedule}]!",
+      "notLoggedYet": "no meals logged yet",
+      "progressGood": "solid progress",
+      "defaultCoach": "Pro coaching team"
+    },
+    "roastTitle": "🤖 AI coach roast",
+    "settingsSummary": "Your settings: {trainingType} · {weeklyFrequency} per week",
+    "progress": {
+      "title": "Today's progress"
+    },
+    "weight": {
+      "title": "Weight trend",
+      "last7Days": "Last 7 days",
+      "placeholder": "Today's weight (kg)",
+      "saving": "Saving…",
+      "updateButton": "Update today's weight",
+      "invalidAlert": "Please enter a valid weight (30–300 kg)",
+      "savedToast": "✅ Today's weight saved",
+      "saveFailed": "Failed to save weight: {message}\n\nRun phase5-weight-logs.sql in Supabase."
+    },
+    "meals": {
+      "today": "Today's meals",
+      "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g"
+    }
   },
   "common": {
     "loading": "Loading...",
+    "loadingCloud": "Loading from cloud…",
+    "save": "Save settings",
     "protein": "Protein",
     "carbs": "Carbs",
     "fat": "Fat",
@@ -109,5 +163,260 @@
     "perPiece": "→ About {cal} kcal per piece (applied)",
     "engineOpenAi": "Engine: GPT-4o Vision",
     "engineMock": "Engine: demo mode"
+  },
+  "roles": {
+    "admin": "Admin Console",
+    "coach": "Coach",
+    "student": "Student"
+  },
+  "errors": {
+    "cloudInitTimeout": "Cloud initialization timed out",
+    "fetchUsersTimeout": "Fetching users timed out",
+    "fetchMealsTimeout": "Fetching meals timed out",
+    "fetchBrandTimeout": "Fetching brand timed out",
+    "cloudLoadFailed": "Cloud load failed"
+  },
+  "auth": {
+    "welcome": {
+      "login": "Welcome back! Log in to continue tracking meals and AI analysis.",
+      "solo": "No coach needed — Gorilla AI will set your targets and review every meal.",
+      "coach": "Open your gym brand space and start managing student nutrition."
+    },
+    "tab": {
+      "login": "Log In",
+      "signup": "Sign Up"
+    },
+    "goLogin": "Go to login",
+    "backToLogin": "Back to login",
+    "redirectingLogin": "Redirecting to login…",
+    "placeholder": {
+      "email": "Email",
+      "password": "Password (legacy students may leave blank)",
+      "name": "Your name",
+      "gymName": "Gym brand name (e.g. Oxygym)"
+    },
+    "login": "Log in",
+    "verifying": "Verifying…",
+    "signup": {
+      "registering": "Signing up…",
+      "soloCta": "🦍 Sign up for AI Coach",
+      "coachCta": "🚀 Create brand space",
+      "soloTitle": "Sign up for AI private coach (no human coach required)",
+      "soloHint": "Password required · Auto-connects to official AI tenant · Gorilla manages targets and reviews",
+      "trackSolo": "🦍 AI solo student",
+      "trackCoach": "🏢 Coach / Brand",
+      "passwordPlaceholder": "Password (min. 6 characters, required for solo)",
+      "nameCoach": "Coach name",
+      "nameStudent": "Your name"
+    },
+    "invite": {
+      "hide": "Hide coach invite code",
+      "show": "I have a coach invite code (optional)",
+      "placeholder": "Enter coach invite code (leave blank if none)"
+    },
+    "footer": {
+      "ownerPrompt": "Gym owner?",
+      "sasLink": "Open a free brand space"
+    },
+    "errors": {
+      "passwordMin": "⚠️ Please set a password with at least 6 characters.",
+      "emailRequired": "Please enter your email first.",
+      "registerFailed": "Registration failed",
+      "network": "❌ Connection failed. Please try again later.",
+      "networkRetry": "❌ Connection failed. Check your network and try again.",
+      "loginFailed": "Login failed"
+    },
+    "toast": {
+      "welcome": "🎉 Welcome {name}",
+      "adminWelcome": "🎉 Welcome, Chief Executive",
+      "brandOpened": "🎉 Brand \"{gymName}\" is live!",
+      "soloReady": "🦍 Welcome! Gorilla AI coach is ready for onboarding."
+    }
+  },
+  "settings": {
+    "title": "⚙️ Personal settings",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "What should your coach call you?",
+    "job": "Job type",
+    "weeklyFrequency": "Weekly training frequency",
+    "mealSchedule": "Meal schedule",
+    "waterReminder": "Water reminder",
+    "trainingType": "Training type",
+    "saved": "Settings saved",
+    "bodySyncFailed": "Body data sync failed; local settings were saved.",
+    "jobs": {
+      "sedentary": "Desk job (mostly sitting)",
+      "field": "Field / retail",
+      "physical": "Heavy physical work"
+    },
+    "frequency": {
+      "low": "1–2×",
+      "medium": "3×",
+      "high": "4–5×",
+      "daily": "Every day"
+    },
+    "mealSchedules": {
+      "threeMeals": "Three meals (normal)",
+      "fourMeals": "Four+ meals / grazing",
+      "fasting168": "16:8 fasting (two meals)"
+    },
+    "water": {
+      "every1h": "Every 1 hour",
+      "every2h": "Every 2 hours",
+      "every4h": "Every 4 hours",
+      "off": "Off"
+    },
+    "training": {
+      "weightTraining": "Weight training",
+      "cardio": "Cardio",
+      "mixed": "Mixed training"
+    },
+    "saveButton": "Save settings"
+  },
+  "ai": {
+    "roast": {
+      "empty": "Haven't eaten yet? Don't starve — log what you had!",
+      "overCalHigh": "That much fried noodles won't help fat loss — try less oil and salt tomorrow!",
+      "overCalMild": "A bit indulgent today — watch café traps and skip the extra milk tea!",
+      "underCal": "Eating too little? Don't under-fuel — get enough protein!",
+      "lowProtein": "Protein's low — add chicken breast or eggs, not just carbs!",
+      "excellent": "Great eating today! Keep it up — your coach would smile!",
+      "good": "Solid effort — watch fat and sodium and you're golden!"
+    }
+  },
+  "onboarding": {
+    "header": {
+      "badge": "Starter quest · Welcome setup",
+      "title": "Build your body profile",
+      "subtitleSolo": "Gorilla AI will generate calorie and macro targets from your data.",
+      "subtitleCoach": "Complete this to enter the app so AI can estimate dining-out calories and daily targets."
+    },
+    "fields": {
+      "height": "Height (cm)",
+      "weight": "Weight (kg)",
+      "age": "Age",
+      "gender": "Gender",
+      "targetWeight": "Target weight (kg)",
+      "goal": "Your main goal"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "goal": {
+      "cut": "🔥 Cut fat",
+      "bulk": "💪 Build muscle",
+      "maintain": "⚖️ Maintain"
+    },
+    "submit": {
+      "saving": "Saving…",
+      "aiGenerating": "AI is generating your mandate…",
+      "completeSolo": "Finish setup & start AI coach",
+      "completeCoach": "Finish setup & go to home"
+    },
+    "errors": {
+      "invalidFields": "Please enter valid height, weight, age, and target weight.",
+      "permission": "Permission check failed — log out and sign in again as a student.",
+      "saveFailed": "Save failed. Please try again later."
+    },
+    "warnings": {
+      "bypassSaved": "Saved body profile via fallback (cloud may sync later).",
+      "aiTargetsFailed": "Body profile saved, but AI mandate failed: {error}",
+      "aiTargetsRetry": "Body profile saved; AI mandate will retry later."
+    }
+  },
+  "bodyProfile": {
+    "sectionTitle": "📏 Body data",
+    "height": "Height (cm)",
+    "weight": "Weight (kg)",
+    "age": "Age",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
+    "targetWeight": "Target weight (kg)",
+    "exerciseCalories": "Today's exercise burn (kcal)"
+  },
+  "push": {
+    "title": "📲 Meal & hydration reminders",
+    "description": "Get system notifications even when the app is closed (requires VAPID + Supabase subscription storage).",
+    "unsupported": {
+      "title": "📲 System notifications",
+      "hint": "Web Push isn't supported here. On iPhone, use Safari Add to Home Screen, then open from the icon (iOS 16.4+)."
+    },
+    "enable": "🔔 Enable meal & hydration reminders",
+    "processing": "Processing…",
+    "test": "Test notification",
+    "disable": "Disable",
+    "denied": {
+      "help": "Notifications were blocked. Go to Settings → Safari/Chrome → Notifications → allow Nutrition Coach."
+    },
+    "messages": {
+      "permissionStatus": "Permission: {permission}{subscribed}",
+      "subscribed": " · Subscribed",
+      "enabled": "✅ Notifications on; subscription saved to Supabase.",
+      "enabledConsole": "✅ Notifications on. Supabase table missing — subscription logged to Console (F12).",
+      "disabled": "Push subscription disabled.",
+      "testSent": "📲 Local test notification sent (check system settings if nothing appears).",
+      "enableFailed": "❌ {message}",
+      "disableFailed": "Failed to disable",
+      "testFailed": "Test failed"
+    }
+  },
+  "nutritionDash": {
+    "badge": "Premium",
+    "title": "Advanced nutrition",
+    "calories": {
+      "sectionTitle": "Daily calorie balance",
+      "goal": "Goal",
+      "food": "Food",
+      "exercise": "Exercise",
+      "remaining": "Remaining",
+      "formula": "{goal} − {food} + {exercise} = {remaining}"
+    },
+    "exercise": {
+      "placeholder": "Exercise burn",
+      "update": "Update"
+    },
+    "bucket": {
+      "empty": "No logs yet"
+    },
+    "charts": {
+      "title": "Charts",
+      "mealCalorieShare": "Calories per meal",
+      "macroRatio": "Macro energy split",
+      "noMeals": "No meals logged today",
+      "noMacroData": "No macro data"
+    },
+    "recommendations": {
+      "title": "💡 Meal ideas for remaining quota",
+      "loading": "Generating AI meal suggestions…",
+      "itemLine": "~{calories} kcal · P{protein} C{carbs} F{fats}"
+    },
+    "micro": {
+      "title": "Micronutrients",
+      "fiber": "Fiber",
+      "sugar": "Sugar",
+      "satFat": "Saturated fat",
+      "sodium": "Sodium",
+      "disclaimer": "* Micronutrients estimated from today's intake — reference only"
+    },
+    "close": "Close",
+    "tooltip": {
+      "calories": "Calories",
+      "energy": "Energy"
+    }
+  },
+  "mealBuckets": {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "snack": "Snack"
+  },
+  "mealStatus": {
+    "good": "Good",
+    "caution": "Caution",
+    "danger": "High"
   }
 }

@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
+import { searchFoodWithAI, searchFoodLocally } from "@/lib/food-search/ai-legacy";
 import { searchFoodWithFatSecret } from "@/lib/food-search/fatsecret";
 import { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
 import { FoodSearchError } from "@/lib/food-search/shared";
 import { normalizeLanguage } from "@/lib/i18n";
 import { parseSessionFromRequest } from "@/lib/session-server";
+import type { FoodSearchItem } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** 主力路由：FatSecret → 本地 hk_food_database.json 保底 */
+function hasCjk(text: string): boolean {
+  return /[\u4e00-\u9fff]/.test(text);
+}
+
+/** 主力路由：FatSecret + 本地茶餐廳 JSON → AI 估算 → 本地規則保底 */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
@@ -30,23 +36,43 @@ export async function POST(request: Request) {
   }
 
   try {
-    let source: "fatsecret" | "hk" = "fatsecret";
-    let items: Awaited<ReturnType<typeof searchFoodWithFatSecret>> = [];
+    let source: FoodSearchItem["source"] = "fatsecret";
+    let items: FoodSearchItem[] = [];
 
+    const hkItems = searchHkFoodDatabase(query);
+    let fatSecretItems: FoodSearchItem[] = [];
     try {
-      items = await searchFoodWithFatSecret(query);
+      fatSecretItems = await searchFoodWithFatSecret(query);
     } catch (err) {
-      console.warn("[food-search] FatSecret unavailable, HK fallback", err);
+      console.warn("[food-search] FatSecret unavailable", err);
+    }
+
+    if (hasCjk(query)) {
+      items = [...hkItems, ...fatSecretItems];
+      source = hkItems.length > 0 ? "hk" : "fatsecret";
+    } else {
+      items = [...fatSecretItems, ...hkItems];
+      source = fatSecretItems.length > 0 ? "fatsecret" : "hk";
+    }
+    items = items.slice(0, 5);
+
+    if (items.length === 0) {
+      try {
+        items = await searchFoodWithAI(query, lang);
+        source = items[0]?.source ?? "gemini";
+      } catch (err) {
+        console.warn("[food-search] AI unavailable, local fallback", err);
+      }
     }
 
     if (items.length === 0) {
-      items = searchHkFoodDatabase(query);
-      source = "hk";
+      items = await searchFoodLocally(query, lang);
+      source = "local";
     }
 
     if (items.length === 0) {
       return NextResponse.json(
-        { error: "搵唔到相關食物，請換個關鍵字再試", items: [], source: "hk" },
+        { error: "搵唔到相關食物，請換個關鍵字再試", items: [], source: "local" },
         { status: 404 }
       );
     }

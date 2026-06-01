@@ -26,8 +26,9 @@ export function BottomNav({
   const isStudent = role === "student";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-200 px-4 pt-3 pb-safe shadow-sm">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pointer-events-none pb-safe">
+      <nav className="mx-auto w-full max-w-lg pointer-events-auto bg-white border border-zinc-100 rounded-t-2xl px-4 pt-3 pb-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => onTabChange("dashboard")}
@@ -79,7 +80,8 @@ export function BottomNav({
             📋 學員記錄
           </button>
         )}
-      </div>
-    </nav>
+        </div>
+      </nav>
+    </div>
   );
 }

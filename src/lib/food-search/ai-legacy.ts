@@ -99,7 +99,7 @@ export async function searchFoodWithGemini(
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: process.env.GEMINI_TEXT_MODEL || "gemini-2.0-flash",
       systemInstruction: `${GEMINI_SYSTEM_BASE}\n${getLanguageInstruction(lang)}`,
       generationConfig: {
         responseMimeType: "application/json",

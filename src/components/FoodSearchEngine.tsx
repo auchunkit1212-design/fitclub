@@ -199,7 +199,9 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
             {t("foodSearch.sourceHk", "茶餐廳資料庫")}
           </span>
         )}
-        {lastSource === "local" && (
+        {(lastSource === "local" ||
+          lastSource === "gemini" ||
+          lastSource === "openai") && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
             {t("foodSearch.sourceLocal", "智能估算")}
           </span>

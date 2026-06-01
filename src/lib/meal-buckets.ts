@@ -10,10 +10,11 @@ export const MEAL_BUCKET_LABELS: Record<MealBucket, string> = {
 };
 
 export function getMealBucket(mealType: string): MealBucket {
-  if (mealType.includes("早餐")) return "breakfast";
-  if (mealType.includes("午餐") || mealType.includes("下午茶")) return "lunch";
-  if (mealType.includes("晚餐") || mealType.includes("宵夜")) return "dinner";
-  if (mealType.includes("零食")) return "snack";
+  const m = mealType.toLowerCase();
+  if (/早餐|breakfast|morning/i.test(mealType) || m.includes("breakfast")) return "breakfast";
+  if (/午餐|lunch|下午茶|afternoon/i.test(mealType)) return "lunch";
+  if (/晚餐|dinner|宵夜|late.?night|supper/i.test(mealType)) return "dinner";
+  if (/零食|snack/i.test(mealType)) return "snack";
   return "snack";
 }
 

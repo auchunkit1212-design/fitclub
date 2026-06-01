@@ -37,6 +37,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
     document.cookie = `app_lang=${encodeURIComponent(lang)};path=/;max-age=31536000;SameSite=Lax`;
+    document.documentElement.lang = lang;
   }, [lang]);
 
   const value = useMemo<I18nContextValue>(
