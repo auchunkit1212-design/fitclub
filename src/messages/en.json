@@ -154,7 +154,9 @@
     "addFavorite": "Add to favorites",
     "favorites": "Favorites / History",
     "usedTimes": "Used {count} times",
-    "aboutG": "about {g}g"
+    "aboutG": "about {g}g",
+    "loginRequired": "Please log in to search foods",
+    "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity."
   },
   "snackScanner": {
     "scanning": "Reading nutrition label...",

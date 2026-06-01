@@ -154,7 +154,9 @@
     "addFavorite": "⭐ 加入常用",
     "favorites": "⭐ 常用 / 歷史",
     "usedTimes": "用過 {count} 次",
-    "aboutG": "約 {g}g"
+    "aboutG": "約 {g}g",
+    "loginRequired": "請先登入後再搜尋食物",
+    "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。"
   },
   "snackScanner": {
     "scanning": "AI 辨識標籤中...",

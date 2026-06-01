@@ -106,6 +106,23 @@ function asArray<T>(value: T | T[] | undefined): T[] {
 
 type FatSecretApiError = { code?: number; message?: string };
 
+/** FatSecret 回傳的 IP 白名單錯誤 → 可操作的說明 */
+export function formatFatSecretApiError(message: string): string {
+  const ipMatch = message.match(/Invalid IP address detected:\s*'([^']+)'/i);
+  if (ipMatch) {
+    const ip = ipMatch[1];
+    return (
+      `FatSecret blocked server IP ${ip}. Add this IP in FatSecret Platform → your app → IP allowlist. ` +
+      `On Vercel, enable Static IPs (Project Settings → Connectivity) so the outbound IP stays fixed, then whitelist those IPs in FatSecret.`
+    );
+  }
+  return `FatSecret: ${message}`;
+}
+
+export function isFatSecretIpBlockedError(message: string): boolean {
+  return /invalid ip address/i.test(message);
+}
+
 async function fatSecretCall<T>(
   method: string,
   params: Record<string, string>,
@@ -149,7 +166,7 @@ async function fatSecretCall<T>(
 
   if (data?.error?.message) {
     console.error("[fatsecret] API error", method, data.error);
-    throw new FoodSearchError(`FatSecret: ${data.error.message}`, 502);
+    throw new FoodSearchError(formatFatSecretApiError(data.error.message), 502);
   }
 
   return data as T;

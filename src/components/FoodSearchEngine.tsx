@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { useDebounce } from "@/hooks/useDebounce";
+import { isFatSecretIpBlockedError } from "@/lib/food-search/fatsecret";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
 
@@ -114,7 +115,12 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
         const primarySource =
           items[0]?.source ?? data.source ?? null;
         setLastSource(primarySource);
-        setSearchWarning(data.warning ?? null);
+        const warning = data.warning ?? null;
+        setSearchWarning(
+          warning && isFatSecretIpBlockedError(warning)
+            ? t("foodSearch.fatSecretIpBlocked", warning)
+            : warning
+        );
       } catch {
         if (seq !== searchSeq.current) return;
         setResults([]);

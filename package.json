@@ -14,7 +14,7 @@
     "@supabase/supabase-js": "^2.106.2",
     "bcryptjs": "^3.0.3",
     "browser-image-compression": "^2.0.2",
-    "next": "14.2.18",
+    "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.8.1",
