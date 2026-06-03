@@ -24,6 +24,7 @@
       "unboundGym": "未綁定分店"
     },
     "todayMealCount": "今日 {count} 餐",
+    "healthMgmt": "健康管理",
     "welcome": "👋 歡迎，{name}",
     "advancedNutrition": "📊 高級營養分析",
     "notifications": {
@@ -69,7 +70,9 @@
     },
     "meals": {
       "today": "今日餐單",
-      "macroLine": "{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g"
+      "macroLine": "{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g",
+      "quickSaved": "✅ 已記錄：{name}",
+      "quickSaveFailed": "❌ {message}"
     }
   },
   "common": {
@@ -156,7 +159,9 @@
     "usedTimes": "用過 {count} 次",
     "aboutG": "約 {g}g",
     "loginRequired": "請先登入後再搜尋食物",
-    "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。"
+    "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。",
+    "sheetTitle": "快速記錄飲食",
+    "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"
   },
   "snackScanner": {
     "scanning": "AI 辨識標籤中...",

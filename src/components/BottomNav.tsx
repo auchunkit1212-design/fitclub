@@ -12,76 +12,111 @@ interface BottomNavProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   role: "student" | "coach" | "admin";
-  themeBtn: string;
+  onFabClick?: () => void;
 }
 
 export function BottomNav({
   activeTab,
   onTabChange,
   role,
-  themeBtn,
+  onFabClick,
 }: BottomNavProps) {
   const router = useRouter();
   const { t } = useI18n();
   const isStudent = role === "student";
 
+  const handleFab = () => {
+    if (onFabClick) {
+      onFabClick();
+      return;
+    }
+    if (isStudent) router.push("/add-meal");
+    else router.push("/coach/records");
+  };
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pointer-events-none pb-safe">
-      <nav className="mx-auto w-full max-w-lg pointer-events-auto bg-white border border-zinc-100 rounded-t-2xl px-4 pt-3 pb-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <div className="grid grid-cols-3 gap-2">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
+      <div className="relative pointer-events-auto h-[4.5rem]">
+        <nav className="absolute inset-x-0 bottom-0 h-14 flex items-center justify-between bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-6 sm:px-10">
+          <button
+            type="button"
+            onClick={() => onTabChange("dashboard")}
+            className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
+            aria-current={activeTab === "dashboard" ? "page" : undefined}
+          >
+            <span
+              className={`text-xl leading-none ${
+                activeTab === "dashboard" ? "opacity-100" : "opacity-50"
+              }`}
+            >
+              🏠
+            </span>
+            <span
+              className={`text-[10px] font-semibold ${
+                activeTab === "dashboard"
+                  ? "text-[#7ED321]"
+                  : "text-gray-500"
+              }`}
+            >
+              {t("nav.home", "主頁")}
+            </span>
+          </button>
+
+          <div className="w-14 shrink-0" aria-hidden />
+
+          {isStudent ? (
+            <button
+              type="button"
+              onClick={() => onTabChange("settings")}
+              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
+              aria-current={activeTab === "settings" ? "page" : undefined}
+            >
+              <span
+                className={`text-xl leading-none ${
+                  activeTab === "settings" ? "opacity-100" : "opacity-50"
+                }`}
+              >
+                ⚙️
+              </span>
+              <span
+                className={`text-[10px] font-semibold ${
+                  activeTab === "settings"
+                    ? "text-[#7ED321]"
+                    : "text-gray-500"
+                }`}
+              >
+                {t("nav.settings", "設定")}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => router.push("/coach")}
+              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
+            >
+              <span className="text-xl leading-none">👨‍🏫</span>
+              <span className="text-[10px] font-semibold text-gray-500">
+                {t("nav.coach", "教練")}
+              </span>
+            </button>
+          )}
+        </nav>
+
         <button
           type="button"
-          onClick={() => onTabChange("dashboard")}
-          className={`${
-            activeTab === "dashboard"
-              ? "bg-emerald-600 text-white"
-              : "bg-gray-100 text-gray-700"
-          } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
+          onClick={handleFab}
+          aria-label={
+            isStudent
+              ? t("nav.addMeal", "記錄飲食")
+              : t("nav.records", "學員記錄")
+          }
+          className={`absolute left-1/2 -translate-x-1/2 -top-1 bg-[#7ED321] text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform ${btnClass}`}
         >
-          🏠 {t("nav.home", "主頁")}
+          <span className="text-2xl font-light leading-none block w-6 h-6 text-center">
+            +
+          </span>
         </button>
-
-        {isStudent ? (
-          <button
-            type="button"
-            onClick={() => onTabChange("settings")}
-            className={`${
-              activeTab === "settings"
-                ? "bg-emerald-600 text-white"
-                : "bg-gray-100 text-gray-700"
-            } font-semibold py-3 rounded-xl shadow-sm ${btnClass} text-sm`}
-          >
-            ⚙️ {t("nav.settings", "設定")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/coach")}
-            className={`bg-emerald-600 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
-          >
-            👨‍🏫 {t("nav.coach", "教練")}
-          </button>
-        )}
-
-        {isStudent ? (
-          <button
-            type="button"
-            onClick={() => router.push("/add-meal")}
-            className={`${themeBtn} text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
-          >
-            ➕ {t("nav.addMeal", "飲食")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/coach/records")}
-            className={`bg-emerald-600 text-white font-semibold py-3 rounded-xl shadow-md ${btnClass} text-sm`}
-          >
-            📋 學員記錄
-          </button>
-        )}
-        </div>
-      </nav>
+      </div>
     </div>
   );
 }

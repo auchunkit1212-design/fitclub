@@ -22,9 +22,14 @@ interface FoodSearchEngineProps {
     fats: number;
     fromSearch: boolean;
   }) => void;
+  /** Strip outer card chrome when used inside a bottom sheet */
+  embedded?: boolean;
 }
 
-export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
+export function FoodSearchEngine({
+  onAddToMeal,
+  embedded = false,
+}: FoodSearchEngineProps) {
   const { lang, t } = useI18n();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, DEBOUNCE_MS);
@@ -213,8 +218,13 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
     trimmedQuery.length >= MIN_QUERY_LENGTH &&
     results.length === 0;
 
+  const Wrapper = embedded ? "div" : "section";
+  const wrapperClass = embedded
+    ? "space-y-3"
+    : "soft-card p-4 space-y-3";
+
   return (
-    <section className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-3">
+    <Wrapper className={wrapperClass}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-gray-900">
           🔍 {t("foodSearch.title", "巨型食物搜尋引擎")}
@@ -272,18 +282,18 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
             }}
             placeholder={t("foodSearch.placeholder", "搜尋食物名稱...")}
             autoComplete="off"
-            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 pr-10 text-sm text-gray-900 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+            className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-[#7ED321]/40 focus:border-[#7ED321]"
           />
           {loading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[#7ED321] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
 
         {showDropdown && (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg"
+            className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.08)]"
             role="listbox"
           >
             {showMinChars && (
@@ -293,8 +303,8 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
             )}
 
             {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
-              <div className="flex items-center gap-2 px-3 py-3 text-sm text-emerald-700">
-                <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-3 text-sm text-[#5a9c18]">
+                <div className="w-4 h-4 border-2 border-[#7ED321] border-t-transparent rounded-full animate-spin shrink-0" />
                 {t("foodSearch.searching", "搜尋中...")}
               </div>
             )}
@@ -325,7 +335,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => selectResult(item)}
                     className={`w-full text-left px-3 py-2.5 border-b border-gray-100 last:border-b-0 transition-colors ${btnClass} ${
-                      active ? "bg-emerald-50" : "bg-white hover:bg-emerald-50"
+                      active ? "bg-[#f4fce8]" : "bg-white hover:bg-[#f4fce8]"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -338,7 +348,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                             FS
                           </span>
                         )}
-                        <span className="text-sm font-semibold text-emerald-600">
+                        <span className="text-sm font-semibold text-[#5a9c18]">
                           {item.calories} kcal
                         </span>
                       </div>
@@ -359,7 +369,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
       </div>
 
       {selectedItem && (
-        <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-3 shadow-sm space-y-2">
+        <div className="rounded-2xl border-2 border-[#7ED321] bg-[#f4fce8] p-3 shadow-sm space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">{selectedItem.name}</p>
@@ -367,7 +377,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                 <p className="text-xs text-gray-500 truncate">{selectedItem.brand}</p>
               )}
             </div>
-            <span className="shrink-0 text-lg font-black text-emerald-600">
+            <span className="shrink-0 text-lg font-black text-[#5a9c18]">
               {selectedItem.calories}
               <span className="text-xs font-semibold ml-0.5">kcal</span>
             </span>
@@ -388,7 +398,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
               </span>
             ))}
           </div>
-          <p className="text-xs text-emerald-700 font-medium">
+          <p className="text-xs text-[#5a9c18] font-medium">
             {t("foodSearch.addedHint", "✓ 已帶入表單，撳「發布記錄」即可儲存")}
           </p>
           <button
@@ -422,7 +432,7 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
                 <button
                   type="button"
                   onClick={() => quickAddFavorite(f)}
-                  className={`w-9 h-9 rounded-full bg-emerald-600 text-white font-bold text-lg ${btnClass}`}
+                  className={`w-9 h-9 rounded-full bg-[#7ED321] text-white font-bold text-lg ${btnClass}`}
                 >
                   +
                 </button>
@@ -431,6 +441,6 @@ export function FoodSearchEngine({ onAddToMeal }: FoodSearchEngineProps) {
           </ul>
         </div>
       )}
-    </section>
+    </Wrapper>
   );
 }

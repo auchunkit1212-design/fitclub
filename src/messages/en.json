@@ -24,6 +24,7 @@
       "unboundGym": "Unassigned gym"
     },
     "todayMealCount": "Today {count} meals",
+    "healthMgmt": "Health management",
     "welcome": "👋 Welcome, {name}",
     "advancedNutrition": "📊 Advanced Nutrition",
     "notifications": {
@@ -69,7 +70,9 @@
     },
     "meals": {
       "today": "Today's meals",
-      "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g"
+      "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g",
+      "quickSaved": "✅ Logged: {name}",
+      "quickSaveFailed": "❌ {message}"
     }
   },
   "common": {
@@ -156,7 +159,9 @@
     "usedTimes": "Used {count} times",
     "aboutG": "about {g}g",
     "loginRequired": "Please log in to search foods",
-    "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity."
+    "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity.",
+    "sheetTitle": "Quick log meal",
+    "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page."
   },
   "snackScanner": {
     "scanning": "Reading nutrition label...",
