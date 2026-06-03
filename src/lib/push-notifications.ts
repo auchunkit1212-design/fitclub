@@ -1,5 +1,4 @@
-import { getSession } from "@/lib/session";
-import { supabase } from "@/lib/supabase";
+import { getSessionRequestHeaders } from "@/lib/session";
 
 export type PushPermissionState = NotificationPermission | "unsupported";
 
@@ -99,31 +98,35 @@ export async function unsubscribeFromPush(): Promise<void> {
   }
 }
 
-/** 將訂閱 JSON 存入 Supabase（需先執行 supabase/push_subscriptions.sql） */
-export async function savePushSubscriptionToSupabase(
+/** 將訂閱存入後端（/api/notifications/subscribe → Supabase push_subscriptions） */
+export async function savePushSubscriptionToServer(
   subscription: PushSubscription
 ): Promise<void> {
-  const session = getSession();
-  if (!session?.email) {
-    throw new Error("請先登入再開啟推送");
-  }
-
   const payload = subscriptionToPayload(subscription);
 
-  const { error } = await supabase.from("push_subscriptions").upsert(
-    {
-      email: session.email.trim().toLowerCase(),
-      endpoint: payload.endpoint,
-      p256dh: payload.keys.p256dh,
-      auth: payload.keys.auth,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      updated_at: new Date().toISOString(),
+  const res = await fetch("/api/notifications/subscribe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getSessionRequestHeaders(),
     },
-    { onConflict: "endpoint" }
-  );
+    credentials: "include",
+    body: JSON.stringify({
+      endpoint: payload.endpoint,
+      keys: payload.keys,
+      userAgent:
+        typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+    }),
+  });
 
-  if (error) throw error;
+  const data = (await res.json()) as { error?: string; hint?: string };
+  if (!res.ok) {
+    throw new Error(data.error ?? data.hint ?? "訂閱儲存失敗");
+  }
 }
+
+/** @deprecated 請改用 savePushSubscriptionToServer */
+export const savePushSubscriptionToSupabase = savePushSubscriptionToServer;
 
 /** 開發用：唔經伺服器，喺本機彈一個測試通知（App 開住時最易見到） */
 export async function showLocalTestNotification(): Promise<void> {

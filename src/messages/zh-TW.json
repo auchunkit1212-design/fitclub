@@ -163,6 +163,7 @@
     "loginRequired": "請先登入後再搜尋食物",
     "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。",
     "sheetTitle": "快速記錄飲食",
+    "fullLogCta": "📷 完整記錄（含相片）",
     "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"
   },
   "snackScanner": {
@@ -372,6 +373,21 @@
       "disableFailed": "關閉失敗",
       "testFailed": "測試失敗"
     }
+  },
+  "coachPush": {
+    "title": "📲 學員打卡即時推播",
+    "description": "開啟後，學員上傳飲食紀錄時你會收到系統級通知，即使 App 在背景或已關閉。",
+    "unsupportedTitle": "📲 學員打卡推播",
+    "unsupportedHint": "此瀏覽器不支援 Web Push。請用 Chrome / Safari，iPhone 需「加入主畫面」後從圖示開啟（iOS 16.4+）。",
+    "enable": "🔔 開啟推播通知",
+    "processing": "處理中...",
+    "test": "測試通知",
+    "disable": "關閉",
+    "permission": "權限：{permission}",
+    "subscribed": " · 已訂閱",
+    "enabled": "✅ 已開啟推播！學員打卡時你會收到系統通知。",
+    "testOk": "📲 已發送本機測試通知。",
+    "deniedHelp": "你先前拒絕了通知。請到系統設定 → 瀏覽器 → 通知 → 允許此網站。"
   },
   "nutritionDash": {
     "badge": "殿堂級",

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
+import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
@@ -201,6 +202,10 @@ export default function CoachPage() {
       />
 
       <main className="px-4 py-4 space-y-4">
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <CoachPushSubscribe />
+        )}
+
         <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
           <h2 className="text-sm font-bold text-emerald-700">
             🤖 AI 數據智能整合中心

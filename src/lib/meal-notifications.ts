@@ -13,9 +13,14 @@ export async function notifyCoachOfNewMealLog(log: MealLog): Promise<void> {
   const coach = await findCoachForStudent(log.email);
   if (!coach) return;
 
+  const detail =
+    log.description.length > 0
+      ? `（${log.mealType} · ${log.calories} kcal）`
+      : `（${log.calories} kcal）`;
+
   await sendPushToEmails([coach.email], {
     title: "學員打卡通知",
-    body: `📸 ${student.name} 剛記錄了 ${log.mealType}：${log.description.slice(0, 40)}（${log.calories} kcal）`,
+    body: `📢 學員 ${student.name} 剛上傳了新飲食紀錄，快去點評！${detail}`,
     url: "/coach",
     tag: `meal-log-${log.id}`,
   });

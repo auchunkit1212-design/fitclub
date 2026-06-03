@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -25,7 +26,13 @@ export function MealSearchSheet({
   onClose,
   onAddToMeal,
 }: MealSearchSheetProps) {
+  const router = useRouter();
   const { t } = useI18n();
+
+  const goToFullLog = () => {
+    onClose();
+    router.push("/add-meal");
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -70,7 +77,14 @@ export function MealSearchSheet({
           </button>
         </div>
         <FoodSearchEngine embedded onAddToMeal={onAddToMeal} />
-        <p className="text-xs text-gray-500 text-center mt-4">
+        <button
+          type="button"
+          onClick={goToFullLog}
+          className={`w-full mt-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-gray-800 text-sm font-semibold ${btnClass}`}
+        >
+          {t("foodSearch.fullLogCta", "📷 完整記錄（含相片）")}
+        </button>
+        <p className="text-xs text-gray-500 text-center mt-3">
           {t(
             "foodSearch.sheetHint",
             "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"

@@ -163,6 +163,7 @@
     "loginRequired": "Please log in to search foods",
     "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity.",
     "sheetTitle": "Quick log meal",
+    "fullLogCta": "📷 Full log (with photo)",
     "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page."
   },
   "snackScanner": {
@@ -372,6 +373,21 @@
       "disableFailed": "Failed to disable",
       "testFailed": "Test failed"
     }
+  },
+  "coachPush": {
+    "title": "📲 Instant meal-log alerts",
+    "description": "Get system notifications when a student logs a meal, even if the app is in the background.",
+    "unsupportedTitle": "📲 Meal-log alerts",
+    "unsupportedHint": "Web Push isn't supported here. Use Chrome/Safari; on iPhone, Add to Home Screen first (iOS 16.4+).",
+    "enable": "🔔 Enable push notifications",
+    "processing": "Processing…",
+    "test": "Test notification",
+    "disable": "Disable",
+    "permission": "Permission: {permission}",
+    "subscribed": " · Subscribed",
+    "enabled": "✅ Push enabled! You'll be notified when students log meals.",
+    "testOk": "📲 Local test sent (use /api/push/test for server push).",
+    "deniedHelp": "Notifications were blocked. Allow this site in browser/system settings."
   },
   "nutritionDash": {
     "badge": "Premium",
