@@ -18,54 +18,20 @@ function normalize(text: string): string {
   return text.trim().toLowerCase();
 }
 
-/** 查詢字是否為目標名的子序列（支援「雞胸」→「香煎雞胸肉」） */
-function isSubsequence(query: string, target: string): boolean {
-  if (query.length < 2) return false;
-  let i = 0;
-  for (const ch of target) {
-    if (ch === query[i]) i += 1;
-    if (i === query.length) return true;
-  }
-  return i === query.length;
+function matchesQuery(name: string, query: string): boolean {
+  return normalize(name).includes(normalize(query));
 }
 
-function matchScore(name: string, query: string): number {
-  const n = normalize(name);
-  const q = normalize(query);
-  if (!n || !q) return 0;
-  if (n === q) return 100;
-  if (n.startsWith(q)) return 95;
-  if (n.includes(q)) return 90;
-  if (q.includes(n) && n.length >= 2) return 75;
-  if (isSubsequence(q, n)) return 60;
-  // English / mixed token match (e.g. "latte" → "Latte Coffee")
-  const qTokens = q.split(/[\s,·/]+/).filter(Boolean);
-  const nTokens = n.split(/[\s,·/]+/).filter(Boolean);
-  if (
-    qTokens.length > 0 &&
-    qTokens.every((qt) =>
-      nTokens.some((nt) => nt.includes(qt) || qt.includes(nt))
-    )
-  ) {
-    return 85;
-  }
-  return 0;
-}
-
-/** 地道茶餐廳 JSON 保底查詢 */
+/** @deprecated 茶餐廳 JSON 保底；主搜尋已改 OpenRouter */
 export function searchHkFoodDatabase(query: string): FoodSearchItem[] {
-  const q = normalize(query);
+  const q = query.trim();
   if (!q) return [];
 
-  const scored = HK_FOODS.flatMap((row) => {
-    const names = [row.food_name, ...(row.aliases ?? [])];
-    const best = Math.max(...names.map((name) => matchScore(name, q)));
-    return best > 0 ? [{ row, score: best }] : [];
-  });
+  const hits = HK_FOODS.filter((row) =>
+    [row.food_name, ...(row.aliases ?? [])].some((name) => matchesQuery(name, q))
+  );
 
-  scored.sort((a, b) => b.score - a.score);
-
-  return scored.slice(0, 5).map(({ row }) =>
+  return hits.slice(0, 5).map((row) =>
     toFoodSearchItem(
       {
         food_name: row.food_name,

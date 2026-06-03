@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { useDebounce } from "@/hooks/useDebounce";
-import { isFatSecretIpBlockedError } from "@/lib/food-search/fatsecret";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
 
@@ -11,7 +10,7 @@ const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 const MIN_QUERY_LENGTH = 2;
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 500;
 
 interface FoodSearchEngineProps {
   onAddToMeal: (item: {
@@ -40,7 +39,6 @@ export function FoodSearchEngine({
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchWarning, setSearchWarning] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +66,6 @@ export function FoodSearchEngine({
         setResults([]);
         setLastSource(null);
         setSearchError(null);
-        setSearchWarning(null);
         setLoading(false);
         return;
       }
@@ -76,7 +73,6 @@ export function FoodSearchEngine({
       const seq = ++searchSeq.current;
       setLoading(true);
       setSearchError(null);
-      setSearchWarning(null);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -92,8 +88,7 @@ export function FoodSearchEngine({
           items?: FoodSearchItem[];
           source?: string;
           error?: string;
-          fatSecretConfigured?: boolean;
-          warning?: string;
+          databaseSize?: number;
         };
 
         if (seq !== searchSeq.current) return;
@@ -117,15 +112,7 @@ export function FoodSearchEngine({
         const items = data.items ?? [];
         setResults(items);
         setSearchError(null);
-        const primarySource =
-          items[0]?.source ?? data.source ?? null;
-        setLastSource(primarySource);
-        const warning = data.warning ?? null;
-        setSearchWarning(
-          warning && isFatSecretIpBlockedError(warning)
-            ? t("foodSearch.fatSecretIpBlocked", warning)
-            : warning
-        );
+        setLastSource(items[0]?.source ?? data.source ?? "openrouter");
       } catch {
         if (seq !== searchSeq.current) return;
         setResults([]);
@@ -135,7 +122,7 @@ export function FoodSearchEngine({
         if (seq === searchSeq.current) setLoading(false);
       }
     },
-    [lang]
+    [lang, t]
   );
 
   useEffect(() => {
@@ -229,38 +216,19 @@ export function FoodSearchEngine({
         <h2 className="font-semibold text-gray-900">
           🔍 {t("foodSearch.title", "巨型食物搜尋引擎")}
         </h2>
-        {(lastSource === "fatsecret" ||
-          results.some((r) => r.source === "fatsecret")) && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
-            FatSecret
-          </span>
-        )}
-        {lastSource === "hk" && !results.some((r) => r.source === "fatsecret") && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
-            {t("foodSearch.sourceHk", "茶餐廳資料庫")}
-          </span>
-        )}
-        {(lastSource === "local" ||
-          lastSource === "gemini" ||
-          lastSource === "openai") &&
-          !results.some((r) => r.source === "fatsecret") && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-            {t("foodSearch.sourceLocal", "智能估算")}
+        {(lastSource === "openrouter" ||
+          results.some((r) => r.source === "openrouter")) && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
+            {t("foodSearch.sourceAi", "AI 聯想")}
           </span>
         )}
       </div>
       <p className="text-xs text-gray-500">
         {t(
           "foodSearch.hint",
-          "Search any food — results from FatSecret when connected, otherwise estimated macros"
+          "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養"
         )}
       </p>
-
-      {searchWarning && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          {searchWarning}
-        </p>
-      )}
 
       <div ref={containerRef} className="relative">
         <div className="relative">
@@ -324,7 +292,6 @@ export function FoodSearchEngine({
 
             {!loading &&
               results.map((item) => {
-                const label = item.brand ? `${item.brand} · ${item.name}` : item.name;
                 const active = hoveredId === item.id;
                 return (
                   <button
@@ -334,33 +301,19 @@ export function FoodSearchEngine({
                     onMouseEnter={() => setHoveredId(item.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => selectResult(item)}
-                    className={`w-full text-left px-3 py-2.5 border-b border-gray-100 last:border-b-0 transition-colors ${btnClass} ${
+                    className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-b-0 transition-colors ${btnClass} ${
                       active ? "bg-[#f4fce8]" : "bg-white hover:bg-[#f4fce8]"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-3 min-w-0">
                       <span className="text-sm font-medium text-gray-900 truncate">
-                        {label}
+                        {item.name}
                       </span>
-                      <div className="shrink-0 flex items-center gap-1.5">
-                        {item.source === "fatsecret" && (
-                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-sky-100 text-sky-800">
-                            FS
-                          </span>
-                        )}
-                        <span className="text-sm font-semibold text-[#5a9c18]">
-                          {item.calories} kcal
-                        </span>
-                      </div>
+                      <span className="shrink-0 text-sm text-gray-400 tabular-nums">
+                        {item.calories}{" "}
+                        <span className="text-xs">kcal</span>
+                      </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">
-                      {item.servingLabel && (
-                        <span className="text-gray-400">{item.servingLabel} · </span>
-                      )}
-                      {t("common.protein", "蛋白")} {item.protein}g ·{" "}
-                      {t("common.carbs", "碳水")} {item.carbs}g · {t("common.fat", "脂肪")}{" "}
-                      {item.fats}g
-                    </p>
                   </button>
                 );
               })}

@@ -1,24 +1,34 @@
 import { NextResponse } from "next/server";
-import { searchFoodWithAI, searchFoodLocally } from "@/lib/food-search/ai-legacy";
-import {
-  isFatSecretConfigured,
-  searchFoodWithFatSecret,
-} from "@/lib/food-search/fatsecret";
-import { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
 import { FoodSearchError } from "@/lib/food-search/shared";
+import {
+  getOpenRouterModel,
+  isOpenRouterConfigured,
+  searchFoodWithOpenRouter,
+} from "@/lib/food-search/openrouter";
 import { normalizeLanguage } from "@/lib/i18n";
 import { parseSessionFromRequest } from "@/lib/session-server";
-import type { FoodSearchItem } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** FatSecret OAuth 2.0 優先 → 茶餐廳 JSON → AI → 本地估算 */
+/** OpenRouter LLM — 港台食物聯想 + 營養估算（Autocomplete） */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
+  }
+
+  if (!isOpenRouterConfigured()) {
+    return NextResponse.json(
+      {
+        error: "AI 食物搜尋尚未設定，請設定 OPENROUTER_API_KEY",
+        items: [],
+        source: "openrouter" as const,
+        configured: false,
+      },
+      { status: 503 }
+    );
   }
 
   let query = "";
@@ -35,97 +45,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "請輸入食物名稱" }, { status: 400 });
   }
 
-  const fatSecretConfigured = isFatSecretConfigured();
-  let fatSecretError: string | undefined;
+  if (query.length < 2) {
+    return NextResponse.json({ error: "請至少輸入 2 個字元", items: [] }, { status: 400 });
+  }
 
   try {
-    if (fatSecretConfigured) {
-      try {
-        const fatSecretItems = await searchFoodWithFatSecret(query);
-        if (fatSecretItems.length > 0) {
-          return NextResponse.json({
-            items: fatSecretItems.slice(0, 5),
-            source: "fatsecret" as const,
-            lang,
-            fatSecretConfigured: true,
-          });
-        }
-        fatSecretError =
-          "FatSecret search returned no foods for this query. Check /api/food-search/status on your deployment.";
-        console.warn("[food-search]", fatSecretError, { query });
-      } catch (err) {
-        fatSecretError =
-          err instanceof FoodSearchError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : "FatSecret request failed";
-        console.error("[food-search] FatSecret error", fatSecretError);
-      }
-    } else {
-      fatSecretError = "FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET not set on server";
-      console.warn("[food-search]", fatSecretError);
-    }
+    const items = await searchFoodWithOpenRouter(query, lang);
 
-    const hkItems = searchHkFoodDatabase(query);
-    if (hkItems.length > 0) {
-      return NextResponse.json({
-        items: hkItems.slice(0, 5),
-        source: "hk" as const,
-        lang,
-        fatSecretConfigured,
-        warning: fatSecretError,
-      });
-    }
-
-    try {
-      const aiItems = await searchFoodWithAI(query, lang);
-      if (aiItems.length > 0) {
-        return NextResponse.json({
-          items: aiItems,
-          source: aiItems[0]?.source ?? "gemini",
+    if (items.length === 0) {
+      return NextResponse.json(
+        {
+          error: "搵唔到相關食物，請換個關鍵字再試",
+          items: [],
+          source: "openrouter" as const,
+          model: getOpenRouterModel(),
           lang,
-          fatSecretConfigured,
-          warning: fatSecretError,
-        });
-      }
-    } catch (err) {
-      console.warn("[food-search] AI unavailable", err);
+        },
+        { status: 404 }
+      );
     }
 
-    const localItems = await searchFoodLocally(query, lang);
-    if (localItems.length > 0) {
-      return NextResponse.json({
-        items: localItems,
-        source: "local" as const,
-        lang,
-        fatSecretConfigured,
-        warning:
-          fatSecretError ??
-          (fatSecretConfigured
-            ? "Using estimated macros."
-            : "FatSecret not configured; using estimated macros."),
-      });
-    }
-
-    return NextResponse.json(
-      {
-        error: fatSecretConfigured
-          ? fatSecretError ?? "搵唔到相關食物，請換個關鍵字再試"
-          : "食物資料庫未連線，請設定 FatSecret API 環境變數",
-        items: [] as FoodSearchItem[],
-        source: "local" as const,
-        fatSecretConfigured,
-        fatSecretError,
-      },
-      { status: 404 }
-    );
+    return NextResponse.json({
+      items,
+      source: "openrouter" as const,
+      model: getOpenRouterModel(),
+      lang,
+    });
   } catch (error) {
     if (error instanceof FoodSearchError) {
       console.error("[food-search]", error.message);
-      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+      return NextResponse.json(
+        { error: error.message, items: [], source: "openrouter" as const },
+        { status: error.statusCode }
+      );
     }
     console.error("[food-search]", error);
-    return NextResponse.json({ error: "搜尋失敗，請稍後再試" }, { status: 500 });
+    return NextResponse.json(
+      { error: "搜尋失敗，請稍後再試", items: [] },
+      { status: 500 }
+    );
   }
 }

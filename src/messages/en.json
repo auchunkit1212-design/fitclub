@@ -141,7 +141,9 @@
   },
   "foodSearch": {
     "title": "Food Search",
-    "hint": "Try \"char siu rice\", \"milk tea\", or \"chicken breast\" — AI estimates standard serving macros",
+    "hint": "Type partial keywords (typos, EN/ZH mix OK) — AI suggests HK & Taiwan foods with estimated macros",
+    "sourceAi": "AI suggest",
+    "sourceLocalDb": "HK/TW local DB",
     "placeholder": "Search food name...",
     "searching": "Searching...",
     "analyzing": "AI is analyzing nutrients for",

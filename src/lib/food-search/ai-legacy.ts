@@ -1,6 +1,6 @@
 /**
  * 【封印備用】OpenAI / Gemini / 本地 AI 食物搜尋
- * 前端預設走 /api/food-search (FatSecret)；需要 AI 時改 call /api/food-search-ai
+ * 前端預設走 /api/food-search（OpenRouter）；需要舊版 Gemini/OpenAI 時改 call /api/food-search-ai
  */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { estimateFoodSearchMacros } from "@/lib/ai-mock";

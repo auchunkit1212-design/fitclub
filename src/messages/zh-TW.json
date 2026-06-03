@@ -141,7 +141,9 @@
   },
   "foodSearch": {
     "title": "食物搜尋引擎",
-    "hint": "輸入「叉燒飯」、「奶茶」、「雞胸肉」等，AI 即時估算標準一人份營養素",
+    "hint": "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養",
+    "sourceAi": "AI 聯想",
+    "sourceLocalDb": "港台本地庫",
     "placeholder": "搜尋食物名稱...",
     "searching": "分析中...",
     "analyzing": "AI 正在分析",

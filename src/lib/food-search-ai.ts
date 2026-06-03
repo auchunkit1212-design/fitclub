@@ -10,5 +10,9 @@ export {
   type AiFoodSearchResult,
 } from "@/lib/food-search/ai-legacy";
 
-export { searchFoodWithFatSecret } from "@/lib/food-search/fatsecret";
-export { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
+export {
+  searchFoodWithOpenRouter,
+  isOpenRouterConfigured,
+  getOpenRouterModel,
+  diagnoseOpenRouter,
+} from "@/lib/food-search/openrouter";
