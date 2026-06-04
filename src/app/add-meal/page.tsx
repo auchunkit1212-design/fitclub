@@ -8,7 +8,13 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { estimateMacros } from "@/lib/ai-mock";
+import { estimateMacrosWithBreakdown } from "@/lib/ai-mock";
+import { formatCompositeBreakdown } from "@/lib/composite-meal";
+import {
+  estimateMilkMacros,
+  isMilkLikeDescription,
+  parseVolumeMl,
+} from "@/lib/macro-scale";
 import {
   CARBS_PORTION_KEYS,
   MEAL_TYPE_KEYS,
@@ -190,24 +196,47 @@ export default function AddMealPage() {
     let finalCarbs = carbs;
     let finalFats = fats;
 
-    if (macrosFromSearch && calories > 0) {
-      // 巨型食物搜尋引擎已帶入 AI 估算，直接沿用表單數值
+    const descTrim = description.trim();
+    const volumeMl = parseVolumeMl(descTrim);
+    const milkOnly =
+      isMilkLikeDescription(descTrim) &&
+      (volumeMl != null || !macrosFromSearch) &&
+      !descTrim.includes("+") &&
+      !descTrim.includes("、");
+
+    if (milkOnly) {
+      const milkEst = estimateMilkMacros(volumeMl ?? 250);
+      finalCalories = milkEst.calories;
+      finalProtein = milkEst.protein;
+      finalCarbs = milkEst.carbs;
+      finalFats = milkEst.fats;
+      setCalories(milkEst.calories);
+      setProtein(milkEst.protein);
+      setCarbs(milkEst.carbs);
+      setFats(milkEst.fats);
+    } else if (macrosFromSearch && calories > 0) {
+      // 食物搜尋已帶入營養
     } else {
       await new Promise((resolve) => setTimeout(resolve, 600));
-      const aiEst = estimateMacros(
-        description.trim(),
+      const result = estimateMacrosWithBreakdown(
+        descTrim,
         carbsPortionKeyToLegacy(carbsPortionKey),
         proteinPortionKeyToLegacy(proteinPortionKey),
         veggiesKeyToLegacy(hasVeggies)
       );
-      finalCalories = aiEst.calories;
-      finalProtein = aiEst.protein;
-      finalCarbs = aiEst.carbs;
-      finalFats = aiEst.fats;
-      setCalories(aiEst.calories);
-      setProtein(aiEst.protein);
-      setCarbs(aiEst.carbs);
-      setFats(aiEst.fats);
+      finalCalories = result.macros.calories;
+      finalProtein = result.macros.protein;
+      finalCarbs = result.macros.carbs;
+      finalFats = result.macros.fats;
+      setCalories(result.macros.calories);
+      setProtein(result.macros.protein);
+      setCarbs(result.macros.carbs);
+      setFats(result.macros.fats);
+      if (result.isComposite && result.parts.length > 0) {
+        alert(
+          `已智能分拆 ${result.parts.length} 樣食物：\n${formatCompositeBreakdown(result.parts)}\n\n合計 ${result.macros.calories} kcal`
+        );
+      }
     }
 
     let imageToUpload = imageBase64;

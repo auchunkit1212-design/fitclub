@@ -13,7 +13,9 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash";
 const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺服器。用戶會輸入未完成的拼音、錯別字或中英夾雜的食物名稱，請你自動推斷他們想找的食物，並聯想出 5 個最可能的選項（必須包含香港與台灣的地道飲食，亦可包含合理的國際常見食物）。
 每個選項請估算標準一人份的營養素（整數）。
 你必須【絕對嚴格】地只回傳一個合法的 JSON Array，不要使用 Markdown 標記 (如 \`\`\`json)，不要包含任何其他文字。
-格式範例：[{"food_name": "Hot Chocolate (Drink)", "calories": 250, "protein": 5, "carbs": 30, "fat": 10, "weight_g": 250}, {"food_name": "茶走", "calories": 95, "protein": 3, "carbs": 8, "fat": 5, "weight_g": 350}]`;
+格式範例：[{"food_name": "Hot Chocolate (Drink)", "calories": 250, "protein": 5, "carbs": 30, "fat": 10, "weight_g": 250}, {"food_name": "茶走", "calories": 95, "protein": 3, "carbs": 8, "fat": 5, "weight_g": 350}]
+飲品注意：200ml 全脂鮮奶約 120–135 kcal（蛋白 ~7g、碳水 ~10g、脂肪 ~7g），勿與公仔麵或正餐混淆。
+若用戶一次輸入多樣食物（用 +、，、加 等連接），請把每項分開估算後加總，勿只按其中一個關鍵字（例如只算咖啡）。`;
 
 export function getOpenRouterModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;

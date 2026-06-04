@@ -1,9 +1,17 @@
-export interface MacroEstimate {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-}
+import {
+  formatCompositeBreakdown,
+  splitMealDescription,
+  sumMacros,
+} from "@/lib/composite-meal";
+import { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
+import {
+  estimateMilkMacros,
+  isMilkLikeDescription,
+  parseVolumeMl,
+  type MacroEstimate,
+} from "@/lib/macro-scale";
+
+export type { MacroEstimate } from "@/lib/macro-scale";
 
 export const PORTION_NONE = "無 / 冇食 (0)";
 
@@ -143,24 +151,72 @@ function enforceMacroCalorieConsistency(estimate: MacroEstimate): MacroEstimate 
   };
 }
 
-export function estimateMacros(
-  description: string,
-  carbsPortion: string,
-  proteinPortion: string,
-  hasVeggies: string
-): MacroEstimate {
-  const desc = description.toLowerCase();
+/** 單一食物片段估算（不含拳頭/掌份量調整） */
+export function estimateSingleItemCore(description: string): MacroEstimate {
+  const desc = description.toLowerCase().trim();
 
-  let calories = 450;
-  let protein = 18;
-  let carbs = 55;
-  let fats = 16;
+  if (isMilkLikeDescription(desc)) {
+    const ml = parseVolumeMl(description) ?? 250;
+    return enforceMacroCalorieConsistency(estimateMilkMacros(ml));
+  }
+
+  const hkHits = searchHkFoodDatabase(description);
+  if (hkHits.length > 0) {
+    const best = hkHits[0];
+    return enforceMacroCalorieConsistency({
+      calories: best.calories,
+      protein: best.protein,
+      carbs: best.carbs,
+      fats: best.fats,
+    });
+  }
+
+  let calories = 280;
+  let protein = 12;
+  let carbs = 28;
+  let fats = 12;
 
   if (matchesAny(desc, FRUIT_KEYWORDS)) {
     calories = 95;
     protein = 1;
     carbs = 24;
     fats = 0;
+  } else if (
+    desc.includes("漢堡餐") ||
+    desc.includes("超值餐") ||
+    (desc.includes("餐") && (desc.includes("堡") || desc.includes("麥")))
+  ) {
+    calories = 520;
+    protein = 22;
+    carbs = 48;
+    fats = 26;
+  } else if (
+    desc.includes("豬柳蛋") ||
+    desc.includes("麥香雞") ||
+    desc.includes("巨無霸") ||
+    desc.includes("漢堡") ||
+    desc.includes("burger")
+  ) {
+    calories = 380;
+    protein = 18;
+    carbs = 32;
+    fats = 20;
+  } else if (
+    desc.includes("雞腿") ||
+    desc.includes("炸雞") ||
+    desc.includes("雞髀") ||
+    desc.includes("thigh") ||
+    desc.includes("crispy")
+  ) {
+    calories = 300;
+    protein = 22;
+    carbs = 12;
+    fats = 18;
+  } else if (desc.includes("薯條") || desc.includes("fries")) {
+    calories = 320;
+    protein = 4;
+    carbs = 42;
+    fats = 15;
   } else if (matchesAny(desc, HIGH_CAL_KEYWORDS)) {
     calories = 920;
     protein = 32;
@@ -181,7 +237,7 @@ export function estimateMacros(
     desc.includes("cappuccino") ||
     desc.includes("mocha")
   ) {
-    calories = 135;
+    calories = desc.includes("冰") || desc.includes("ice") ? 150 : 135;
     protein = 9;
     carbs = 12;
     fats = 6;
@@ -218,6 +274,76 @@ export function estimateMacros(
     fats -= 6;
   }
 
+  return enforceMacroCalorieConsistency(
+    applyHiddenCalorieFloor(desc, {
+      calories: Math.max(0, Math.round(calories)),
+      protein: Math.max(0, Math.round(protein)),
+      carbs: Math.max(0, Math.round(carbs)),
+      fats: Math.max(0, Math.round(fats)),
+    })
+  );
+}
+
+export type MacroEstimateResult = {
+  macros: MacroEstimate;
+  isComposite: boolean;
+  parts: { name: string; macros: MacroEstimate }[];
+};
+
+export function estimateMacrosWithBreakdown(
+  description: string,
+  carbsPortion: string,
+  proteinPortion: string,
+  hasVeggies: string
+): MacroEstimateResult {
+  const parts = splitMealDescription(description);
+  if (parts.length > 1) {
+    const breakdown = parts.map((name) => ({
+      name,
+      macros: estimateSingleItemCore(name),
+    }));
+    const total = enforceMacroCalorieConsistency(
+      applyHiddenCalorieFloor(
+        description.toLowerCase(),
+        sumMacros(breakdown.map((p) => p.macros))
+      )
+    );
+    return { macros: total, isComposite: true, parts: breakdown };
+  }
+
+  return {
+    macros: estimateMacros(description, carbsPortion, proteinPortion, hasVeggies),
+    isComposite: false,
+    parts: [],
+  };
+}
+
+export function estimateMacros(
+  description: string,
+  carbsPortion: string,
+  proteinPortion: string,
+  hasVeggies: string
+): MacroEstimate {
+  const parts = splitMealDescription(description);
+  if (parts.length > 1) {
+    return estimateMacrosWithBreakdown(
+      description,
+      carbsPortion,
+      proteinPortion,
+      hasVeggies
+    ).macros;
+  }
+
+  const desc = description.toLowerCase();
+
+  if (isMilkLikeDescription(desc)) {
+    const ml = parseVolumeMl(description) ?? 250;
+    return enforceMacroCalorieConsistency(estimateMilkMacros(ml));
+  }
+
+  let base = estimateSingleItemCore(description);
+  let { calories, protein, carbs, fats } = base;
+
   const isFruitMeal = matchesAny(desc, FRUIT_KEYWORDS);
 
   if (!isFruitMeal) {
@@ -242,21 +368,19 @@ export function estimateMacros(
     }
   }
 
-  if (hasVeggies === PORTION_NONE) {
-    // no veggie adjustment
-  } else if (hasVeggies === "有") {
+  if (hasVeggies === "有") {
     calories -= 20;
     carbs -= 5;
   }
 
-  const base = {
-    calories: Math.max(0, Math.round(calories)),
-    protein: Math.max(0, Math.round(protein)),
-    carbs: Math.max(0, Math.round(carbs)),
-    fats: Math.max(0, Math.round(fats)),
-  };
-
-  return enforceMacroCalorieConsistency(applyHiddenCalorieFloor(desc, base));
+  return enforceMacroCalorieConsistency(
+    applyHiddenCalorieFloor(desc, {
+      calories: Math.max(0, Math.round(calories)),
+      protein: Math.max(0, Math.round(protein)),
+      carbs: Math.max(0, Math.round(carbs)),
+      fats: Math.max(0, Math.round(fats)),
+    })
+  );
 }
 
 const LEAN_PROTEIN_KEYWORDS = [

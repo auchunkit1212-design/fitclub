@@ -682,6 +682,42 @@
     "carbs": 12,
     "fat": 12,
     "weight_g": 250
+  },
+  {
+    "food_name": "鮮奶",
+    "aliases": ["鮮奶", "牛奶", "全脂鮮奶", "脫脂奶", "fresh milk"],
+    "calories": 128,
+    "protein": 7,
+    "carbs": 10,
+    "fat": 7,
+    "weight_g": 200
+  },
+  {
+    "food_name": "豬柳蛋漢堡餐",
+    "aliases": ["豬柳蛋", "豬柳蛋漢堡", "麥當勞早餐", "sausage mcmuffin"],
+    "calories": 520,
+    "protein": 22,
+    "carbs": 48,
+    "fat": 26,
+    "weight_g": 350
+  },
+  {
+    "food_name": "炸雞腿",
+    "aliases": ["雞腿", "炸雞髀", "脆炸雞腿", "crispy thigh"],
+    "calories": 300,
+    "protein": 22,
+    "carbs": 12,
+    "fat": 18,
+    "weight_g": 120
+  },
+  {
+    "food_name": "冰 Cappuccino",
+    "aliases": ["cappuccino", "iced cappuccino", "冰卡布"],
+    "calories": 150,
+    "protein": 9,
+    "carbs": 12,
+    "fat": 6,
+    "weight_g": 350
   }
 ]
 
