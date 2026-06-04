@@ -91,7 +91,7 @@ export function CoachPushSubscribe() {
           type="button"
           disabled={status === "loading" || permission === "denied"}
           onClick={handleEnable}
-          className={`w-full py-3 rounded-2xl bg-[#7ED321] text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
+          className={`w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
         >
           {status === "loading"
             ? t("coachPush.processing", "處理中...")

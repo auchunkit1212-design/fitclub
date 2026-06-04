@@ -9,13 +9,14 @@ body {
 }
 
 :root {
-  --brand-lime: #7ed321;
-  --brand-lime-hover: #6bc01a;
-  --brand-lime-muted: #f4fce8;
-  --brand-primary: #7ed321;
-  --brand-primary-hover: #6bc01a;
-  --brand-primary-dark: #4d9a12;
-  --brand-primary-light: #f4fce8;
+  --brand-primary: #059669;
+  --brand-primary-hover: #047857;
+  --brand-primary-dark: #065f46;
+  --brand-primary-light: #ecfdf5;
+  /* legacy aliases */
+  --brand-lime: #059669;
+  --brand-lime-hover: #047857;
+  --brand-lime-muted: #ecfdf5;
 }
 
 body {

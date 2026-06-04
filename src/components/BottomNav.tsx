@@ -54,7 +54,7 @@ export function BottomNav({
             <span
               className={`text-[10px] font-semibold ${
                 activeTab === "dashboard"
-                  ? "text-[#7ED321]"
+                  ? "text-emerald-600"
                   : "text-gray-500"
               }`}
             >
@@ -81,7 +81,7 @@ export function BottomNav({
               <span
                 className={`text-[10px] font-semibold ${
                   activeTab === "settings"
-                    ? "text-[#7ED321]"
+                    ? "text-emerald-600"
                     : "text-gray-500"
                 }`}
               >
@@ -110,7 +110,7 @@ export function BottomNav({
               ? t("nav.addMeal", "記錄飲食")
               : t("nav.records", "學員記錄")
           }
-          className={`absolute left-1/2 -translate-x-1/2 -top-1 bg-[#7ED321] text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform ${btnClass}`}
+          className={`absolute left-1/2 -translate-x-1/2 -top-1 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform ${btnClass}`}
         >
           <span className="text-2xl font-light leading-none block w-6 h-6 text-center">
             +

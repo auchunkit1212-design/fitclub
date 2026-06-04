@@ -6,6 +6,7 @@ import {
   BodyProfileFields,
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
+import { CoachLogoAvatar } from "@/components/CoachLogoAvatar";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { BottomNav } from "@/components/BottomNav";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
@@ -71,8 +72,8 @@ const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 const SOFT_CARD = "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
-const BRAND_BTN = "bg-[#7ED321] hover:bg-[#6bc01a] text-white";
-const BRAND_BAR = "bg-[#7ED321]";
+const BRAND_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+const BRAND_BAR = "bg-emerald-600";
 
 function mealTypeByTimeOfDay(): string {
   const h = new Date().getHours();
@@ -683,7 +684,7 @@ export default function StudentDashboard() {
                 <p className="text-gray-500 text-sm mt-0.5 truncate">
                   {session.gym} · {t("home.healthMgmt", "健康管理")}
                 </p>
-                <p className="text-[#7ED321] text-xs font-semibold mt-1 truncate">
+                <p className="text-emerald-600 text-xs font-semibold mt-1 truncate">
                   {title}
                 </p>
               </div>
@@ -700,8 +701,12 @@ export default function StudentDashboard() {
           {isStudent && (
             <div className="w-full flex overflow-x-auto gap-3 scrollbar-hide pb-1 -mx-0">
               <div className="shrink-0 flex flex-col items-center gap-1.5 w-[4.5rem]">
-                <div className="w-[4.25rem] h-[4.25rem] rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-0.5 ring-2 ring-[#7ED321] ring-offset-2 ring-offset-white flex items-center justify-center overflow-hidden">
-                  <GorillaMascot logoUrl={branding?.logo} size="sm" className="scale-90" />
+                <div className="w-[4.25rem] h-[4.25rem] rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-0.5 ring-2 ring-emerald-600 ring-offset-2 ring-offset-white flex items-center justify-center overflow-hidden">
+                  <CoachLogoAvatar
+                    logoUrl={branding?.logo ?? session.brandLogo}
+                    label={title}
+                    size="story"
+                  />
                 </div>
                 <span className="text-[10px] font-medium text-gray-900 text-center truncate w-full">
                   {displayName.split(" ")[0]}
@@ -712,7 +717,7 @@ export default function StudentDashboard() {
                 current={todayCalories}
                 target={targetCalories}
                 unit=""
-                accentClass="text-[#7ED321]"
+                accentClass="text-emerald-600"
               />
               <MacroStoryRing
                 label={t("common.protein", "蛋白")}
@@ -784,7 +789,7 @@ export default function StudentDashboard() {
           )}
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
-          <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 ring-1 ring-[#7ED321]/30`}>
+          <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 ring-1 ring-emerald-600/30`}>
             {t("home.targets.lockedBanner", "📜 {source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
               source: session.isSoloStudent
                 ? t("home.targets.lockedSolo", "AI 大猩猩聖旨")
@@ -798,7 +803,7 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
-          <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-[#f4fce8]`}>
+          <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-[#ecfdf5]`}>
             {t("home.soloModeBanner", "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
           </div>
         )}
@@ -820,8 +825,8 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === "dashboard" && isStudent && (
-          <section className={`${SOFT_CARD} p-5 bg-gradient-to-br from-[#f4fce8] to-white`}>
-            <p className="text-sm font-semibold text-[#5a9c18] mb-1">
+          <section className={`${SOFT_CARD} p-5 bg-gradient-to-br from-[#ecfdf5] to-white`}>
+            <p className="text-sm font-semibold text-emerald-700 mb-1">
               🤖{" "}
               {session.isSoloStudent
                 ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
@@ -860,7 +865,7 @@ export default function StudentDashboard() {
         {activeTab === "dashboard" && isStudent ? (
           <>
             <section className={`${SOFT_CARD} p-5`}>
-              <h2 className="text-sm font-semibold text-[#7ED321] mb-2">
+              <h2 className="text-sm font-semibold text-emerald-600 mb-2">
                 {t("home.roastTitle", "🤖 AI 教練吐槽")}
               </h2>
               <p className="text-gray-900 leading-relaxed">{roast}</p>
@@ -875,7 +880,7 @@ export default function StudentDashboard() {
             <button
               type="button"
               onClick={() => setShowNutritionDash(true)}
-              className={`w-full ${BRAND_BTN} font-bold py-4 rounded-3xl shadow-[0_8px_30px_rgb(126,211,33,0.35)] ${btnClass}`}
+              className={`w-full ${BRAND_BTN} font-bold py-4 rounded-3xl shadow-[0_8px_30px_rgb(5,150,105,0.25)] ${btnClass}`}
             >
               📊 {t("home.advancedNutrition", "高級營養分析")}
             </button>

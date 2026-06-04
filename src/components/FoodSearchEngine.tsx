@@ -250,11 +250,11 @@ export function FoodSearchEngine({
             }}
             placeholder={t("foodSearch.placeholder", "搜尋食物名稱...")}
             autoComplete="off"
-            className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-[#7ED321]/40 focus:border-[#7ED321]"
+            className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600"
           />
           {loading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-[#7ED321] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
@@ -271,8 +271,8 @@ export function FoodSearchEngine({
             )}
 
             {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
-              <div className="flex items-center gap-2 px-3 py-3 text-sm text-[#5a9c18]">
-                <div className="w-4 h-4 border-2 border-[#7ED321] border-t-transparent rounded-full animate-spin shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-3 text-sm text-emerald-700">
+                <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
                 {t("foodSearch.searching", "搜尋中...")}
               </div>
             )}
@@ -302,7 +302,7 @@ export function FoodSearchEngine({
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => selectResult(item)}
                     className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-b-0 transition-colors ${btnClass} ${
-                      active ? "bg-[#f4fce8]" : "bg-white hover:bg-[#f4fce8]"
+                      active ? "bg-emerald-50" : "bg-white hover:bg-emerald-50"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3 min-w-0">
@@ -322,7 +322,7 @@ export function FoodSearchEngine({
       </div>
 
       {selectedItem && (
-        <div className="rounded-2xl border-2 border-[#7ED321] bg-[#f4fce8] p-3 shadow-sm space-y-2">
+        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-3 shadow-sm space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">{selectedItem.name}</p>
@@ -330,7 +330,7 @@ export function FoodSearchEngine({
                 <p className="text-xs text-gray-500 truncate">{selectedItem.brand}</p>
               )}
             </div>
-            <span className="shrink-0 text-lg font-black text-[#5a9c18]">
+            <span className="shrink-0 text-lg font-black text-emerald-700">
               {selectedItem.calories}
               <span className="text-xs font-semibold ml-0.5">kcal</span>
             </span>
@@ -351,7 +351,7 @@ export function FoodSearchEngine({
               </span>
             ))}
           </div>
-          <p className="text-xs text-[#5a9c18] font-medium">
+          <p className="text-xs text-emerald-700 font-medium">
             {t("foodSearch.addedHint", "✓ 已帶入表單，撳「發布記錄」即可儲存")}
           </p>
           <button
@@ -385,7 +385,7 @@ export function FoodSearchEngine({
                 <button
                   type="button"
                   onClick={() => quickAddFavorite(f)}
-                  className={`w-9 h-9 rounded-full bg-[#7ED321] text-white font-bold text-lg ${btnClass}`}
+                  className={`w-9 h-9 rounded-full bg-emerald-600 text-white font-bold text-lg ${btnClass}`}
                 >
                   +
                 </button>

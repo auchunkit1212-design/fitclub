@@ -25,6 +25,16 @@ export function isCustomBrandLogo(logo?: string): boolean {
   );
 }
 
+/** 教練 / 分店品牌 logo（排除官方大猩猩預設圖） */
+export function resolveCoachBrandLogo(logoUrl?: string): string | undefined {
+  if (!logoUrl?.trim()) return undefined;
+  const lower = logoUrl.toLowerCase();
+  if (lower.includes("gorilla-logo") || lower.includes("gorilla.svg")) {
+    return undefined;
+  }
+  return logoUrl;
+}
+
 /** 解析可疊加在白背心上的 tenant logo */
 export function resolveTenantLogoUrl(logoUrl?: string): string | undefined {
   return isCustomBrandLogo(logoUrl) ? logoUrl : undefined;
