@@ -1,7 +1,12 @@
 import { PORTION_NONE, estimateMacrosWithBreakdown } from "@/lib/ai-mock";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
 import { parseAiJson } from "@/lib/food-search/shared";
-import type { MacroEstimate } from "@/lib/macro-scale";
+import {
+  estimateMilkMacros,
+  isMilkLikeDescription,
+  parseVolumeMl,
+  type MacroEstimate,
+} from "@/lib/macro-scale";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -11,7 +16,26 @@ export type MealReestimateResult = {
   parts?: { name: string; macros: MacroEstimate }[];
 };
 
-/** 依食物描述重算營養；可選教練手動值作為 AI 校正參考 */
+function isCoachManualOverride(
+  hint: MacroEstimate,
+  rules: MacroEstimate
+): boolean {
+  const calDiff = Math.abs(hint.calories - rules.calories);
+  return calDiff >= Math.max(25, rules.calories * 0.12);
+}
+
+function deterministicRulesResult(
+  description: string
+): MealReestimateResult | null {
+  const volumeMl = parseVolumeMl(description);
+  if (isMilkLikeDescription(description) && volumeMl !== null) {
+    const macros = estimateMilkMacros(volumeMl);
+    return { macros, source: "rules" };
+  }
+  return null;
+}
+
+/** 依食物描述重算營養；coachHint 僅在與本地估算明顯不同時視為教練手動修正 */
 export async function reestimateMealFromDescription(input: {
   description: string;
   coachHint?: MacroEstimate;
@@ -21,32 +45,56 @@ export async function reestimateMealFromDescription(input: {
     throw new Error("請填寫食物描述");
   }
 
-  if (input.coachHint && isOpenRouterConfigured()) {
-    try {
-      const ai = await reestimateWithOpenRouter(description, input.coachHint);
-      return { macros: ai, source: "openrouter" };
-    } catch (err) {
-      console.warn("[meal-reestimate] OpenRouter fallback to rules:", err);
-    }
+  const deterministic = deterministicRulesResult(description);
+  if (deterministic) {
+    return deterministic;
   }
 
-  const result = estimateMacrosWithBreakdown(
+  const rulesResult = estimateMacrosWithBreakdown(
     description,
     PORTION_NONE,
     PORTION_NONE,
     PORTION_NONE
   );
 
+  if (rulesResult.isComposite && rulesResult.parts.length > 1) {
+    return {
+      macros: rulesResult.macros,
+      source: "rules",
+      parts: rulesResult.parts,
+    };
+  }
+
+  const rulesMacros = rulesResult.macros;
+  const manualHint =
+    input.coachHint && isCoachManualOverride(input.coachHint, rulesMacros)
+      ? input.coachHint
+      : undefined;
+
+  if (isOpenRouterConfigured()) {
+    try {
+      const ai = await reestimateWithOpenRouter(
+        description,
+        rulesMacros,
+        manualHint
+      );
+      return { macros: ai, source: "openrouter" };
+    } catch (err) {
+      console.warn("[meal-reestimate] OpenRouter fallback to rules:", err);
+    }
+  }
+
   return {
-    macros: result.macros,
+    macros: rulesMacros,
     source: "rules",
-    parts: result.isComposite ? result.parts : undefined,
+    parts: rulesResult.isComposite ? rulesResult.parts : undefined,
   };
 }
 
 async function reestimateWithOpenRouter(
   description: string,
-  coachHint: MacroEstimate
+  rulesBaseline: MacroEstimate,
+  coachOverride?: MacroEstimate
 ): Promise<MacroEstimate> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
@@ -57,12 +105,17 @@ async function reestimateWithOpenRouter(
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     "https://fitclub.hk";
 
-  const prompt = `你是嚴謹的營養師。學員記錄了以下飲食（可能包含多樣，用 + 或逗號分隔）：
+  const coachBlock = coachOverride
+    ? `\n教練已手動修正為參考：${coachOverride.calories} kcal，蛋白 ${coachOverride.protein}g，碳水 ${coachOverride.carbs}g，脂肪 ${coachOverride.fats}g（若與容量／品項不符，以食物描述與常見營養數據為準）。`
+    : "";
+
+  const prompt = `你是嚴謹的香港營養師。學員飲食描述（可能多樣，用 +、逗號分隔）：
 「${description}」
 
-教練認為較合理的總營養約為：${coachHint.calories} kcal，蛋白 ${coachHint.protein}g，碳水 ${coachHint.carbs}g，脂肪 ${coachHint.fats}g。
+本地規則估算約：${rulesBaseline.calories} kcal，蛋白 ${rulesBaseline.protein}g，碳水 ${rulesBaseline.carbs}g，脂肪 ${rulesBaseline.fats}g。
+注意：200ml 全脂鮮奶約 120–135 kcal，勿與整包／公仔麵混淆；多樣要加總。${coachBlock}
 
-請綜合描述與教練意見，輸出修正後的「整餐」總營養（整數）。只回傳 JSON：
+請依描述輸出「整餐」總營養（整數）。只回傳 JSON：
 {"calories":數字,"protein":數字,"carbs":數字,"fat":數字}`;
 
   const res = await fetch(OPENROUTER_CHAT_URL, {
@@ -81,7 +134,7 @@ async function reestimateWithOpenRouter(
         {
           role: "system",
           content:
-            "只回傳合法 JSON，不要 markdown。多樣食物要加總。",
+            "只回傳合法 JSON，不要 markdown。以描述與常見一人份為準，勿沿用明顯錯誤的舊熱量。",
         },
         { role: "user", content: prompt },
       ],

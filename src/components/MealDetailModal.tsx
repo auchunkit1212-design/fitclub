@@ -37,13 +37,28 @@ export function MealDetailModal({
   const [aiBusy, setAiBusy] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState({
+    description: log.description,
+    calories: log.calories ?? 0,
+    protein: log.protein ?? 0,
+    carbs: log.carbs ?? 0,
+    fats: log.fats ?? 0,
+  });
 
   useEffect(() => {
-    setDescription(log.description);
-    setCalories(String(log.calories ?? 0));
-    setProtein(String(log.protein ?? 0));
-    setCarbs(String(log.carbs ?? 0));
-    setFats(String(log.fats ?? 0));
+    const next = {
+      description: log.description,
+      calories: log.calories ?? 0,
+      protein: log.protein ?? 0,
+      carbs: log.carbs ?? 0,
+      fats: log.fats ?? 0,
+    };
+    setBaseline(next);
+    setDescription(next.description);
+    setCalories(String(next.calories));
+    setProtein(String(next.protein));
+    setCarbs(String(next.carbs));
+    setFats(String(next.fats));
     setAiNote(null);
     setError(null);
   }, [log.id, log.calories, log.protein, log.carbs, log.fats, log.description]);
@@ -63,6 +78,24 @@ export function MealDetailModal({
     fats: displayMacros.fats,
   });
 
+  const hasManualMacroEdits =
+    displayMacros.calories !== baseline.calories ||
+    displayMacros.protein !== baseline.protein ||
+    displayMacros.carbs !== baseline.carbs ||
+    displayMacros.fats !== baseline.fats;
+
+  const coachHintBody = () =>
+    hasManualMacroEdits
+      ? {
+          coachHint: {
+            calories: displayMacros.calories,
+            protein: displayMacros.protein,
+            carbs: displayMacros.carbs,
+            fats: displayMacros.fats,
+          },
+        }
+      : {};
+
   const handleSave = async () => {
     if (!canEdit) return;
     setSaving(true);
@@ -79,7 +112,16 @@ export function MealDetailModal({
       });
       const data = (await res.json()) as { log?: MealLog; error?: string };
       if (!res.ok) throw new Error(data.error ?? "儲存失敗");
-      if (data.log) onUpdated?.(data.log);
+      if (data.log) {
+        onUpdated?.(data.log);
+        setBaseline({
+          description: data.log.description,
+          calories: data.log.calories ?? 0,
+          protein: data.log.protein ?? 0,
+          carbs: data.log.carbs ?? 0,
+          fats: data.log.fats ?? 0,
+        });
+      }
       setAiNote("✅ 已儲存修正");
     } catch (e) {
       setError(errorMessage(e, "儲存失敗"));
@@ -105,12 +147,7 @@ export function MealDetailModal({
           mealLogId: log.id,
           description: description.trim(),
           apply,
-          coachHint: {
-            calories: displayMacros.calories,
-            protein: displayMacros.protein,
-            carbs: displayMacros.carbs,
-            fats: displayMacros.fats,
-          },
+          ...coachHintBody(),
         }),
       });
       const data = (await res.json()) as {
@@ -136,7 +173,7 @@ export function MealDetailModal({
       }
 
       const sourceLabel =
-        data.source === "openrouter" ? "AI 模型" : "本地營養規則";
+        data.source === "openrouter" ? "AI 模型" : "本地營養規則（含容量／拆餐）";
       const partsHint =
         data.parts && data.parts.length > 1
           ? `（拆成 ${data.parts.length} 項加總）`
@@ -144,6 +181,13 @@ export function MealDetailModal({
 
       if (apply && data.log) {
         onUpdated?.(data.log);
+        setBaseline({
+          description: data.log.description,
+          calories: data.log.calories ?? 0,
+          protein: data.log.protein ?? 0,
+          carbs: data.log.carbs ?? 0,
+          fats: data.log.fats ?? 0,
+        });
         setAiNote(`✅ 已用${sourceLabel}重算並儲存${partsHint}`);
       } else {
         setAiNote(`預覽：${sourceLabel}建議 ${est?.calories ?? "?"} kcal${partsHint} — 按「套用並儲存」寫入`);
