@@ -4,7 +4,7 @@ import {
   ensureCoachTenant,
   syncTenantBranding,
 } from "@/lib/tenant";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin, getSupabaseServiceRole } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
@@ -181,12 +181,29 @@ export async function fetchUserByEmail(
   return getDemoUser(normalized);
 }
 
+/** 僅讀取 password_hash（登入驗證用，必須 Service Role） */
+export async function fetchPasswordHashForEmail(
+  email: string
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseServiceRole();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("password_hash")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  const hash = data?.password_hash;
+  return typeof hash === "string" && hash.trim() ? hash.trim() : null;
+}
+
 /** 伺服器登入專用：以 service role 讀取用戶與 password_hash，避免 RLS 阻擋舊帳號登入 */
 export async function fetchUserByEmailForAuth(
   email: string
 ): Promise<RegistryUser | null> {
   const normalized = email.trim().toLowerCase();
-  const admin = getSupabaseAdmin();
+  const admin = getSupabaseServiceRole();
   const { data, error } = await admin
     .from("users_registry")
     .select("*")
@@ -196,8 +213,7 @@ export async function fetchUserByEmailForAuth(
   if (error) throw error;
   if (data) return mapUser(data as UserRow, true);
 
-  const { getDemoUser } = await import("@/lib/demo-users");
-  return getDemoUser(normalized);
+  return null;
 }
 
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
@@ -276,8 +292,13 @@ export function filterStudentsForSession(
 }
 
 export async function emailExists(email: string): Promise<boolean> {
-  const user = await fetchUserByEmail(email);
-  return Boolean(user);
+  try {
+    const user = await fetchUserByEmailForAuth(email);
+    return Boolean(user);
+  } catch {
+    const user = await fetchUserByEmail(email);
+    return Boolean(user);
+  }
 }
 
 export async function insertUser(

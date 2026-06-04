@@ -15,6 +15,10 @@ import {
 } from "@/components/icons";
 import { IosPwaInstallBanner } from "@/components/IosPwaInstallBanner";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import {
+  hasInviteInUrl,
+  readInviteCodeFromWindow,
+} from "@/lib/invite-url";
 import { getDemoUser } from "@/lib/demo-users";
 import { isIosSafariBrowser } from "@/lib/ios-pwa";
 import { goTo } from "@/lib/navigate";
@@ -59,6 +63,13 @@ export default function RegisterPage() {
     if (existing?.email && existing.isLoggedIn) {
       goTo(router, "/");
       return;
+    }
+    const codeFromUrl = readInviteCodeFromWindow();
+    if (codeFromUrl) {
+      setInviteCode(codeFromUrl);
+      setShowInviteField(true);
+      setSignupTrack("solo");
+      setAuthTab("signup");
     }
     initUserRegistry().catch(() => undefined);
     setShowIosBanner(isIosSafariBrowser());
@@ -152,6 +163,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const isCoach = signupTrack === "coach";
+      const effectiveInvite = (
+        inviteCode.trim() || readInviteCodeFromWindow()
+      ).trim();
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,9 +176,8 @@ export default function RegisterPage() {
           password: signupPassword,
           name,
           gymName: isCoach ? gymName : undefined,
-          inviteCode:
-            !isCoach && inviteCode.trim() ? inviteCode.trim() : undefined,
-          soloStudent: !isCoach && !inviteCode.trim(),
+          inviteCode: !isCoach && effectiveInvite ? effectiveInvite : undefined,
+          soloStudent: !isCoach && !effectiveInvite,
         }),
       });
       const data = (await res.json()) as {
@@ -174,7 +187,17 @@ export default function RegisterPage() {
       };
 
       if (!res.ok || !data.session) {
-        showToast(data.error ?? t("auth.errors.registerFailed", "註冊失敗"));
+        const err = data.error ?? t("auth.errors.registerFailed", "註冊失敗");
+        if (err.includes("已被註冊")) {
+          setAuthTab("login");
+          setLoginError(
+            t(
+              "auth.errors.alreadyRegisteredLogin",
+              "此 Email 已註冊。請用相同密碼喺「登入」分頁登入；若剛註冊過，請勿重複註冊。"
+            )
+          );
+        }
+        showToast(err);
         return;
       }
 
@@ -183,7 +206,13 @@ export default function RegisterPage() {
         data.session,
         isCoach
           ? t("auth.toast.brandOpened", "品牌「{gymName}」已開通！", { gymName: data.gymName ?? gymName })
-          : t("auth.toast.soloReady", "歡迎！AI 大猩猩私教已為你準備好 onboarding。")
+          : effectiveInvite
+            ? t(
+                "auth.toast.inviteReady",
+                "帳號已啟用！歡迎加入「{gymName}」。",
+                { gymName: data.gymName ?? "" }
+              )
+            : t("auth.toast.soloReady", "歡迎！AI 大猩猩私教已為你準備好 onboarding。")
       );
     } catch (err) {
       console.error("Register failed:", err);
@@ -313,6 +342,15 @@ export default function RegisterPage() {
                 { code: inviteCode.trim() }
               )}
             </IconLabel>
+          </div>
+        )}
+
+        {authTab === "login" && hasInviteInUrl() && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 leading-relaxed">
+            {t(
+              "auth.invite.useSignupTab",
+              "你透過教練邀請連結進入。請切換到「註冊」分頁，填寫 Email 同密碼完成加入；完成後先用「登入」分頁登入。"
+            )}
           </div>
         )}
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { readInviteCodeFromSearch } from "@/lib/invite-url";
 
 interface RegisterInvitePrefillProps {
   onPrefill: (code: string) => void;
@@ -12,10 +13,10 @@ export function RegisterInvitePrefill({ onPrefill }: RegisterInvitePrefillProps)
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const code =
-      searchParams.get("invite")?.trim() ||
-      searchParams.get("code")?.trim() ||
-      "";
+    const fromParams = readInviteCodeFromSearch(
+      searchParams.toString() ? `?${searchParams.toString()}` : ""
+    );
+    const code = fromParams || readInviteCodeFromSearch(window.location.search);
     if (code) onPrefill(code);
   }, [searchParams, onPrefill]);
 

@@ -60,14 +60,18 @@ export async function fetchTenantBySlug(slug: string): Promise<Tenant | null> {
   return data ? mapTenant(data as TenantRow) : null;
 }
 
-/** 學員註冊邀請碼：先比對 slug，再 fallback 至 tenant id */
+/** 學員註冊邀請碼：先比對 slug（不分大小寫），再 fallback 至 tenant id */
 export async function fetchTenantByInviteCode(
   code: string
 ): Promise<Tenant | null> {
   const trimmed = code.trim();
   if (!trimmed) return null;
-  const bySlug = await fetchTenantBySlug(trimmed);
+  const bySlug = await fetchTenantBySlug(trimmed.toLowerCase());
   if (bySlug) return bySlug;
+  if (trimmed !== trimmed.toLowerCase()) {
+    const byOriginalCase = await fetchTenantBySlug(trimmed);
+    if (byOriginalCase) return byOriginalCase;
+  }
   return fetchTenantById(trimmed);
 }
 

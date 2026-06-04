@@ -21,6 +21,7 @@ import {
   insertUser,
 } from "@/lib/db";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { AdminAccountsConsole } from "@/components/AdminAccountsConsole";
 import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
 
 const btnClass =
@@ -336,7 +337,15 @@ export function FranchiseConsole({
         </>
       )}
 
-      {(session.role === "admin" || session.role === "coach") && (
+      {session.role === "admin" && (
+        <AdminAccountsConsole
+          registry={registry}
+          onRegistryChange={onRegistryChange}
+          onToast={onToast}
+        />
+      )}
+
+      {session.role === "coach" && (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
           <h2 className="font-semibold text-zinc-800 mb-2">
             <IconLabel icon={ClipboardList} iconClassName="text-zinc-600">
