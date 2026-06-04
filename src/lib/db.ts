@@ -451,7 +451,20 @@ export async function updateCoachBrandingAdmin(
     .eq("email", email)
     .eq("role", "coach");
 
-  if (error) throw error;
+  if (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    const msg = error.message ?? "";
+    if (code === "PGRST204" || /broadcast/i.test(msg)) {
+      throw Object.assign(new Error("資料庫缺少 broadcast 欄位"), {
+        code: "MISSING_BROADCAST_COLUMN",
+        hint: "請在 Supabase SQL Editor 執行 supabase/fix-users-registry-broadcast.sql",
+      });
+    }
+    throw error;
+  }
 
   if (payload.tenantId) {
     await syncTenantBranding(payload.tenantId, {

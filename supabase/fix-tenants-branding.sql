@@ -17,6 +17,11 @@ alter table tenants add column if not exists theme_color text default 'emerald';
 
 alter table users_registry add column if not exists tenant_id uuid references tenants (id);
 
+alter table users_registry add column if not exists app_title text;
+alter table users_registry add column if not exists theme_color text default 'emerald';
+alter table users_registry add column if not exists logo text;
+alter table users_registry add column if not exists broadcast text default '';
+
 -- ── 1) 教練聖旨表（Phase 4）────────────────────────────────
 create table if not exists student_nutrition_targets (
   student_email text primary key references users_registry (email) on delete cascade,

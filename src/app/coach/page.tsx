@@ -131,7 +131,11 @@ export default function CoachPage() {
       const data = (await res.json()) as { error?: string; hint?: string };
       if (!res.ok) {
         console.error("[coach] branding publish failed:", data);
-        alert(data.error ?? "雲端發布失敗，請稍後再試。");
+        alert(
+          data.hint
+            ? `${data.error ?? "雲端發布失敗"}\n\n${data.hint}`
+            : data.error ?? "雲端發布失敗，請稍後再試。"
+        );
         return;
       }
       const updated = applyBrandToSession(session, {
