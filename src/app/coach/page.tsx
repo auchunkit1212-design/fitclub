@@ -198,8 +198,8 @@ export default function CoachPage() {
   return (
     <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
       <PageHeader
-        title={`${brand.gymName} · 教練後台`}
-        subtitle="白標品牌 · 雲端同步"
+        title={`${appTitle.trim() || brand.gymName} · 教練後台`}
+        subtitle={`${appTitle.trim() || brand.appTitle || brand.gymName} · 雲端同步`}
         variant="light"
         backLabel="← 返回主頁"
         onBack={() => router.push("/")}
