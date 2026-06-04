@@ -19,7 +19,15 @@ export function PwaShell() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
   const [showStandaloneLoginHint, setShowStandaloneLoginHint] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const [installed, setInstalled] = useState(false);
+
+  const dismissStandaloneLoginHint = () => {
+    if (dontShowAgain && typeof window !== "undefined") {
+      localStorage.setItem("hidePwaWarning", "true");
+    }
+    setShowStandaloneLoginHint(false);
+  };
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -36,7 +44,12 @@ export function PwaShell() {
     const standalone = isStandaloneDisplay();
     if (standalone) {
       setInstalled(true);
-      setShowStandaloneLoginHint(true);
+      const hideWarning =
+        typeof window !== "undefined" &&
+        localStorage.getItem("hidePwaWarning") === "true";
+      if (!hideWarning) {
+        setShowStandaloneLoginHint(true);
+      }
       return;
     }
 
@@ -79,10 +92,21 @@ export function PwaShell() {
             <p className="mt-1">
               主畫面圖示同 Safari 分開儲存登入狀態。若見唔到資料，請喺呢度重新登入一次。
             </p>
+            <label className="mt-3 flex items-center gap-3 min-h-[44px] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="h-5 w-5 shrink-0 rounded border-amber-400 text-amber-700 focus:ring-amber-500 focus:ring-offset-0"
+              />
+              <span className="text-[11px] text-gray-600 leading-snug">
+                以後不再提醒 (Don&apos;t show again)
+              </span>
+            </label>
             <button
               type="button"
-              onClick={() => setShowStandaloneLoginHint(false)}
-              className={`mt-2 w-full py-2 rounded-lg bg-amber-200 font-medium ${btnClass}`}
+              onClick={dismissStandaloneLoginHint}
+              className={`mt-1 w-full py-2.5 rounded-lg bg-amber-200 font-medium ${btnClass}`}
             >
               知道喇
             </button>
