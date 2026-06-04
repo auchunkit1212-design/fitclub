@@ -54,10 +54,12 @@ export function AdminAccountsConsole({
   const [loadError, setLoadError] = useState<string | null>(null);
   const onRegistryChangeRef = useRef(onRegistryChange);
   const onToastRef = useRef(onToast);
+  const registryRef = useRef(registry);
 
   useEffect(() => {
     onRegistryChangeRef.current = onRegistryChange;
     onToastRef.current = onToast;
+    registryRef.current = registry;
   });
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -67,8 +69,9 @@ export function AdminAccountsConsole({
   const [assignTenantId, setAssignTenantId] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  const loadAccounts = useCallback(async () => {
-    setLoading(true);
+  const loadAccounts = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch("/api/admin/accounts", {
         credentials: "include",
@@ -80,21 +83,26 @@ export function AdminAccountsConsole({
         error?: string;
       };
       if (!res.ok) {
-        onToast(data.error ?? "讀取帳戶失敗");
+        const msg = data.error ?? "讀取帳戶失敗";
+        setLoadError(msg);
+        onToastRef.current(msg);
         return;
       }
-      if (data.users) onRegistryChange(data.users);
+      if (data.users) onRegistryChangeRef.current(data.users);
       if (data.tenants) setTenants(data.tenants);
     } catch {
-      onToast("無法連線讀取帳戶");
+      const msg = "無法連線讀取帳戶";
+      setLoadError(msg);
+      onToastRef.current(msg);
     } finally {
       setLoading(false);
     }
-  }, [onRegistryChange, onToast]);
+  }, []);
 
   useEffect(() => {
-    void loadAccounts();
-  }, [loadAccounts]);
+    void loadAccounts({ silent: registry.length > 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -146,9 +154,10 @@ export function AdminAccountsConsole({
   const handleAssign = async () => {
     if (!profile || profile.user.role !== "student") return;
     if (!assignTenantId) {
-      onToast("請選擇目標健身室");
+      onToastRef.current("請選擇目標健身室");
       return;
     }
+    const targetTenant = tenants.find((t) => t.id === assignTenantId);
     setAssigning(true);
     try {
       const res = await fetch("/api/admin/users/assign-tenant", {
@@ -165,14 +174,41 @@ export function AdminAccountsConsole({
       });
       const data = (await res.json()) as { user?: RegistryUser; error?: string };
       if (!res.ok) {
-        onToast(data.error ?? "調配失敗");
+        onToastRef.current(data.error ?? "調配失敗");
         return;
       }
-      onToast(`已將 ${profile.user.name} 調至新健身室`);
-      await loadAccounts();
-      if (selectedEmail) await openProfile(selectedEmail);
+
+      const nextUser: RegistryUser = data.user
+        ? {
+            ...data.user,
+            tenantName: targetTenant?.gymName ?? data.user.tenantName ?? data.user.gym,
+            gym: targetTenant?.gymName ?? data.user.gym,
+            tenantId: assignTenantId,
+          }
+        : profile.user;
+
+      onRegistryChangeRef.current(
+        registryRef.current.map((u) =>
+          u.email.toLowerCase() === nextUser.email.toLowerCase() ? nextUser : u
+        )
+      );
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: nextUser,
+              tenant: targetTenant ?? prev.tenant,
+            }
+          : prev
+      );
+
+      onToastRef.current(
+        `已調至「${targetTenant?.gymName ?? nextUser.gym}」`
+      );
+      void loadAccounts({ silent: true });
     } catch {
-      onToast("調配失敗");
+      onToastRef.current("調配失敗，請檢查網絡或稍後再試");
     } finally {
       setAssigning(false);
     }

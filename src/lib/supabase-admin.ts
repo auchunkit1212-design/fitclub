@@ -43,3 +43,12 @@ export function getSupabaseAdmin(): SupabaseClient {
   });
   return adminClient;
 }
+
+/** 寫入 users_registry / tenants：優先 Service Role，否則 fallback admin client */
+export function getRegistryWriteClient(): SupabaseClient {
+  try {
+    return getSupabaseServiceRole();
+  } catch {
+    return getSupabaseAdmin();
+  }
+}
