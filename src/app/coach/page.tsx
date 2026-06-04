@@ -7,6 +7,7 @@ import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
+import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
@@ -349,6 +350,10 @@ export default function CoachPage() {
               {publishing ? "發布緊..." : "發布到雲端"}
             </button>
           </section>
+        )}
+
+        {students.length > 0 && (
+          <CoachStudentDailyPanel logs={logs} students={students} />
         )}
 
         {session?.role === "coach" && students.length > 0 && (

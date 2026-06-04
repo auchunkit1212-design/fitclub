@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nProvider";
-import { GraduationCap, Home, Plus, Settings } from "@/components/icons";
+import { Globe, GraduationCap, Home, Plus, Settings } from "@/components/icons";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -16,6 +16,40 @@ interface BottomNavProps {
   onFabClick?: () => void;
 }
 
+function NavTabButton({
+  active,
+  label,
+  icon: Icon,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  icon: typeof Home;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 min-w-[2.75rem] max-w-[4rem] ${btnClass}`}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon
+        size={20}
+        strokeWidth={active ? 2.25 : 2}
+        className={active ? "text-emerald-600" : "text-zinc-400"}
+      />
+      <span
+        className={`text-[9px] font-semibold leading-tight text-center ${
+          active ? "text-emerald-600" : "text-zinc-400"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export function BottomNav({
   activeTab,
   onTabChange,
@@ -23,8 +57,13 @@ export function BottomNav({
   onFabClick,
 }: BottomNavProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useI18n();
   const isStudent = role === "student";
+
+  const communityActive = pathname === "/community";
+  const homeActive = pathname === "/" && activeTab === "dashboard";
+  const settingsActive = pathname === "/" && activeTab === "settings";
 
   const handleFab = () => {
     if (onFabClick) {
@@ -35,71 +74,58 @@ export function BottomNav({
     else router.push("/coach/records");
   };
 
-  const homeActive = activeTab === "dashboard";
-  const settingsActive = activeTab === "settings";
+  const goHome = () => {
+    if (pathname !== "/") router.push("/");
+    else onTabChange("dashboard");
+  };
+
+  const goCommunity = () => {
+    if (pathname !== "/community") router.push("/community");
+  };
+
+  const goSettings = () => {
+    if (pathname !== "/") router.push("/?tab=settings");
+    else onTabChange("settings");
+  };
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
       <div className="relative pointer-events-auto h-[4.5rem]">
-        <nav className="absolute inset-x-0 bottom-0 h-14 flex items-center justify-between bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-6 sm:px-10">
-          <button
-            type="button"
-            onClick={() => onTabChange("dashboard")}
-            className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-            aria-current={homeActive ? "page" : undefined}
-          >
-            <Home
-              size={22}
-              strokeWidth={homeActive ? 2.25 : 2}
-              className={
-                homeActive ? "text-emerald-600" : "text-zinc-400"
-              }
+        <nav className="absolute inset-x-0 bottom-0 h-14 flex items-center bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-3 sm:px-5">
+          <div className="flex flex-1 items-center justify-evenly min-w-0 pr-6">
+            <NavTabButton
+              active={communityActive}
+              label={t("nav.explore", "探索")}
+              icon={Globe}
+              onClick={goCommunity}
             />
-            <span
-              className={`text-[10px] font-semibold ${
-                homeActive ? "text-emerald-600" : "text-zinc-400"
-              }`}
-            >
-              {t("nav.home", "主頁")}
-            </span>
-          </button>
+            <NavTabButton
+              active={homeActive}
+              label={t("nav.home", "主頁")}
+              icon={Home}
+              onClick={goHome}
+            />
+          </div>
 
-          <div className="w-14 shrink-0" aria-hidden />
+          <div className="w-12 shrink-0" aria-hidden />
 
-          {isStudent ? (
-            <button
-              type="button"
-              onClick={() => onTabChange("settings")}
-              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-              aria-current={settingsActive ? "page" : undefined}
-            >
-              <Settings
-                size={22}
-                strokeWidth={settingsActive ? 2.25 : 2}
-                className={
-                  settingsActive ? "text-emerald-600" : "text-zinc-400"
-                }
+          <div className="flex flex-1 items-center justify-evenly min-w-0 pl-6">
+            {isStudent ? (
+              <NavTabButton
+                active={settingsActive}
+                label={t("nav.settings", "設定")}
+                icon={Settings}
+                onClick={goSettings}
               />
-              <span
-                className={`text-[10px] font-semibold ${
-                  settingsActive ? "text-emerald-600" : "text-zinc-400"
-                }`}
-              >
-                {t("nav.settings", "設定")}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => router.push("/coach")}
-              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-            >
-              <GraduationCap size={22} className="text-zinc-400" />
-              <span className="text-[10px] font-semibold text-zinc-400">
-                {t("nav.coach", "教練")}
-              </span>
-            </button>
-          )}
+            ) : (
+              <NavTabButton
+                active={pathname.startsWith("/coach")}
+                label={t("nav.coach", "教練")}
+                icon={GraduationCap}
+                onClick={() => router.push("/coach")}
+              />
+            )}
+          </div>
         </nav>
 
         <button

@@ -98,6 +98,28 @@ export async function fetchStudentNutritionTargets(
   return mapTargets(data);
 }
 
+export async function fetchNutritionTargetsForEmails(
+  emails: string[]
+): Promise<Map<string, StudentNutritionTargets>> {
+  const normalized = Array.from(
+    new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+  const map = new Map<string, StudentNutritionTargets>();
+  if (normalized.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("student_nutrition_targets")
+    .select("*")
+    .in("student_email", normalized);
+
+  if (error || !data) return map;
+  for (const row of data) {
+    const t = mapTargets(row as Record<string, unknown>);
+    map.set(t.studentEmail.trim().toLowerCase(), t);
+  }
+  return map;
+}
+
 export async function upsertStudentNutritionTargets(
   targets: StudentNutritionTargets,
   options?: { useServiceRole?: boolean }

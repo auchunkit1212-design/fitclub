@@ -31,6 +31,7 @@ import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
+import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -226,6 +227,11 @@ export default function StudentDashboard() {
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [session, setSession] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "settings") setActiveTab("settings");
+  }, []);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -973,7 +979,32 @@ export default function StudentDashboard() {
                 unit="g"
                 barClass={BRAND_BAR}
               />
+              <ProgressBar
+                label={t("common.carbs", "碳水")}
+                current={todayCarbs}
+                target={targetCarbs}
+                unit="g"
+                barClass="bg-amber-500"
+              />
+              <ProgressBar
+                label={t("common.fat", "脂肪")}
+                current={todayFats}
+                target={targetFats}
+                unit="g"
+                barClass="bg-rose-400"
+              />
             </section>
+
+            <StudentMicronutrientPanel
+              todayCalories={todayCalories}
+              todayCarbs={todayCarbs}
+              todayFats={todayFats}
+              todayProtein={todayProtein}
+              targetCalories={targetCalories}
+              targetCarbs={targetCarbs}
+              targetFats={targetFats}
+              weightKg={bodyProfile?.weightKg}
+            />
 
             <section className={`${SOFT_CARD} p-5 space-y-3 overflow-hidden min-w-0`}>
               <div className="flex justify-between items-center gap-2 min-w-0">

@@ -72,5 +72,8 @@ export function estimateMicronutrients(
   const sugarG = Math.round(Math.max(0, carbs * 0.35));
   const satFatG = Math.round(Math.max(0, fats * 0.42));
   const sodiumMg = Math.round(Math.max(800, calories * 1.8));
-  return { fiberG, sugarG, satFatG, sodiumMg, protein };
+  const cholesterolMg = Math.round(
+    Math.min(500, Math.max(80, fats * 3.2 + protein * 0.2))
+  );
+  return { fiberG, sugarG, satFatG, sodiumMg, cholesterolMg, protein };
 }

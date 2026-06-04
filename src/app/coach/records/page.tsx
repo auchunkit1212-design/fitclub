@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
+import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
@@ -127,6 +128,8 @@ export default function CoachRecordsPage() {
           </section>
         ) : (
           <>
+            <CoachStudentDailyPanel logs={logs} students={students} />
+
             {session?.role === "coach" && (
               <CoachActivityWall
                 logs={logs}

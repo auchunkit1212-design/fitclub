@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { estimateMicronutrients } from "@/lib/body-profile";
+import { MicronutrientGuideSection } from "@/components/NutritionMicroBars";
 import { useI18n } from "@/components/I18nProvider";
 import { IconLabel, Lightbulb } from "@/components/icons";
 import { groupLogsByBucket, type MealBucket } from "@/lib/meal-buckets";
@@ -31,40 +31,6 @@ interface NutritionDashboardProps {
   exerciseCalories: number;
   onClose: () => void;
   onExerciseChange?: (kcal: number) => void;
-}
-
-function MicroBar({
-  label,
-  current,
-  target,
-  unit,
-  color,
-}: {
-  label: string;
-  current: number;
-  target: number;
-  unit: string;
-  color: string;
-}) {
-  const pct = Math.min(100, Math.round((current / target) * 100)) || 0;
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="font-medium text-zinc-700">{label}</span>
-        <span className="text-zinc-500">
-          {current}
-          {unit} / {target}
-          {unit}
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
 }
 
 export function NutritionDashboard({
@@ -153,13 +119,6 @@ export function NutritionDashboard({
         { name: t("common.fat", "脂肪"), value: totals.fats * 9 },
       ].filter((d) => d.value > 0),
     [totals, t]
-  );
-
-  const micro = estimateMicronutrients(
-    totals.calories,
-    totals.carbs,
-    totals.fats,
-    totals.protein
   );
 
   return (
@@ -373,37 +332,15 @@ export function NutritionDashboard({
 
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
             <h3 className="font-semibold text-zinc-800">{t("nutritionDash.micro.title", "微量元素 Micronutrients")}</h3>
-            <MicroBar
-              label={t("nutritionDash.micro.fiber", "膳食纖維")}
-              current={micro.fiberG}
-              target={28}
-              unit="g"
-              color="bg-emerald-500"
+            <MicronutrientGuideSection
+              calories={totals.calories}
+              carbs={totals.carbs}
+              fats={totals.fats}
+              protein={totals.protein}
+              targetCalories={goalCalories}
+              targetCarbs={goalCarbs}
+              targetFats={goalFats}
             />
-            <MicroBar
-              label={t("nutritionDash.micro.sugar", "糖分")}
-              current={micro.sugarG}
-              target={50}
-              unit="g"
-              color="bg-amber-500"
-            />
-            <MicroBar
-              label={t("nutritionDash.micro.satFat", "飽和脂肪")}
-              current={micro.satFatG}
-              target={20}
-              unit="g"
-              color="bg-red-500"
-            />
-            <MicroBar
-              label={t("nutritionDash.micro.sodium", "鈉")}
-              current={micro.sodiumMg}
-              target={2300}
-              unit="mg"
-              color="bg-blue-500"
-            />
-            <p className="text-[10px] text-zinc-400">
-              {t("nutritionDash.micro.disclaimer", "* 微量元素由今日總攝取估算，僅供參考")}
-            </p>
           </section>
         </div>
       </div>
