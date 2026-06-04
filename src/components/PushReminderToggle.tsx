@@ -20,13 +20,13 @@ export function PushReminderToggle() {
   } = usePushSubscription();
 
   const handleEnable = async () => {
-    const ok = await enable();
-    if (ok) {
+    const result = await enable();
+    if (result.ok) {
       setMessage(
         t("push.messages.enabled", "✅ 已開啟系統通知，訂閱已儲存。")
       );
-    } else if (message) {
-      setMessage(`❌ ${message}`);
+    } else {
+      setMessage(`❌ ${result.error}`);
     }
   };
 

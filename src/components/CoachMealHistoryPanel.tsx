@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import {
   buildMealExportRows,
-  downloadMealsCsv,
+  downloadMealsExcel,
 } from "@/lib/csv-export";
 import type { MealLog, RegistryUser } from "@/lib/types";
 
@@ -52,7 +52,7 @@ export function CoachMealHistoryPanel({
     }
     const rows = buildMealExportRows(filteredLogs, students);
     const slug = gymName.replace(/\s+/g, "-").slice(0, 20) || "gym";
-    downloadMealsCsv(rows, `${slug}-meal-export-${fromDate}_${toDate}.csv`);
+    downloadMealsExcel(rows, `${slug}-meal-export-${fromDate}_${toDate}.xls`);
   };
 
   return (
@@ -66,7 +66,7 @@ export function CoachMealHistoryPanel({
           onClick={handleExport}
           className={`shrink-0 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold ${btnClass}`}
         >
-          📥 匯出數據
+          📥 匯出 Excel
         </button>
       </div>
 

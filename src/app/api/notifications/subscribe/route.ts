@@ -37,7 +37,20 @@ export async function POST(request: Request) {
   }
 
   const email = session.email.trim().toLowerCase();
-  const supabase = getSupabaseAdmin();
+
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (err) {
+    console.error("[notifications/subscribe] supabase config", err);
+    return NextResponse.json(
+      {
+        error: "伺服器未設定 Supabase",
+        hint: "請在 Vercel / .env.local 設定 NEXT_PUBLIC_SUPABASE_URL 及 SUPABASE_SERVICE_ROLE_KEY",
+      },
+      { status: 500 }
+    );
+  }
 
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
@@ -53,10 +66,18 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("[notifications/subscribe]", error);
+    const missingTable =
+      error.code === "PGRST205" ||
+      /push_subscriptions/i.test(error.message ?? "");
     return NextResponse.json(
       {
-        error: "訂閱儲存失敗",
-        hint: "請在 Supabase 執行 supabase/push_subscriptions.sql",
+        error: missingTable
+          ? "Supabase 未建立 push_subscriptions 表"
+          : "訂閱儲存失敗",
+        hint: missingTable
+          ? "請到 Supabase → SQL Editor 貼上並執行專案內 supabase/push_subscriptions.sql"
+          : "請確認 SUPABASE_SERVICE_ROLE_KEY 已設定，並檢查 Supabase 連線",
+        code: error.code,
       },
       { status: 500 }
     );

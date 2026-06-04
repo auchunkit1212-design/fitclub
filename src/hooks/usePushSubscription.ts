@@ -45,7 +45,9 @@ export function usePushSubscription() {
     refresh();
   }, [refresh]);
 
-  const enable = useCallback(async () => {
+  const enable = useCallback(async (): Promise<
+    { ok: true } | { ok: false; error: string }
+  > => {
     setStatus("loading");
     setMessage("");
     try {
@@ -53,7 +55,7 @@ export function usePushSubscription() {
       await savePushSubscriptionToServer(subscription);
       setStatus("enabled");
       setPermission("granted");
-      return true;
+      return { ok: true };
     } catch (error) {
       const text =
         error instanceof Error ? error.message : "開啟推播失敗";
@@ -64,7 +66,7 @@ export function usePushSubscription() {
       );
       setMessage(text);
       setPermission(getPushPermission());
-      return false;
+      return { ok: false, error: text };
     }
   }, []);
 

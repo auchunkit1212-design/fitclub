@@ -27,14 +27,16 @@ export function CoachPushSubscribe() {
   }, [refresh]);
 
   const handleEnable = async () => {
-    const ok = await enable();
-    if (ok) {
+    const result = await enable();
+    if (result.ok) {
       setMessage(
         t(
           "coachPush.enabled",
           "✅ 已開啟推播！學員打卡時你會收到系統通知。"
         )
       );
+    } else {
+      setMessage(`❌ ${result.error}`);
     }
   };
 
