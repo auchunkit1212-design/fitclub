@@ -127,7 +127,16 @@ export interface FavoriteFood {
   lastUsedAt: string;
 }
 
-export interface FoodSearchItem {
+/** Pro-tier micronutrients from AI food search (per serving) */
+export interface FoodAdvancedNutrients {
+  fiberG?: number;
+  sugarG?: number;
+  saturatedFatG?: number;
+  sodiumMg?: number;
+  cholesterolMg?: number;
+}
+
+export interface FoodSearchItem extends FoodAdvancedNutrients {
   id: string;
   name: string;
   brand: string;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { useI18n } from "@/components/I18nProvider";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -42,7 +43,12 @@ import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
-import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
+import type {
+  FoodAdvancedNutrients,
+  MealLog,
+  StudentBodyProfile,
+  UserSession,
+} from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -78,6 +84,10 @@ export default function AddMealPage() {
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
   const [macrosFromSearch, setMacrosFromSearch] = useState(false);
+  const [searchAdvanced, setSearchAdvanced] = useState<
+    FoodAdvancedNutrients | undefined
+  >();
+  const [proNutrition, setProNutrition] = useState(false);
 
   useEffect(() => {
     const parsed = getSession();
@@ -441,8 +451,19 @@ export default function AddMealPage() {
             setCarbs(item.carbs);
             setFats(item.fats);
             setMacrosFromSearch(item.fromSearch);
+            setSearchAdvanced(item.advanced);
+            setProNutrition(Boolean(item.proNutrition));
           }}
         />
+
+        {calories > 0 && (
+          <AdvancedNutritionCard
+            name={description.trim() || undefined}
+            macros={{ calories, protein, carbs, fats }}
+            advanced={searchAdvanced}
+            proSource={proNutrition}
+          />
+        )}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
           <div>
@@ -471,6 +492,8 @@ export default function AddMealPage() {
               onChange={(e) => {
                 setDescription(e.target.value);
                 setMacrosFromSearch(false);
+                setSearchAdvanced(undefined);
+                setProNutrition(false);
               }}
               placeholder={t(
                 "addMeal.descriptionPlaceholder",

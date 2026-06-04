@@ -1,4 +1,5 @@
-import type { FoodSearchItem } from "@/lib/types";
+import { parseAdvancedFromAiRow } from "@/lib/food-advanced-nutrients";
+import type { FoodAdvancedNutrients, FoodSearchItem } from "@/lib/types";
 
 export interface AiFoodSearchResult {
   food_name: string;
@@ -7,6 +8,11 @@ export interface AiFoodSearchResult {
   carbs: number;
   fat: number;
   weight_g: number;
+  fiber?: number;
+  sugar?: number;
+  saturated_fat?: number;
+  sodium_mg?: number;
+  cholesterol_mg?: number;
 }
 
 export class FoodSearchError extends Error {
@@ -34,6 +40,11 @@ export function toFoodSearchItem(
     weightG: result.weight_g,
     servingLabel: result.weight_g > 0 ? `約 ${result.weight_g}g` : "標準一人份",
     source,
+    fiberG: result.fiber,
+    sugarG: result.sugar,
+    saturatedFatG: result.saturated_fat,
+    sodiumMg: result.sodium_mg,
+    cholesterolMg: result.cholesterol_mg,
   };
 }
 
@@ -62,6 +73,8 @@ function normalizeAiFoodRow(
     throw new FoodSearchError("AI 回應缺少食物名稱", 502);
   }
 
+  const advanced = parseAdvancedFromAiRow(parsed as Record<string, unknown>);
+
   return {
     food_name,
     calories: Math.round(calories),
@@ -69,6 +82,11 @@ function normalizeAiFoodRow(
     carbs: Math.round(carbs),
     fat: Math.round(fat),
     weight_g: Math.round(Number.isFinite(weight_g) ? weight_g : 0),
+    fiber: advanced.fiberG,
+    sugar: advanced.sugarG,
+    saturated_fat: advanced.saturatedFatG,
+    sodium_mg: advanced.sodiumMg,
+    cholesterol_mg: advanced.cholesterolMg,
   };
 }
 

@@ -5,6 +5,7 @@ import { IconLabel, Sparkles } from "@/components/icons";
 import { errorMessage } from "@/lib/errors";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
+import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog } from "@/lib/types";
 
@@ -254,6 +255,12 @@ export function MealDetailModal({
             )}
           </div>
 
+          <AdvancedNutritionCard
+            name={description.trim() || log.description}
+            macros={displayMacros}
+            className="border-emerald-100 bg-white"
+          />
+
           {canEdit ? (
             <>
               <label className="block text-xs text-zinc-500">食物描述</label>
@@ -340,32 +347,7 @@ export function MealDetailModal({
               </div>
             </>
           ) : (
-            <>
-              <p className="text-sm text-zinc-800">{log.description}</p>
-              <div className="grid grid-cols-3 gap-3">
-                {(
-                  [
-                    ["蛋白質", displayMacros.protein, "g", "text-emerald-600"],
-                    ["碳水", displayMacros.carbs, "g", "text-amber-600"],
-                    ["脂肪", displayMacros.fats, "g", "text-rose-600"],
-                  ] as const
-                ).map(([label, val, unit, color]) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl bg-zinc-50 border border-zinc-100 p-3 text-center"
-                  >
-                    <p className="text-xs text-zinc-500">{label}</p>
-                    <p className={`text-xl font-bold ${color}`}>
-                      {val}
-                      <span className="text-sm font-medium">{unit}</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-center text-2xl font-bold text-zinc-900">
-                {displayMacros.calories} kcal
-              </p>
-            </>
+            <p className="text-sm text-zinc-800">{log.description}</p>
           )}
         </div>
       </div>

@@ -63,7 +63,7 @@
       "last7Days": "過去 7 日",
       "placeholder": "今日體重 (kg)",
       "saving": "儲存中...",
-      "updateButton": "更新今日體重",
+      "updateButton": "儲存",
       "invalidAlert": "請輸入有效體重（30–300 kg）",
       "savedToast": "今日體重已記錄",
       "saveFailed": "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql"
@@ -164,7 +164,12 @@
     "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。",
     "sheetTitle": "快速記錄飲食",
     "fullLogCta": "完整記錄（含相片）",
-    "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"
+    "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁",
+    "advanced": {
+      "title": "進階營養分析",
+      "cholesterol": "膽固醇",
+      "disclaimer": "進階營養素由 AI 估算或依宏量推算，僅供 Pro 參考，非醫療建議。"
+    }
   },
   "snackScanner": {
     "scanning": "AI 辨識標籤中...",

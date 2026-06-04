@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { CheckCircle2, IconLabel, Search } from "@/components/icons";
 import { useDebounce } from "@/hooks/useDebounce";
+import { hasAiAdvancedNutrients } from "@/lib/food-advanced-nutrients";
 import { getSessionRequestHeaders } from "@/lib/session";
-import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
+import type { FavoriteFood, FoodAdvancedNutrients, FoodSearchItem } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -21,6 +23,8 @@ interface FoodSearchEngineProps {
     carbs: number;
     fats: number;
     fromSearch: boolean;
+    advanced?: FoodAdvancedNutrients;
+    proNutrition?: boolean;
   }) => void;
   /** Strip outer card chrome when used inside a bottom sheet */
   embedded?: boolean;
@@ -169,6 +173,15 @@ export function FoodSearchEngine({
       carbs: item.carbs,
       fats: item.fats,
       fromSearch: true,
+      advanced: {
+        fiberG: item.fiberG,
+        sugarG: item.sugarG,
+        saturatedFatG: item.saturatedFatG,
+        sodiumMg: item.sodiumMg,
+        cholesterolMg: item.cholesterolMg,
+      },
+      proNutrition:
+        item.source === "openrouter" && hasAiAdvancedNutrients(item),
     });
   };
 
@@ -325,35 +338,28 @@ export function FoodSearchEngine({
       </div>
 
       {selectedItem && (
-        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-3 shadow-sm space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">{selectedItem.name}</p>
-              {selectedItem.brand && (
-                <p className="text-xs text-gray-500 truncate">{selectedItem.brand}</p>
-              )}
-            </div>
-            <span className="shrink-0 text-lg font-black text-emerald-700">
-              {selectedItem.calories}
-              <span className="text-xs font-semibold ml-0.5">kcal</span>
-            </span>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {(
-              [
-                [t("common.protein", "蛋白"), selectedItem.protein, "bg-sky-100 text-sky-800"],
-                [t("common.carbs", "碳水"), selectedItem.carbs, "bg-amber-100 text-amber-800"],
-                [t("common.fat", "脂肪"), selectedItem.fats, "bg-rose-100 text-rose-800"],
-              ] as const
-            ).map(([label, val, cls]) => (
-              <span
-                key={String(label)}
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}
-              >
-                {label} {val}g
-              </span>
-            ))}
-          </div>
+        <div className="space-y-3">
+          <AdvancedNutritionCard
+            name={selectedItem.brand ? `${selectedItem.brand} ${selectedItem.name}` : selectedItem.name}
+            macros={{
+              calories: selectedItem.calories,
+              protein: selectedItem.protein,
+              carbs: selectedItem.carbs,
+              fats: selectedItem.fats,
+            }}
+            advanced={{
+              fiberG: selectedItem.fiberG,
+              sugarG: selectedItem.sugarG,
+              saturatedFatG: selectedItem.saturatedFatG,
+              sodiumMg: selectedItem.sodiumMg,
+              cholesterolMg: selectedItem.cholesterolMg,
+            }}
+            proSource={
+              selectedItem.source === "openrouter" &&
+              hasAiAdvancedNutrients(selectedItem)
+            }
+          />
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm">
           <p className="text-xs text-emerald-700 font-medium">
             <span className="inline-flex items-center gap-1.5">
               <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-emerald-700" aria-hidden />
@@ -367,6 +373,7 @@ export function FoodSearchEngine({
           >
             {t("foodSearch.addFavorite", "加入常用")}
           </button>
+          </div>
         </div>
       )}
 

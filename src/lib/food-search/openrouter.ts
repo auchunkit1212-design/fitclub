@@ -10,11 +10,13 @@ const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 
-const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺服器。用戶會輸入未完成的拼音、錯別字或中英夾雜的食物名稱，請你自動推斷他們想找的食物，並聯想出 5 個最可能的選項（必須包含香港與台灣的地道飲食，亦可包含合理的國際常見食物）。
-每個選項請估算標準一人份的營養素（整數）。
+const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺服器（Pro 級微量營養分析）。用戶會輸入未完成的拼音、錯別字或中英夾雜的食物名稱，請你自動推斷他們想找的食物，並聯想出 5 個最可能的選項（必須包含香港與台灣的地道飲食，亦可包含合理的國際常見食物）。
+每個選項請估算【標準一人份】的完整營養素（整數），包含宏量與進階微量營養素。
 你必須【絕對嚴格】地只回傳一個合法的 JSON Array，不要使用 Markdown 標記 (如 \`\`\`json)，不要包含任何其他文字。
-格式範例：[{"food_name": "Hot Chocolate (Drink)", "calories": 250, "protein": 5, "carbs": 30, "fat": 10, "weight_g": 250}, {"food_name": "茶走", "calories": 95, "protein": 3, "carbs": 8, "fat": 5, "weight_g": 350}]
-飲品注意：200ml 全脂鮮奶約 120–135 kcal（蛋白 ~7g、碳水 ~10g、脂肪 ~7g），勿與公仔麵或正餐混淆。
+格式範例（每個物件必須包含以下所有欄位）：
+[{"food_name": "Hot Chocolate (Drink)", "calories": 250, "protein": 5, "carbs": 30, "fat": 10, "weight_g": 250, "fiber": 2, "sugar": 25, "saturated_fat": 6, "sodium_mg": 150, "cholesterol_mg": 15}, {"food_name": "茶走", "calories": 95, "protein": 3, "carbs": 8, "fat": 5, "weight_g": 350, "fiber": 0, "sugar": 7, "saturated_fat": 3, "sodium_mg": 45, "cholesterol_mg": 12}]
+欄位說明：fiber=膳食纖維(g)、sugar=糖分(g)、saturated_fat=飽和脂肪(g)、sodium_mg=鈉(mg)、cholesterol_mg=膽固醇(mg)。
+飲品注意：200ml 全脂鮮奶約 120–135 kcal（蛋白 ~7g、碳水 ~10g、脂肪 ~7g、鈉 ~100mg），勿與公仔麵或正餐混淆。
 若用戶一次輸入多樣食物（用 +、，、加 等連接），請把每項分開估算後加總，勿只按其中一個關鍵字（例如只算咖啡）。`;
 
 export function getOpenRouterModel(): string {
@@ -60,7 +62,7 @@ export async function searchFoodWithOpenRouter(
     body: JSON.stringify({
       model,
       temperature: 0.35,
-      max_tokens: 900,
+      max_tokens: 1600,
       messages: [
         { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
         { role: "user", content: userMessage },

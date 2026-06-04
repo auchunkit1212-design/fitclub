@@ -63,7 +63,7 @@
       "last7Days": "Last 7 days",
       "placeholder": "Today's weight (kg)",
       "saving": "Saving…",
-      "updateButton": "Update today's weight",
+      "updateButton": "Save",
       "invalidAlert": "Please enter a valid weight (30–300 kg)",
       "savedToast": "Today's weight saved",
       "saveFailed": "Failed to save weight: {message}\n\nRun phase5-weight-logs.sql in Supabase."
@@ -164,7 +164,12 @@
     "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity.",
     "sheetTitle": "Quick log meal",
     "fullLogCta": "Full log (with photo)",
-    "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page."
+    "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page.",
+    "advanced": {
+      "title": "Advanced Nutrition",
+      "cholesterol": "Cholesterol",
+      "disclaimer": "Advanced nutrients are AI-estimated or derived from macros. Pro reference only—not medical advice."
+    }
   },
   "snackScanner": {
     "scanning": "Reading nutrition label...",

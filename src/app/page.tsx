@@ -892,28 +892,28 @@ export default function StudentDashboard() {
               />
             </section>
 
-            <section className={`${SOFT_CARD} p-5 space-y-3`}>
-              <div className="flex justify-between items-center">
-                <h2 className="font-semibold text-gray-900">{t("home.weight.title", "體重趨勢")}</h2>
-                <span className="text-xs text-gray-500">{t("home.weight.last7Days", "過去 7 日")}</span>
+            <section className={`${SOFT_CARD} p-5 space-y-3 overflow-hidden min-w-0`}>
+              <div className="flex justify-between items-center gap-2 min-w-0">
+                <h2 className="font-semibold text-gray-900 truncate">{t("home.weight.title", "體重趨勢")}</h2>
+                <span className="text-xs text-gray-500 shrink-0">{t("home.weight.last7Days", "過去 7 日")}</span>
               </div>
               <WeightTrendChart logs={weightLogs} loading={weightLogsLoading} />
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-row flex-wrap w-full gap-3 pt-1 min-w-0 sm:flex-nowrap">
                 <input
                   type="number"
                   inputMode="decimal"
                   value={weightInput}
                   onChange={(e) => setWeightInput(e.target.value)}
                   placeholder={t("home.weight.placeholder", "今日體重 (kg)")}
-                  className="flex-1 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-gray-900"
+                  className="min-w-0 w-full flex-1 basis-24 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-gray-900"
                 />
                 <button
                   type="button"
                   disabled={weightSaving}
                   onClick={handleSaveWeight}
-                  className={`shrink-0 px-4 py-2.5 rounded-2xl ${BRAND_BTN} text-sm font-semibold disabled:opacity-60 ${btnClass}`}
+                  className={`w-full sm:w-auto whitespace-nowrap flex-shrink-0 px-6 py-2.5 rounded-2xl ${BRAND_BTN} text-sm font-semibold disabled:opacity-60 ${btnClass}`}
                 >
-                  {weightSaving ? t("home.weight.saving", "儲存中...") : t("home.weight.updateButton", "更新今日體重")}
+                  {weightSaving ? t("home.weight.saving", "儲存中...") : t("home.weight.updateButton", "儲存")}
                 </button>
               </div>
             </section>
