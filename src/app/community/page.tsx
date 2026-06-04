@@ -69,7 +69,12 @@ export default function CommunityPage() {
           </h2>
           <div className="space-y-4">
             {posts.map((post) => (
-              <CommunityFeedCard key={post.id} post={post} />
+              <CommunityFeedCard
+                key={post.id}
+                post={post}
+                currentUserEmail={session.email}
+                onPostChanged={refreshFeed}
+              />
             ))}
           </div>
           <p className="text-center text-[11px] text-gray-400 pt-2 leading-relaxed">

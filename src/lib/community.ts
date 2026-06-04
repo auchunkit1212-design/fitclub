@@ -236,6 +236,59 @@ export const COMMUNITY_DEMO_POSTS: CommunityFeedPost[] = [
   },
 ];
 
+export function isCommunityPostOwner(
+  post: CommunityFeedPost,
+  userEmail: string
+): boolean {
+  if (post.isDemo) return false;
+  return (
+    post.authorEmail.trim().toLowerCase() ===
+    userEmail.trim().toLowerCase()
+  );
+}
+
+export function deleteCommunityPost(
+  postId: string,
+  authorEmail: string
+): boolean {
+  const email = authorEmail.trim().toLowerCase();
+  const posts = readStoredPosts();
+  const next = posts.filter(
+    (p) => !(p.id === postId && p.authorEmail.trim().toLowerCase() === email)
+  );
+  if (next.length === posts.length) return false;
+  writeStoredPosts(next);
+  return true;
+}
+
+export function updateCommunityPost(
+  postId: string,
+  authorEmail: string,
+  patch: { bodyText: string }
+): CommunityFeedPost | null {
+  const email = authorEmail.trim().toLowerCase();
+  const text = patch.bodyText.trim();
+  const posts = readStoredPosts();
+  const idx = posts.findIndex(
+    (p) => p.id === postId && p.authorEmail.trim().toLowerCase() === email
+  );
+  if (idx < 0) return null;
+
+  const current = posts[idx];
+  if (current.kind === "thought" && !text && !current.mediaUrl) {
+    throw new Error("EMPTY_POST");
+  }
+
+  const updated: CommunityFeedPost = {
+    ...current,
+    bodyText: text || undefined,
+    postedAt: formatRelativeTime(current.createdAt),
+  };
+  posts[idx] = updated;
+  writeStoredPosts(posts);
+  return updated;
+}
+
 export function loadCommunityFeed(now = Date.now()): CommunityFeedPost[] {
   const stored = readStoredPosts().map((p) => ({
     ...p,
