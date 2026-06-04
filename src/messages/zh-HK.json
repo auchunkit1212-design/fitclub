@@ -1,0 +1,449 @@
+{
+  "nav": {
+    "home": "主頁",
+    "coach": "教練",
+    "settings": "設定",
+    "addMeal": "飲食"
+  },
+  "header": {
+    "back": "← 返回",
+    "logout": "🚪 登出"
+  },
+  "language": {
+    "label": "語言",
+    "hk": "🇭🇰 廣東話",
+    "tw": "🇹🇼 繁體中文 (台灣)",
+    "en": "🇺🇸 English"
+  },
+  "home": {
+    "coachHome": "教練主頁",
+    "adminHome": "老闆主頁",
+    "studentHome": "學員主頁",
+    "defaults": {
+      "trialStudent": "體驗學員",
+      "unboundGym": "未綁定分店"
+    },
+    "todayMealCount": "今日 {count} 餐",
+    "healthMgmt": "健康管理",
+    "welcome": "👋 歡迎，{name}",
+    "advancedNutrition": "📊 高級營養分析",
+    "notifications": {
+      "logMeal": "⏰ 到時間記錄上一餐啦，唔好漏打卡！",
+      "hydration": "💧 補水提示：依家飲一大杯水先！",
+      "later": "稍後",
+      "actNow": "即刻做"
+    },
+    "errors": {
+      "cloudLoadFailed": "❌ 雲端讀取失敗，請檢查網絡或 Supabase。"
+    },
+    "targets": {
+      "lockedSolo": "AI 大猩猩聖旨",
+      "lockedCoach": "教練聖旨",
+      "lockedBanner": "📜 {source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g"
+    },
+    "soloModeBanner": "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！",
+    "coachReplied": "教練回覆咗你 {sticker}",
+    "broadcastPrefix": "📣 教練突發警告:",
+    "aiCoach": {
+      "soloTitle": "大猩猩 AI 私教",
+      "coachTitle": "專屬教練 AI 點評",
+      "soloJoined": "你已加入【{gym}】散客計劃。今日{status}，跟 AI 聖旨食就啱！",
+      "coachJoined": "你已綁定【{gym}】，負責教練【{coach}】。今日{status}，記得跟【{mealSchedule}】食！",
+      "notLoggedYet": "仲未打卡",
+      "progressGood": "進度唔錯",
+      "defaultCoach": "專業教練組"
+    },
+    "roastTitle": "🤖 AI 教練吐槽",
+    "settingsSummary": "你而家設定：{trainingType} · 每星期 {weeklyFrequency}",
+    "progress": {
+      "title": "今日進度"
+    },
+    "weight": {
+      "title": "體重趨勢",
+      "last7Days": "過去 7 日",
+      "placeholder": "今日體重 (kg)",
+      "saving": "儲存中...",
+      "updateButton": "更新今日體重",
+      "invalidAlert": "請輸入有效體重（30–300 kg）",
+      "savedToast": "✅ 今日體重已記錄",
+      "saveFailed": "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql"
+    },
+    "meals": {
+      "today": "今日餐單",
+      "macroLine": "{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g",
+      "quickSaved": "✅ 已記錄：{name}",
+      "quickSaveFailed": "❌ {message}"
+    }
+  },
+  "common": {
+    "loading": "載入中...",
+    "loadingCloud": "從雲端載入緊...",
+    "save": "儲存設定",
+    "protein": "蛋白",
+    "carbs": "碳水",
+    "fat": "脂肪",
+    "calories": "熱量",
+    "search": "搜尋",
+    "total": "總計",
+    "quantity": "數量",
+    "yes": "有"
+  },
+  "addMeal": {
+    "title": "記錄飲食",
+    "uploadPhoto": "上傳相片",
+    "uploadPhotoHint": "撳一下拍照或選擇相片（自動壓縮至 1MB 內）",
+    "compressingPhoto": "壓縮相片中...",
+    "uploadedPhotoAlt": "已上傳食物",
+    "calculateCalories": "零食計算機",
+    "publish": "發布記錄",
+    "saving": "正在儲存...",
+    "aiAnalyzing": "AI 正在火速分析...",
+    "advancedNutrition": "高級營養分析",
+    "mealType": "餐別",
+    "description": "食物描述",
+    "descriptionPlaceholder": "例如：牛肉叉燒拉麵、茶餐廳乾炒牛河...",
+    "quickPortion": "快速份量估算",
+    "quickPortionHint": "AI 已啟用外食隱形熱量修正（湯底、紅油、用油）",
+    "carbsPortion": "碳水（拳頭大小）",
+    "proteinPortion": "蛋白質（手掌大小）",
+    "veggies": "蔬菜",
+    "autoEstimateHint": "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）",
+    "perPieceCalories": "每件卡路里",
+    "applyTotalCalories": "套用總卡路里",
+    "manualMacros": "手動調整營養素",
+    "fromAiSearch": "來自 AI 搜尋",
+    "caloriesKcal": "熱量 (kcal)",
+    "proteinG": "蛋白質 (g)",
+    "carbsG": "碳水 (g)",
+    "fatG": "脂肪 (g)",
+    "mealTypes": {
+      "breakfast": "早餐",
+      "lunch": "午餐",
+      "dinner": "晚餐",
+      "afternoonTea": "下午茶",
+      "lateNight": "宵夜",
+      "snack": "零食"
+    },
+    "portions": {
+      "none": "無 / 冇食 (0)",
+      "carbsSmall": "細拳",
+      "carbsMedium": "中拳",
+      "carbsLarge": "大拳",
+      "proteinSmall": "細掌",
+      "proteinMedium": "中掌",
+      "proteinLarge": "大掌"
+    },
+    "errors": {
+      "descriptionRequired": "請填寫食物描述！",
+      "loginRequired": "請先登入再記錄飲食。",
+      "compressFailed": "相片壓縮失敗，請換一張較細的相片或再試一次。"
+    }
+  },
+  "foodSearch": {
+    "title": "巨型食物搜尋引擎",
+    "hint": "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養",
+    "sourceAi": "AI 聯想",
+    "sourceLocalDb": "港台本地庫",
+    "placeholder": "搜尋食物名稱...",
+    "searching": "分析中...",
+    "analyzing": "AI 正在分析",
+    "searchFailed": "搜尋失敗",
+    "notFound": "搵唔到相關食物，請換個關鍵字再試",
+    "noResultsDropdown": "找不到相符的食物，請嘗試其他關鍵字",
+    "typeToSearch": "請輸入至少 2 個字開始搜尋",
+    "minCharsHint": "繼續輸入以顯示建議…",
+    "networkError": "網絡錯誤，請稍後再試",
+    "sourceHk": "茶餐廳資料庫",
+    "sourceLocal": "智能估算",
+    "addedHint": "✓ 已帶入表單，撳「發布記錄」即可儲存",
+    "addFavorite": "⭐ 加入常用",
+    "favorites": "⭐ 常用 / 歷史",
+    "usedTimes": "用過 {count} 次",
+    "aboutG": "約 {g}g",
+    "loginRequired": "請先登入後再搜尋食物",
+    "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。",
+    "sheetTitle": "快速記錄飲食",
+    "fullLogCta": "📷 完整記錄（含相片）",
+    "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"
+  },
+  "snackScanner": {
+    "scanning": "AI 辨識標籤中...",
+    "scanButton": "📸 拍攝營養標籤",
+    "perServing": "每份 {cal} kcal（{size}）· 共 {count} 份",
+    "perPiece": "→ 每件約 {cal} kcal（已填入）",
+    "engineOpenAi": "引擎：GPT-4o Vision",
+    "engineMock": "引擎：示範模式"
+  },
+  "roles": {
+    "admin": "總控制台",
+    "coach": "教練",
+    "student": "學員"
+  },
+  "errors": {
+    "cloudInitTimeout": "雲端初始化逾時",
+    "fetchUsersTimeout": "讀取用戶逾時",
+    "fetchMealsTimeout": "讀取餐食逾時",
+    "fetchBrandTimeout": "讀取品牌逾時",
+    "cloudLoadFailed": "雲端讀取失敗"
+  },
+  "auth": {
+    "welcome": {
+      "login": "歡迎回來！登入後繼續記錄飲食同 AI 分析。",
+      "solo": "無教練都可加入 — 大猩猩 AI 私教會幫你設定目標同批閱每一餐。",
+      "coach": "開通你嘅 Gym 品牌空間，開始管理學員飲食。"
+    },
+    "tab": {
+      "login": "登入 Login",
+      "signup": "註冊 Sign Up"
+    },
+    "goLogin": "去登入",
+    "backToLogin": "返回登入",
+    "redirectingLogin": "前往登入頁...",
+    "placeholder": {
+      "email": "Email",
+      "password": "密碼（舊學員若未設定可留空）",
+      "name": "你嘅姓名",
+      "gymName": "Gym 品牌名稱（例如 Oxygym）"
+    },
+    "login": "登入",
+    "verifying": "驗證緊...",
+    "signup": {
+      "registering": "註冊中...",
+      "soloCta": "🦍 立即註冊 AI 私教",
+      "coachCta": "🚀 建立品牌空間",
+      "soloTitle": "註冊 AI 專屬私教（無須教練）",
+      "soloHint": "密碼必填 · 自動接入官方 AI Tenant · 大猩猩全面接管目標同批閱",
+      "trackSolo": "🦍 AI 私教散客",
+      "trackCoach": "🏢 教練 / 品牌",
+      "passwordPlaceholder": "密碼（至少 6 位，散客必填）",
+      "nameCoach": "教練姓名",
+      "nameStudent": "你嘅姓名"
+    },
+    "invite": {
+      "hide": "隱藏教練邀請碼",
+      "show": "我有教練邀請碼（選填）",
+      "placeholder": "請輸入教練專屬邀請碼 (若無教練請留空)"
+    },
+    "footer": {
+      "ownerPrompt": "Gym 老闆？",
+      "sasLink": "免費開通品牌空間"
+    },
+    "errors": {
+      "passwordMin": "⚠️ 請設定至少 6 位密碼。",
+      "emailRequired": "請先輸入 Email。",
+      "registerFailed": "註冊失敗",
+      "network": "❌ 連線失敗，請稍後再試。",
+      "networkRetry": "❌ 連線失敗，請檢查網絡後再試。",
+      "loginFailed": "登入失敗"
+    },
+    "toast": {
+      "welcome": "🎉 歡迎 {name}",
+      "adminWelcome": "🎉 歡迎 最高總裁",
+      "brandOpened": "🎉 品牌「{gymName}」已開通！",
+      "soloReady": "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。"
+    }
+  },
+  "settings": {
+    "title": "⚙️ 個人化設定",
+    "nickname": "暱稱",
+    "nicknamePlaceholder": "你想教練點叫你",
+    "job": "工作型態",
+    "weeklyFrequency": "每星期訓練次數",
+    "mealSchedule": "飲食安排",
+    "waterReminder": "飲水提醒",
+    "morningReminderTime": "朝早提醒時間",
+    "morningReminderHint": "每日喺你揀嘅時間，鎖屏收到飲水同記錄飲食提醒（需開啟下方推播）。",
+    "trainingType": "訓練類型",
+    "saved": "設定已儲存",
+    "bodySyncFailed": "身體數據同步失敗，已儲存本地設定。",
+    "jobs": {
+      "sedentary": "文職 (長坐)",
+      "field": "外勤 / 零售",
+      "physical": "高體力勞動"
+    },
+    "frequency": {
+      "low": "1-2次",
+      "medium": "3次",
+      "high": "4-5次",
+      "daily": "日日操"
+    },
+    "mealSchedules": {
+      "threeMeals": "一日三餐 (正常)",
+      "fourMeals": "一日四餐 / 多餐",
+      "fasting168": "168斷食 (兩餐)"
+    },
+    "water": {
+      "every1h": "每1小時提示",
+      "every2h": "每2小時提示",
+      "every4h": "每4小時提示",
+      "off": "關閉提示"
+    },
+    "training": {
+      "weightTraining": "重訓 (Weight Training)",
+      "cardio": "有氧 (Cardio)",
+      "mixed": "混合訓練"
+    },
+    "saveButton": "儲存設定"
+  },
+  "ai": {
+    "roast": {
+      "empty": "仲未食嘢？唔好餓壞個胃呀，記得記低你食咗咩！",
+      "overCalHigh": "食咁多乾炒牛河唔怪之得減唔到肥啦！聽日試下少油少鹽啦！",
+      "overCalMild": "今日有啲放縱喎，茶餐廳陷阱要小心，唔好再加杯凍奶茶！",
+      "underCal": "食咁少？你係咪想變營養不良？記得食夠蛋白質呀！",
+      "lowProtein": "蛋白質唔夠喎，加啲雞胸或者蛋啦，唔好淨係食碳水！",
+      "excellent": "今日食得好靚仔！繼續保持，教練見到都笑！",
+      "good": "表現唔錯，再留意下脂肪同鈉就完美啦！"
+    }
+  },
+  "onboarding": {
+    "header": {
+      "badge": "新手村 · 歡迎設定",
+      "title": "建立你嘅身體檔案",
+      "subtitleSolo": "大猩猩 AI 私教會根據你的數據，自動生成專屬卡路里與 Macros 聖旨。",
+      "subtitleCoach": "填寫以下資料先可以進入主頁，AI 先可以準確估算外食熱量同每日目標。"
+    },
+    "fields": {
+      "height": "身高 (cm)",
+      "weight": "體重 (kg)",
+      "age": "歲數",
+      "gender": "性別",
+      "targetWeight": "目標體重 (kg)",
+      "goal": "你的主要目標"
+    },
+    "gender": {
+      "male": "男",
+      "female": "女",
+      "other": "其他"
+    },
+    "goal": {
+      "cut": "🔥 減脂",
+      "bulk": "💪 增肌",
+      "maintain": "⚖️ 維持"
+    },
+    "submit": {
+      "saving": "儲存中...",
+      "aiGenerating": "AI 正在生成聖旨...",
+      "completeSolo": "完成設定，啟動 AI 私教",
+      "completeCoach": "完成設定，進入主頁"
+    },
+    "errors": {
+      "invalidFields": "請填寫有效嘅身高、體重、歲數同目標體重。",
+      "permission": "權限驗證失敗，請登出後以學員帳號重新登入。",
+      "saveFailed": "儲存失敗，請稍後再試。"
+    },
+    "warnings": {
+      "bypassSaved": "已用備用方式儲存身體檔案（雲端可能稍後同步）。",
+      "aiTargetsFailed": "身體檔案已儲存，但 AI 聖旨生成失敗：{error}",
+      "aiTargetsRetry": "身體檔案已儲存，AI 聖旨稍後再試。"
+    }
+  },
+  "bodyProfile": {
+    "sectionTitle": "📏 身體數據",
+    "height": "身高 (cm)",
+    "weight": "體重 (kg)",
+    "age": "歲數",
+    "gender": "性別",
+    "genderMale": "男",
+    "genderFemale": "女",
+    "genderOther": "其他",
+    "targetWeight": "目標體重 (kg)",
+    "exerciseCalories": "今日運動消耗 (kcal)"
+  },
+  "push": {
+    "title": "📲 飲水與飲食提醒",
+    "description": "開啟後即使閂咗 App，都可收到系統通知（需 Vercel 設定 VAPID 公鑰 + Supabase 儲存訂閱）。",
+    "unsupported": {
+      "title": "📲 系統通知",
+      "hint": "此裝置或瀏覽器唔支援 Web Push。iPhone 請用 Safari「加入主畫面」後，喺主畫面圖示開啟（iOS 16.4+）。"
+    },
+    "enable": "🔔 開啟飲水與飲食提醒",
+    "processing": "處理緊...",
+    "test": "測試通知",
+    "disable": "關閉",
+    "denied": {
+      "help": "你之前拒絕咗通知。請去 設定 → Safari/Chrome → 通知 → 允許 Nutrition Coach。"
+    },
+    "messages": {
+      "permissionStatus": "權限狀態：{permission}{subscribed}",
+      "subscribed": " · 已訂閱",
+      "enabled": "✅ 已開啟系統通知，訂閱已存入 Supabase。",
+      "enabledConsole": "✅ 已開啟通知。Supabase 表未建立，訂閱已印在 Console（F12）供你複製。",
+      "disabled": "已關閉推送訂閱。",
+      "testSent": "📲 已發送本機測試通知（若無彈出，請檢查系統通知設定）。",
+      "enableFailed": "❌ {message}",
+      "disableFailed": "關閉失敗",
+      "testFailed": "測試失敗"
+    }
+  },
+  "coachPush": {
+    "title": "📲 學員打卡即時推播",
+    "description": "開啟後，學員上傳飲食紀錄時你會收到系統級通知，即使 App 在背景或已關閉。",
+    "unsupportedTitle": "📲 學員打卡推播",
+    "unsupportedHint": "此瀏覽器不支援 Web Push。請用 Chrome / Safari，iPhone 需「加入主畫面」後從圖示開啟（iOS 16.4+）。",
+    "enable": "🔔 開啟推播通知",
+    "processing": "處理中...",
+    "test": "測試通知",
+    "disable": "關閉",
+    "permission": "權限：{permission}",
+    "subscribed": " · 已訂閱",
+    "enabled": "✅ 已開啟推播！學員打卡時你會收到系統通知。",
+    "testOk": "📲 已發送本機測試通知。",
+    "deniedHelp": "你先前拒絕了通知。請到系統設定 → 瀏覽器 → 通知 → 允許此網站。"
+  },
+  "nutritionDash": {
+    "badge": "殿堂級",
+    "title": "高級營養分析",
+    "calories": {
+      "sectionTitle": "每日熱量動態扣減",
+      "goal": "目標 Goal",
+      "food": "已攝取 Food",
+      "exercise": "運動 Exercise",
+      "remaining": "剩餘熱量 Remaining",
+      "formula": "{goal} − {food} + {exercise} = {remaining}"
+    },
+    "exercise": {
+      "placeholder": "運動消耗",
+      "update": "更新"
+    },
+    "bucket": {
+      "empty": "暫無記錄"
+    },
+    "charts": {
+      "title": "圖表分析",
+      "mealCalorieShare": "每餐卡路里佔比",
+      "macroRatio": "三大營養素黃金比例",
+      "noMeals": "今日未有飲食記錄",
+      "noMacroData": "未有營養素數據"
+    },
+    "recommendations": {
+      "title": "💡 剩餘 Quota 配餐推薦",
+      "loading": "AI 配餐建議生成中...",
+      "itemLine": "約 {calories} kcal · P{protein} C{carbs} F{fats}"
+    },
+    "micro": {
+      "title": "微量元素 Micronutrients",
+      "fiber": "膳食纖維",
+      "sugar": "糖分",
+      "satFat": "飽和脂肪",
+      "sodium": "鈉",
+      "disclaimer": "* 微量元素由今日總攝取估算，僅供參考"
+    },
+    "close": "關閉",
+    "tooltip": {
+      "calories": "熱量",
+      "energy": "能量"
+    }
+  },
+  "mealBuckets": {
+    "breakfast": "早餐",
+    "lunch": "午餐",
+    "dinner": "晚餐",
+    "snack": "零食"
+  },
+  "mealStatus": {
+    "good": "良好",
+    "caution": "注意",
+    "danger": "危險"
+  }
+}

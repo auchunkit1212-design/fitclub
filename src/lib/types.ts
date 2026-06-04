@@ -51,6 +51,7 @@ export interface RegistryUser {
   coach?: string;
   addedBy?: string;
   tenantId?: string;
+  tenantName?: string;
   logo?: string;
   appTitle?: string;
   themeColor?: ThemeColor;
@@ -71,6 +72,8 @@ export interface UserSession {
   tenantSlug?: string;
   brandName?: string;
   brandLogo?: string;
+  /** 無真人教練的 B2C 散客 */
+  isSoloStudent?: boolean;
   isLoggedIn: boolean;
 }
 
@@ -132,8 +135,17 @@ export interface FoodSearchItem {
   protein: number;
   carbs: number;
   fats: number;
+  weightG?: number;
   servingLabel: string;
-  source: "edamam" | "mock";
+  source:
+    | "openrouter"
+    | "hk_tw"
+    | "hk"
+    | "local"
+    | "gemini"
+    | "openai"
+    | "edamam"
+    | "mock";
 }
 
 export const DEFAULT_PROFILE: UserProfile = {

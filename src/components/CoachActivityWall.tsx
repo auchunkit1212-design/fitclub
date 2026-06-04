@@ -59,14 +59,30 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function buildNudgeMessage(studentName: string, coachName: string): string {
+function buildNudgeMessage(
+  studentName: string,
+  coachName: string,
+  todayMealCount = 0
+): string {
+  const mealLine =
+    todayMealCount === 0
+      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！🍽️`
+      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！🍽️`;
+
   return `🦍 喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
 
-${coachName} 教練發現你今日仲未記錄任何飲食！🍽️
+${mealLine}
 
-快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros，唔好等體重偷偷報復你呀！💪
+快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。💧 記得飲水！💪
 
 — Nutrition Coach · Coach! what to eat?`;
+}
+
+function buildPushNudgeBody(coachName: string, todayMealCount: number): string {
+  if (todayMealCount === 0) {
+    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！💧 記得飲水。`;
+  }
+  return `${coachName} 教練提醒你：今日已記 ${todayMealCount} 餐，請繼續補記同飲水，保持完整打卡！`;
 }
 
 interface CoachActivityWallProps {
@@ -85,6 +101,7 @@ export function CoachActivityWall({
   const [savingTargets, setSavingTargets] = useState(false);
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
   const [nudgeStudent, setNudgeStudent] = useState<RegistryUser | null>(null);
+  const [nudgeSending, setNudgeSending] = useState(false);
 
   const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
 
@@ -197,6 +214,45 @@ export function CoachActivityWall({
     }
   };
 
+  const sendAppNudge = async (student: RegistryUser) => {
+    const todayMealCount = todayMealCountByEmail.get(student.email) ?? 0;
+    setNudgeSending(true);
+    try {
+      const res = await fetch("/api/coach/nudge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          studentEmail: student.email,
+          message: buildPushNudgeBody(coachName, todayMealCount),
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        hint?: string;
+        studentName?: string;
+      };
+
+      if (res.ok && data.ok) {
+        onToast(`📲 已發送 App 通知俾 ${data.studentName ?? student.name}`);
+        setNudgeStudent(null);
+        return;
+      }
+
+      onToast(
+        data.hint ? `${data.error} — ${data.hint}` : data.error ?? "發送失敗"
+      );
+    } catch (err) {
+      onToast(errorMessage(err, "發送失敗"));
+    } finally {
+      setNudgeSending(false);
+    }
+  };
+
   const coachName = getSession()?.name ?? "教練";
 
   return (
@@ -210,22 +266,23 @@ export function CoachActivityWall({
             return (
               <li
                 key={s.email}
-                className="flex items-center justify-between gap-2 text-sm"
+                className="flex items-center justify-between gap-3 text-sm min-w-0"
               >
-                <span className="truncate">
+                <span className="min-w-0 flex-1 truncate">
                   {s.name}{" "}
-                  <span className="text-zinc-400 text-xs">({count} 餐今日)</span>
+                  <span className="text-zinc-400 text-xs whitespace-nowrap">
+                    ({count} 餐今日)
+                  </span>
                 </span>
-                {count === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setNudgeStudent(s)}
-                    className={`shrink-0 text-lg px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 ${btnClass}`}
-                    title="催促記錄飲食"
-                  >
-                    🔔
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setNudgeStudent(s)}
+                  className={`shrink-0 text-lg px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
+                  title="發送 App 提醒（有記錄都可發）"
+                  aria-label={`提醒 ${s.name} 記錄飲食`}
+                >
+                  🔔
+                </button>
               </li>
             );
           })}
@@ -298,6 +355,10 @@ export function CoachActivityWall({
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
             const status = getMealStatus(log);
+            const calories = Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0;
+            const protein = Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0;
+            const carbs = Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0;
+            const fats = Number.isFinite(Number(log.fats)) ? Number(log.fats) : 0;
             return (
               <li
                 key={log.id}
@@ -314,8 +375,8 @@ export function CoachActivityWall({
                     </p>
                     <p className="text-sm text-zinc-700 truncate">{log.description}</p>
                     <p className="text-xs text-zinc-500 mt-1">
-                      {new Date(log.date).toLocaleString("zh-HK")} · {log.calories}{" "}
-                      kcal · P{log.protein} C{log.carbs} F{log.fats}
+                      {new Date(log.date).toLocaleString("zh-HK")} · {calories} kcal · P{protein} C
+                      {carbs} F{fats}
                     </p>
                   </div>
                   <span
@@ -355,28 +416,46 @@ export function CoachActivityWall({
         />
       )}
 
-      {nudgeStudent && (
+      {nudgeStudent && (() => {
+        const mealCount = todayMealCountByEmail.get(nudgeStudent.email) ?? 0;
+        const nudgeText = buildNudgeMessage(
+          nudgeStudent.name,
+          coachName,
+          mealCount
+        );
+        return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="font-bold text-zinc-900">🦍 大猩猩催餐訊息</h3>
+            <h3 className="font-bold text-zinc-900">
+              🔔 提醒 {nudgeStudent.name} 記錄
+            </h3>
+            <p className="text-xs text-zinc-500">
+              今日已記錄 {mealCount} 餐 · 有記錄都可以再發提醒
+            </p>
             <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed bg-amber-50 rounded-xl p-3 border border-amber-100">
-              {buildNudgeMessage(nudgeStudent.name, coachName)}
+              {nudgeText}
             </p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  copyNudge(buildNudgeMessage(nudgeStudent.name, coachName))
-                }
+                disabled={nudgeSending}
+                onClick={() => sendAppNudge(nudgeStudent)}
+                className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60 ${btnClass}`}
+              >
+                {nudgeSending ? "發送中..." : "📲 發送 App 通知（鎖屏提醒）"}
+              </button>
+              <button
+                type="button"
+                onClick={() => copyNudge(nudgeText)}
                 className={`w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold ${btnClass}`}
               >
-                📋 一鍵複製
+                📋 複製文字訊息
               </button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(buildNudgeMessage(nudgeStudent.name, coachName))}`}
+                href={`https://wa.me/?text=${encodeURIComponent(nudgeText)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold text-center ${btnClass}`}
+                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center ${btnClass}`}
               >
                 💬 WhatsApp 轉發
               </a>
@@ -390,7 +469,8 @@ export function CoachActivityWall({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

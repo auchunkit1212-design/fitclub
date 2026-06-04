@@ -1,4 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  AI_GORILLA_COACH_EMAIL,
+  AI_SOLO_TENANT_NAME,
+  AI_SOLO_TENANT_SLUG,
+} from "@/lib/registry-constants";
 import type { Tenant } from "@/lib/types";
 
 type TenantRow = {
@@ -55,14 +60,27 @@ export async function fetchTenantBySlug(slug: string): Promise<Tenant | null> {
   return data ? mapTenant(data as TenantRow) : null;
 }
 
+/** 學員註冊邀請碼：先比對 slug，再 fallback 至 tenant id */
+export async function fetchTenantByInviteCode(
+  code: string
+): Promise<Tenant | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  const bySlug = await fetchTenantBySlug(trimmed);
+  if (bySlug) return bySlug;
+  return fetchTenantById(trimmed);
+}
+
 export async function createTenantWithCoach(input: {
   email: string;
   passwordHash: string;
   gymName: string;
+  coachName?: string;
 }): Promise<{ tenant: Tenant; coachEmail: string }> {
   const supabase = getSupabaseAdmin();
   const email = input.email.trim().toLowerCase();
   const slug = generateTenantSlug(input.gymName);
+  const coachName = input.coachName?.trim() || input.gymName.trim();
 
   const { data: tenantRow, error: tenantError } = await supabase
     .from("tenants")
@@ -80,7 +98,7 @@ export async function createTenantWithCoach(input: {
 
   const { error: coachError } = await supabase.from("users_registry").insert({
     email,
-    name: input.gymName.trim(),
+    name: coachName,
     role: "coach",
     gym: input.gymName.trim(),
     tenant_id: tenant.id,
@@ -93,6 +111,90 @@ export async function createTenantWithCoach(input: {
   if (coachError) throw coachError;
 
   return { tenant, coachEmail: email };
+}
+
+/** 取得或建立散客 AI 私教 Tenant（#003） */
+export async function ensureAiSoloTenant(): Promise<Tenant> {
+  const existing = await fetchTenantBySlug(AI_SOLO_TENANT_SLUG);
+  if (existing) return existing;
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tenants")
+    .insert({
+      slug: AI_SOLO_TENANT_SLUG,
+      gym_name: AI_SOLO_TENANT_NAME,
+      owner_email: AI_GORILLA_COACH_EMAIL,
+      plan: "b2c",
+      theme_color: "emerald",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    const retry = await fetchTenantBySlug(AI_SOLO_TENANT_SLUG);
+    if (retry) return retry;
+    throw error;
+  }
+  return mapTenant(data as TenantRow);
+}
+
+export async function createPartnerTenantWithCoach(input: {
+  brandName: string;
+  coachEmail: string;
+  coachName: string;
+  addedByAdminEmail: string;
+}): Promise<{ tenant: Tenant; coachEmail: string }> {
+  const supabase = getSupabaseAdmin();
+  const brandName = input.brandName.trim();
+  const email = input.coachEmail.trim().toLowerCase();
+  const coachName = input.coachName.trim();
+  const slug = generateTenantSlug(brandName);
+
+  const { data: tenantRow, error: tenantError } = await supabase
+    .from("tenants")
+    .insert({
+      slug,
+      gym_name: brandName,
+      owner_email: email,
+      plan: "trial",
+    })
+    .select("*")
+    .single();
+
+  if (tenantError) throw tenantError;
+  const tenant = mapTenant(tenantRow as TenantRow);
+
+  const { error: coachError } = await supabase.from("users_registry").insert({
+    email,
+    name: coachName,
+    role: "coach",
+    gym: brandName,
+    tenant_id: tenant.id,
+    added_by: input.addedByAdminEmail.trim().toLowerCase(),
+    app_title: brandName,
+    theme_color: "emerald",
+  });
+
+  if (coachError) throw coachError;
+
+  return { tenant, coachEmail: email };
+}
+
+export async function fetchTenantNamesByIds(
+  ids: string[]
+): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return new Map();
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("id, gym_name")
+    .in("id", unique);
+
+  if (error) throw error;
+  return new Map((data ?? []).map((row) => [String(row.id), String(row.gym_name)]));
 }
 
 export async function syncTenantBranding(

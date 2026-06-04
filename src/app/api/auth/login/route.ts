@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "登入失敗";
+    console.error("Login failed:", message, error);
     return NextResponse.json({ error: message }, { status: 401 });
   }
 }

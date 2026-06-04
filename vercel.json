@@ -1,7 +1,16 @@
 {
+  "functions": {
+    "src/app/api/food-search/route.ts": {
+      "maxDuration": 30
+    }
+  },
   "crons": [
     {
-      "path": "/api/cron/reminders",
+      "path": "/api/cron/reminders?slot=morning",
+      "schedule": "0,30 * * * *"
+    },
+    {
+      "path": "/api/cron/reminders?slot=nightly",
       "schedule": "0 14 * * *"
     },
     {

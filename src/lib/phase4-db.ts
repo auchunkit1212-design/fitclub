@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { fetchAllUsers, fetchUserByEmail } from "@/lib/db";
+import { fetchTenantById } from "@/lib/tenant";
 import type {
   FavoriteFood,
   MealLog,
@@ -10,25 +11,77 @@ import type {
   StudentNutritionTargets,
 } from "@/lib/types";
 
+function addCoach(
+  coaches: Map<string, RegistryUser>,
+  user: RegistryUser | undefined | null
+): void {
+  if (user?.role === "coach" && user.email) {
+    coaches.set(user.email.trim().toLowerCase(), user);
+  }
+}
+
+/** 找出應收到學員打卡推播的教練（含 tenant 店主及同店教練） */
+export async function findCoachesForStudent(
+  studentEmail: string
+): Promise<RegistryUser[]> {
+  const student = await fetchUserByEmail(studentEmail);
+  if (!student) return [];
+
+  const all = await fetchAllUsers();
+  const coaches = new Map<string, RegistryUser>();
+
+  if (student.addedBy) {
+    addCoach(
+      coaches,
+      all.find(
+        (u) =>
+          u.role === "coach" &&
+          u.email.trim().toLowerCase() === student.addedBy!.trim().toLowerCase()
+      )
+    );
+  }
+
+  if (student.coach?.trim()) {
+    addCoach(
+      coaches,
+      all.find((u) => u.role === "coach" && u.name === student.coach)
+    );
+  }
+
+  if (student.tenantId) {
+    for (const user of all) {
+      if (user.role === "coach" && user.tenantId === student.tenantId) {
+        addCoach(coaches, user);
+      }
+    }
+
+    const tenant = await fetchTenantById(student.tenantId);
+    if (tenant?.ownerEmail) {
+      addCoach(
+        coaches,
+        all.find(
+          (u) =>
+            u.email.trim().toLowerCase() ===
+            tenant.ownerEmail.trim().toLowerCase()
+        )
+      );
+    }
+  }
+
+  return Array.from(coaches.values());
+}
+
 export async function findCoachForStudent(
   studentEmail: string
 ): Promise<RegistryUser | null> {
-  const student = await fetchUserByEmail(studentEmail);
-  if (!student?.coach && !student?.addedBy) return null;
-  const all = await fetchAllUsers();
-  if (student.addedBy) {
-    const byEmail = all.find(
-      (u) => u.role === "coach" && u.email === student.addedBy
-    );
-    if (byEmail) return byEmail;
-  }
-  return (
-    all.find((u) => u.role === "coach" && u.name === student.coach) ?? null
-  );
+  const coaches = await findCoachesForStudent(studentEmail);
+  return coaches[0] ?? null;
 }
 
 export function studentHasCoach(student: RegistryUser | null): boolean {
-  return Boolean(student?.coach?.trim() || student?.addedBy);
+  return Boolean(
+    student?.coach?.trim() || student?.addedBy?.trim() || student?.tenantId
+  );
 }
 
 export async function fetchStudentNutritionTargets(

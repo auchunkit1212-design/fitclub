@@ -50,6 +50,53 @@ create policy "dev_all_meal_logs" on meal_logs
   using (true)
   with check (true);
 
+-- Web Push 訂閱（學員 / 教練提醒）
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_email_idx on push_subscriptions (email);
+
+alter table push_subscriptions enable row level security;
+
+drop policy if exists "dev_all_push_subscriptions" on push_subscriptions;
+create policy "dev_all_push_subscriptions" on push_subscriptions
+  for all to anon, authenticated
+  using (true)
+  with check (true);
+
+-- 學員飲水 / 飲食提醒設定（Cron 發 App 外 Web Push）
+create table if not exists student_reminder_settings (
+  email text primary key references users_registry (email) on delete cascade,
+  water_reminder text not null default '2h'
+    check (water_reminder in ('1h', '2h', '4h', 'off')),
+  meal_schedule text not null default 'threeMeals'
+    check (meal_schedule in ('threeMeals', 'fourMeals', 'fasting168')),
+  morning_reminder_time text not null default '08:00',
+  last_hydration_push_at timestamptz,
+  last_meal_push_key text,
+  last_morning_push_key text,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists student_reminder_settings_updated_idx
+  on student_reminder_settings (updated_at desc);
+
+alter table student_reminder_settings enable row level security;
+
+drop policy if exists "dev_all_student_reminder_settings" on student_reminder_settings;
+create policy "dev_all_student_reminder_settings" on student_reminder_settings
+  for all to anon, authenticated
+  using (true)
+  with check (true);
+
 -- Demo 種子資料
 insert into users_registry (email, name, role, gym, coach, added_by, app_title, theme_color)
 values

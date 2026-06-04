@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/I18nProvider";
 import type { StudentBodyProfile, StudentGender } from "@/lib/types";
 
 interface BodyProfileFieldsProps {
@@ -15,12 +16,16 @@ interface BodyProfileFieldsProps {
 }
 
 export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-3 pt-2 border-t border-zinc-100">
-      <h3 className="text-sm font-semibold text-zinc-800">📏 身體數據</h3>
+      <h3 className="text-sm font-semibold text-zinc-800">
+        {t("bodyProfile.sectionTitle", "📏 身體數據")}
+      </h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">身高 (cm)</label>
+          <label className="text-xs text-zinc-500">{t("bodyProfile.height", "身高 (cm)")}</label>
           <input
             type="number"
             value={values.heightCm}
@@ -29,7 +34,7 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">體重 (kg)</label>
+          <label className="text-xs text-zinc-500">{t("bodyProfile.weight", "體重 (kg)")}</label>
           <input
             type="number"
             value={values.weightKg}
@@ -38,7 +43,7 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">歲數</label>
+          <label className="text-xs text-zinc-500">{t("bodyProfile.age", "歲數")}</label>
           <input
             type="number"
             value={values.age}
@@ -47,7 +52,7 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">性別</label>
+          <label className="text-xs text-zinc-500">{t("bodyProfile.gender", "性別")}</label>
           <select
             value={values.gender}
             onChange={(e) =>
@@ -55,13 +60,13 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
             }
             className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 bg-white"
           >
-            <option value="male">男</option>
-            <option value="female">女</option>
-            <option value="other">其他</option>
+            <option value="male">{t("bodyProfile.genderMale", "男")}</option>
+            <option value="female">{t("bodyProfile.genderFemale", "女")}</option>
+            <option value="other">{t("bodyProfile.genderOther", "其他")}</option>
           </select>
         </div>
         <div className="space-y-1 col-span-2">
-          <label className="text-xs text-zinc-500">目標體重 (kg)</label>
+          <label className="text-xs text-zinc-500">{t("bodyProfile.targetWeight", "目標體重 (kg)")}</label>
           <input
             type="number"
             value={values.targetWeightKg}
@@ -70,7 +75,9 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
           />
         </div>
         <div className="space-y-1 col-span-2">
-          <label className="text-xs text-zinc-500">今日運動消耗 (kcal)</label>
+          <label className="text-xs text-zinc-500">
+            {t("bodyProfile.exerciseCalories", "今日運動消耗 (kcal)")}
+          </label>
           <input
             type="number"
             min={0}

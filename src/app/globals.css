@@ -8,8 +8,19 @@ body {
   overflow-x: hidden;
 }
 
+:root {
+  --brand-primary: #059669;
+  --brand-primary-hover: #047857;
+  --brand-primary-dark: #065f46;
+  --brand-primary-light: #ecfdf5;
+  /* legacy aliases */
+  --brand-lime: #059669;
+  --brand-lime-hover: #047857;
+  --brand-lime-muted: #ecfdf5;
+}
+
 body {
-  @apply bg-zinc-50 text-zinc-900 antialiased;
+  @apply bg-white text-gray-900 antialiased;
 }
 
 @layer utilities {
@@ -23,5 +34,18 @@ body {
 
   .top-safe {
     top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .soft-card {
+    @apply w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)];
   }
 }

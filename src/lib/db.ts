@@ -67,6 +67,32 @@ function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
   return user;
 }
 
+async function attachTenantNames(users: RegistryUser[]): Promise<RegistryUser[]> {
+  const tenantIds = users
+    .map((u) => u.tenantId)
+    .filter((id): id is string => Boolean(id));
+  if (tenantIds.length === 0) return users;
+
+  try {
+    const unique = Array.from(new Set(tenantIds));
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id, gym_name")
+      .in("id", unique);
+    if (error) throw error;
+    const names = new Map(
+      (data ?? []).map((row) => [String(row.id), String(row.gym_name)])
+    );
+    return users.map((u) => ({
+      ...u,
+      tenantName: u.tenantId ? names.get(u.tenantId) ?? u.appTitle ?? u.gym : undefined,
+    }));
+  } catch (err) {
+    console.warn("[db] fetch tenant names failed", err);
+    return users;
+  }
+}
+
 function mapMeal(row: MealRow): MealLog {
   return {
     id: row.id,
@@ -135,6 +161,25 @@ export async function fetchUserByEmail(
   return getDemoUser(normalized);
 }
 
+/** 伺服器登入專用：以 service role 讀取用戶與 password_hash，避免 RLS 阻擋舊帳號登入 */
+export async function fetchUserByEmailForAuth(
+  email: string
+): Promise<RegistryUser | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("*")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return mapUser(data as UserRow, true);
+
+  const { getDemoUser } = await import("@/lib/demo-users");
+  return getDemoUser(normalized);
+}
+
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
   const { data, error } = await supabase
     .from("users_registry")
@@ -143,7 +188,7 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
 
   if (error) throw error;
   const rows = (data as UserRow[]).map((row) => mapUser(row));
-  if (rows.length > 0) return rows;
+  if (rows.length > 0) return attachTenantNames(rows);
 
   const { getDemoRegistry } = await import("@/lib/demo-users");
   return getDemoRegistry();
@@ -406,7 +451,20 @@ export async function updateCoachBrandingAdmin(
     .eq("email", email)
     .eq("role", "coach");
 
-  if (error) throw error;
+  if (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    const msg = error.message ?? "";
+    if (code === "PGRST204" || /broadcast/i.test(msg)) {
+      throw Object.assign(new Error("資料庫缺少 broadcast 欄位"), {
+        code: "MISSING_BROADCAST_COLUMN",
+        hint: "請在 Supabase SQL Editor 執行 supabase/fix-users-registry-broadcast.sql",
+      });
+    }
+    throw error;
+  }
 
   if (payload.tenantId) {
     await syncTenantBranding(payload.tenantId, {

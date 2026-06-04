@@ -17,6 +17,12 @@ export function MealDetailModal({
 }: MealDetailModalProps) {
   const imageSrc = getMealImageSrc(log);
   const status = getMealStatus(log);
+  const displayMacros = {
+    calories: Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0,
+    protein: Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0,
+    carbs: Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0,
+    fats: Number.isFinite(Number(log.fats)) ? Number(log.fats) : 0,
+  };
 
   return (
     <div
@@ -65,15 +71,15 @@ export function MealDetailModal({
             <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${mealStatusStyles(status)}`}>
               {status}
             </span>
-            <span className="text-2xl font-bold text-zinc-900">{log.calories} kcal</span>
+            <span className="text-2xl font-bold text-zinc-900">{displayMacros.calories} kcal</span>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             {(
               [
-                ["蛋白質", log.protein, "g", "text-emerald-600"],
-                ["碳水", log.carbs, "g", "text-amber-600"],
-                ["脂肪", log.fats, "g", "text-rose-600"],
+                ["蛋白質", displayMacros.protein, "g", "text-emerald-600"],
+                ["碳水", displayMacros.carbs, "g", "text-amber-600"],
+                ["脂肪", displayMacros.fats, "g", "text-rose-600"],
               ] as const
             ).map(([label, val, unit, color]) => (
               <div

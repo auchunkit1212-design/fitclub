@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getHongKongHour,
-  NIGHTLY_REMINDER_HOUR_HKT,
-  runScheduledPushBroadcast,
-} from "@/lib/push-server";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { NIGHTLY_REMINDER_HOUR_HKT } from "@/lib/push-server";
+import {
+  DEFAULT_MORNING_REMINDER_TIME,
+  runScheduledStudentReminders,
+} from "@/lib/scheduled-reminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Vercel Cron（每日 UTC 14:00 ≈ HKT 22:00）：每晚一次打卡總結或明日提示 */
+/**
+ * Vercel Cron：
+ * - `0,30 * * * *` — 每 30 分鐘檢查學員自訂朝早提醒時間
+ * - `0 14 * * *` UTC ≈ 22:00 HKT — 每晚打卡總結
+ */
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,22 +22,26 @@ export async function GET(request: NextRequest) {
 
   try {
     const force = request.nextUrl.searchParams.get("force") === "1";
-    const result = await runScheduledPushBroadcast({ force });
+    const slotParam = request.nextUrl.searchParams.get("slot");
+    const slot =
+      slotParam === "morning" || slotParam === "nightly"
+        ? slotParam
+        : undefined;
 
-    if (!force && result.sent === 0 && result.payloads.length === 0) {
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        message: `僅在香港時間 ${NIGHTLY_REMINDER_HOUR_HKT}:00 發送每晚提醒`,
-        hourHkt: getHongKongHour(),
-        schedule: {
-          nightlyHourHkt: NIGHTLY_REMINDER_HOUR_HKT,
-          vercelCronUtc: "0 14 * * *",
-        },
-      });
-    }
+    const result = await runScheduledStudentReminders({ force, slot });
 
-    return NextResponse.json({ ok: true, forced: force || undefined, ...result });
+    return NextResponse.json({
+      ok: true,
+      forced: force || undefined,
+      slot: slot ?? "auto",
+      schedule: {
+        morningCronUtc: "0,30 * * * *",
+        defaultMorningTimeHkt: DEFAULT_MORNING_REMINDER_TIME,
+        nightlyCronUtc: "0 14 * * *",
+        nightlyHourHkt: NIGHTLY_REMINDER_HOUR_HKT,
+      },
+      ...result,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Cron failed";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

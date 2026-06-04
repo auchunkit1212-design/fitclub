@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
+import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
+import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
@@ -13,7 +15,7 @@ import {
   resolveBranding,
   updateCoachLogo,
 } from "@/lib/db";
-import { applyBrandToSession } from "@/lib/branding";
+import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
@@ -51,6 +53,7 @@ export default function CoachPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [toast, setToast] = useState("");
 
   const showToast = (message: string) => {
@@ -76,7 +79,14 @@ export default function CoachPage() {
         setStudents(filterStudentsForSession(current, registry));
 
         if (current.role === "coach") {
+          const brandResolved = await resolveBrandForUser(current, registry);
           const resolved = await resolveBranding(current, registry);
+          setInviteCode(
+            brandResolved.tenantSlug ??
+              current.tenantSlug ??
+              current.tenantId ??
+              ""
+          );
           setAppTitle(resolved.branding.appTitle);
           setThemeColor(resolved.branding.themeColor);
           setLogo(resolved.branding.logo);
@@ -121,7 +131,11 @@ export default function CoachPage() {
       const data = (await res.json()) as { error?: string; hint?: string };
       if (!res.ok) {
         console.error("[coach] branding publish failed:", data);
-        alert(data.error ?? "雲端發布失敗，請稍後再試。");
+        alert(
+          data.hint
+            ? `${data.error ?? "雲端發布失敗"}\n\n${data.hint}`
+            : data.error ?? "雲端發布失敗，請稍後再試。"
+        );
         return;
       }
       const updated = applyBrandToSession(session, {
@@ -182,25 +196,29 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
       <PageHeader
         title={`${brand.gymName} · 教練後台`}
         subtitle="白標品牌 · 雲端同步"
-        variant="dark"
+        variant="light"
         backLabel="← 返回主頁"
         onBack={() => router.push("/")}
       />
 
       <main className="px-4 py-4 space-y-4">
-        <section className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
-          <h2 className="text-sm font-bold text-indigo-200">
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <CoachPushSubscribe />
+        )}
+
+        <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
+          <h2 className="text-sm font-bold text-emerald-700">
             🤖 AI 數據智能整合中心
           </h2>
           <button
             type="button"
             disabled={isGenerating}
             onClick={generateAIReport}
-            className={`w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
+            className={`w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
             {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
           </button>
@@ -210,6 +228,13 @@ export default function CoachPage() {
             </pre>
           )}
         </section>
+
+        {session?.role === "coach" && (
+          <CoachInviteCodePanel
+            inviteCode={inviteCode}
+            onCopied={showToast}
+          />
+        )}
 
         {session?.role === "coach" && (
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
@@ -291,7 +316,7 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-zinc-900 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {publishing ? "發布緊..." : "發布到雲端"}
             </button>
@@ -314,7 +339,7 @@ export default function CoachPage() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">
+        <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">
           {toast}
         </div>
       )}

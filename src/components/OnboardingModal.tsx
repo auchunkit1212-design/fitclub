@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import { upsertStudentBodyProfile } from "@/lib/db";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import type { StudentBodyProfile, StudentGender } from "@/lib/types";
+import type { FitnessGoal } from "@/lib/ai-solo-coach";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -13,6 +15,8 @@ interface OnboardingModalProps {
   initial?: Partial<StudentBodyProfile> | null;
   onComplete: (profile: StudentBodyProfile) => void;
   themeBtn?: string;
+  /** B2C 散客：額外收集減脂/增肌目標並生成 AI 聖旨 */
+  soloMode?: boolean;
 }
 
 function logOnboardingError(
@@ -27,7 +31,9 @@ export function OnboardingModal({
   initial,
   onComplete,
   themeBtn = "bg-emerald-600",
+  soloMode = false,
 }: OnboardingModalProps) {
+  const { t } = useI18n();
   const [heightCm, setHeightCm] = useState(
     initial?.heightCm ? String(initial.heightCm) : ""
   );
@@ -44,6 +50,7 @@ export function OnboardingModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
+  const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>("cut");
 
   const buildProfile = (
     normalizedEmail: string,
@@ -83,7 +90,7 @@ export function OnboardingModal({
     try {
       const saved = await upsertStudentBodyProfile(profile);
       saveSession({ ...clientSession, role: "student", email: profile.email });
-      setWarning("已用備用方式儲存身體檔案（雲端可能稍後同步）。");
+      setWarning(t("onboarding.warnings.bypassSaved", "已用備用方式儲存身體檔案（雲端可能稍後同步）。"));
       onComplete(saved);
       return true;
     } catch (bypassErr) {
@@ -105,7 +112,7 @@ export function OnboardingModal({
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!h || !w || !a || !tw || h < 100 || h > 250 || w < 30 || w > 300) {
-      setError("請填寫有效嘅身高、體重、歲數同目標體重。");
+      setError(t("onboarding.errors.invalidFields", "請填寫有效嘅身高、體重、歲數同目標體重。"));
       return;
     }
 
@@ -194,6 +201,27 @@ export function OnboardingModal({
       }
 
       const profile: StudentBodyProfile = data.profile ?? profilePayload;
+
+      if (soloMode) {
+        const aiRes = await fetch("/api/student/ai-targets", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionRequestHeaders(),
+          },
+          body: JSON.stringify({ fitnessGoal }),
+        });
+        if (!aiRes.ok) {
+          const aiData = (await aiRes.json()) as { error?: string };
+          setWarning(
+            aiData.error
+              ? `身體檔案已儲存，但 AI 聖旨生成失敗：${aiData.error}`
+              : "身體檔案已儲存，AI 聖旨稍後再試。"
+          );
+        }
+      }
+
       onComplete(profile);
     } catch (e) {
       const message = e instanceof Error ? e.message : "儲存失敗，請稍後再試。";
@@ -213,17 +241,19 @@ export function OnboardingModal({
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white px-5 py-6 rounded-t-3xl">
-          <p className="text-emerald-100 text-sm font-medium">新手村 · 歡迎設定</p>
-          <h2 className="text-xl font-bold mt-1">建立你嘅身體檔案</h2>
+          <p className="text-emerald-100 text-sm font-medium">{t("onboarding.header.badge", "新手村 · 歡迎設定")}</p>
+          <h2 className="text-xl font-bold mt-1">{t("onboarding.header.title", "建立你嘅身體檔案")}</h2>
           <p className="text-sm text-white/90 mt-2 leading-relaxed">
-            填寫以下資料先可以進入主頁，AI 先可以準確估算外食熱量同每日目標。
+            {soloMode
+              ? t("onboarding.header.subtitleSolo", "大猩猩 AI 私教會根據你的數據，自動生成專屬卡路里與 Macros 聖旨。")
+              : t("onboarding.header.subtitleCoach", "填寫以下資料先可以進入主頁，AI 先可以準確估算外食熱量同每日目標。")}
           </p>
         </div>
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-500">身高 (cm)</label>
+              <label className="text-xs font-medium text-zinc-500">{t("onboarding.fields.height", "身高 (cm)")}</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -234,7 +264,7 @@ export function OnboardingModal({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-500">體重 (kg)</label>
+              <label className="text-xs font-medium text-zinc-500">{t("onboarding.fields.weight", "體重 (kg)")}</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -248,7 +278,7 @@ export function OnboardingModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-500">歲數</label>
+              <label className="text-xs font-medium text-zinc-500">{t("onboarding.fields.age", "歲數")}</label>
               <input
                 type="number"
                 value={age}
@@ -258,21 +288,21 @@ export function OnboardingModal({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-500">性別</label>
+              <label className="text-xs font-medium text-zinc-500">{t("onboarding.fields.gender", "性別")}</label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as StudentGender)}
                 className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base bg-white"
               >
-                <option value="male">男</option>
-                <option value="female">女</option>
-                <option value="other">其他</option>
+                <option value="male">{t("onboarding.gender.male", "男")}</option>
+                <option value="female">{t("onboarding.gender.female", "女")}</option>
+                <option value="other">{t("onboarding.gender.other", "其他")}</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-500">目標體重 (kg)</label>
+            <label className="text-xs font-medium text-zinc-500">{t("onboarding.fields.targetWeight", "目標體重 (kg)")}</label>
             <input
               type="number"
               inputMode="decimal"
@@ -282,6 +312,30 @@ export function OnboardingModal({
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base"
             />
           </div>
+
+          {soloMode && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-500">
+                {t("onboarding.fields.goal", "你的主要目標")}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["cut", "bulk", "maintain"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFitnessGoal(value)}
+                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${btnClass} ${
+                      fitnessGoal === value
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                        : "border-zinc-200 bg-white text-zinc-600"
+                    }`}
+                  >
+                    {t(`onboarding.goal.${value}`, value)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {warning && (
             <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2">
@@ -301,7 +355,13 @@ export function OnboardingModal({
             onClick={handleSubmit}
             className={`w-full ${themeBtn} text-white font-bold py-4 rounded-2xl disabled:opacity-60 ${btnClass}`}
           >
-            {saving ? "儲存中..." : "完成設定，進入主頁"}
+            {saving
+              ? soloMode
+                ? t("onboarding.submit.aiGenerating", "AI 正在生成聖旨...")
+                : t("onboarding.submit.saving", "儲存中...")
+              : soloMode
+                ? t("onboarding.submit.completeSolo", "完成設定，啟動 AI 私教")
+                : t("onboarding.submit.completeCoach", "完成設定，進入主頁")}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   resolveBranding,
   updateCoachBranding,
 } from "@/lib/db";
+import { getSessionRequestHeaders } from "@/lib/session";
 import { DEFAULT_BRANDING, DEFAULT_PROFILE } from "@/lib/types";
 import type {
   CoachBranding,
@@ -52,10 +53,31 @@ export async function getMealLogs(
   return fetchMealLogsForSession(session, registry);
 }
 
+export async function notifyCoachAfterMealLog(log: MealLog): Promise<void> {
+  try {
+    await fetch("/api/meals/notify-coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getSessionRequestHeaders(),
+      },
+      credentials: "include",
+      body: JSON.stringify({ log }),
+    });
+  } catch (err) {
+    console.warn("[saveMealLog] coach notify failed:", err);
+  }
+}
+
 export async function saveMealLog(
-  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string }
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string },
+  options?: { notifyCoach?: boolean }
 ): Promise<MealLog> {
-  return insertMealLog(log);
+  const saved = await insertMealLog(log);
+  if (options?.notifyCoach) {
+    void notifyCoachAfterMealLog(saved);
+  }
+  return saved;
 }
 
 export async function saveCoachBranding(
@@ -88,28 +110,28 @@ export function isToday(isoDate: string): boolean {
 export function getThemeClasses(theme: ThemeColor) {
   const map = {
     emerald: {
-      header: "bg-emerald-600",
+      header: "",
       accent: "text-emerald-600",
-      btn: "bg-emerald-600",
-      text: "text-emerald-600",
-      ring: "ring-emerald-500",
-      bar: "bg-emerald-500",
+      btn: "bg-emerald-600 hover:bg-emerald-700",
+      text: "text-emerald-700",
+      ring: "ring-emerald-600",
+      bar: "bg-emerald-600",
     },
     blue: {
-      header: "bg-blue-600",
-      accent: "text-blue-600",
-      btn: "bg-blue-600",
-      text: "text-blue-600",
-      ring: "ring-blue-500",
-      bar: "bg-blue-500",
+      header: "",
+      accent: "text-emerald-600",
+      btn: "bg-emerald-600 hover:bg-emerald-700",
+      text: "text-emerald-700",
+      ring: "ring-emerald-600",
+      bar: "bg-emerald-600",
     },
     black: {
-      header: "bg-zinc-900",
-      accent: "text-zinc-800",
-      btn: "bg-zinc-900",
-      text: "text-zinc-800",
-      ring: "ring-zinc-700",
-      bar: "bg-zinc-800",
+      header: "",
+      accent: "text-emerald-600",
+      btn: "bg-emerald-600 hover:bg-emerald-700",
+      text: "text-emerald-700",
+      ring: "ring-emerald-600",
+      bar: "bg-emerald-600",
     },
   } as const;
   return map[theme] ?? map.emerald;

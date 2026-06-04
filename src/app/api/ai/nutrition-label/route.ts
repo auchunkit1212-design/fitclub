@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { scanNutritionLabel } from "@/lib/vision-label";
+import { normalizeLanguage } from "@/lib/i18n";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -11,13 +12,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
   }
 
-  const body = (await request.json()) as { imageBase64?: string };
+  const body = (await request.json()) as { imageBase64?: string; lang?: string };
   if (!body.imageBase64?.trim()) {
     return NextResponse.json({ error: "請上傳標籤相片" }, { status: 400 });
   }
 
   try {
-    const result = await scanNutritionLabel(body.imageBase64);
+    const result = await scanNutritionLabel(
+      body.imageBase64,
+      normalizeLanguage(body.lang)
+    );
     return NextResponse.json({ result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "掃描失敗";

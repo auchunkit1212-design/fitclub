@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { BRAND_FULL, BRAND_NAME } from "@/lib/brand";
+import { APP_LOGO_PATH, BRAND_FULL, BRAND_NAME } from "@/lib/brand";
 import { BrandingProvider } from "@/components/BrandingProvider";
 import { DynamicManifestLink } from "@/components/DynamicManifestLink";
+import { I18nProvider } from "@/components/I18nProvider";
 import { PwaShell } from "@/components/PwaShell";
 import "./globals.css";
 
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
   applicationName: BRAND_NAME,
   manifest: "/api/manifest",
     icons: {
-    icon: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/gorilla.svg", type: "image/svg+xml" }],
+    icon: [{ url: APP_LOGO_PATH, type: "image/png" }],
+    apple: [{ url: APP_LOGO_PATH, type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
@@ -40,12 +41,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-HK">
-      <body className="antialiased bg-zinc-50 min-h-screen">
-        <BrandingProvider>
-          <DynamicManifestLink />
-          {children}
-          <PwaShell />
-        </BrandingProvider>
+      <body className="antialiased bg-white min-h-screen text-gray-900">
+        <I18nProvider>
+          <BrandingProvider>
+            <DynamicManifestLink />
+            {children}
+            <PwaShell />
+          </BrandingProvider>
+        </I18nProvider>
       </body>
     </html>
   );

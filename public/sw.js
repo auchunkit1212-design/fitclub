@@ -1,8 +1,8 @@
-const CACHE_VERSION = "nutrition-coach-pwa-v6";
-const STATIC_CACHE = "nutrition-coach-static-v6";
+const CACHE_VERSION = "nutrition-coach-pwa-v7";
+const STATIC_CACHE = "nutrition-coach-static-v7";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
-const PRECACHE_URLS = ["/logo.png", "/manifest.json"];
+const PRECACHE_URLS = ["/gorilla-logo.png", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -39,6 +39,7 @@ function isNavigationRequest(request) {
 function isStaticAsset(pathname) {
   return (
     pathname.startsWith("/_next/static/") ||
+    pathname === "/gorilla-logo.png" ||
     pathname === "/logo.png" ||
     pathname === "/manifest.json"
   );
@@ -107,8 +108,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/gorilla-logo.png",
+      badge: "/gorilla-logo.png",
       tag: payload.tag || "nutrition-coach-reminder",
       renotify: true,
       data: { url: payload.url || "/" },
@@ -119,20 +120,29 @@ self.addEventListener("push", (event) => {
 /** 用戶撳通知時打開 App 對應頁面 */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
+  const path = event.notification.data?.url || "/";
+  const targetUrl = new URL(path, self.location.origin).href;
 
   event.waitUntil(
-    clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windowClients) => {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(
+      async (windowClients) => {
         for (const client of windowClients) {
-          if (client.url.includes(self.location.origin) && "focus" in client) {
+          if (!client.url.startsWith(self.location.origin)) continue;
+          if ("navigate" in client) {
+            try {
+              await client.navigate(targetUrl);
+            } catch {
+              /* older browsers */
+            }
+          }
+          if ("focus" in client) {
             return client.focus();
           }
         }
         if (clients.openWindow) {
           return clients.openWindow(targetUrl);
         }
-      })
+      }
+    )
   );
 });

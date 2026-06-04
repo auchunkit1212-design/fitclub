@@ -3,11 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
+import { useI18n } from "@/components/I18nProvider";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { PORTION_NONE, estimateMacros } from "@/lib/ai-mock";
+import { estimateMacros } from "@/lib/ai-mock";
+import {
+  CARBS_PORTION_KEYS,
+  MEAL_TYPE_KEYS,
+  PROTEIN_PORTION_KEYS,
+  carbsPortionKeyToLegacy,
+  proteinPortionKeyToLegacy,
+  veggiesKeyToLegacy,
+  type CarbsPortionKey,
+  type MealTypeKey,
+  type ProteinPortionKey,
+} from "@/lib/portion-estimate";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
@@ -25,24 +37,21 @@ import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
 import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
 
-const MEAL_TYPES = ["早餐", "午餐", "晚餐", "下午茶", "宵夜", "零食"];
-const CARBS_OPTIONS = [PORTION_NONE, "細拳", "中拳", "大拳"];
-const PROTEIN_OPTIONS = [PORTION_NONE, "細掌", "中掌", "大掌"];
-const VEGGIE_OPTIONS = [PORTION_NONE, "有"];
-
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 export default function AddMealPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [mealType, setMealType] = useState("午餐");
+  const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
   const [description, setDescription] = useState("");
   const [imageBase64, setImageBase64] = useState<string | undefined>();
-  const [carbsPortion, setCarbsPortion] = useState("中拳");
-  const [proteinPortion, setProteinPortion] = useState("中掌");
-  const [hasVeggies, setHasVeggies] = useState("有");
+  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("carbsMedium");
+  const [proteinPortionKey, setProteinPortionKey] =
+    useState<ProteinPortionKey>("proteinMedium");
+  const [hasVeggies, setHasVeggies] = useState(true);
   const [calories, setCalories] = useState(0);
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
@@ -61,6 +70,7 @@ export default function AddMealPage() {
   const [goalFats, setGoalFats] = useState(65);
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
+  const [macrosFromSearch, setMacrosFromSearch] = useState(false);
 
   useEffect(() => {
     const parsed = getSession();
@@ -136,7 +146,7 @@ export default function AddMealPage() {
       setImageBase64(compressed);
     } catch (err) {
       console.error("[add-meal] image compress failed", err);
-      alert("相片壓縮失敗，請換一張較細的相片或再試一次。");
+      alert(t("addMeal.errors.compressFailed", "相片壓縮失敗，請換一張較細的相片或再試一次。"));
     } finally {
       setImageCompressing(false);
       e.target.value = "";
@@ -158,14 +168,14 @@ export default function AddMealPage() {
 
   const handleSave = async () => {
     if (!description.trim()) {
-      alert("請填寫食物描述！");
+      alert(t("addMeal.errors.descriptionRequired", "請填寫食物描述！"));
       return;
     }
     if (saveLoading) return;
 
     const email = readSessionEmail();
     if (!email) {
-      alert("請先登入再記錄飲食。");
+      alert(t("addMeal.errors.loginRequired", "請先登入再記錄飲食。"));
       router.push("/register");
       return;
     }
@@ -175,18 +185,30 @@ export default function AddMealPage() {
     const currentSession = getSession();
     if (currentSession) saveSession(currentSession);
 
-    // 自動 AI 估算（儲存前）
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const aiEst = estimateMacros(
-      description.trim(),
-      carbsPortion,
-      proteinPortion,
-      hasVeggies
-    );
-    setCalories(aiEst.calories);
-    setProtein(aiEst.protein);
-    setCarbs(aiEst.carbs);
-    setFats(aiEst.fats);
+    let finalCalories = calories;
+    let finalProtein = protein;
+    let finalCarbs = carbs;
+    let finalFats = fats;
+
+    if (macrosFromSearch && calories > 0) {
+      // 巨型食物搜尋引擎已帶入 AI 估算，直接沿用表單數值
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const aiEst = estimateMacros(
+        description.trim(),
+        carbsPortionKeyToLegacy(carbsPortionKey),
+        proteinPortionKeyToLegacy(proteinPortionKey),
+        veggiesKeyToLegacy(hasVeggies)
+      );
+      finalCalories = aiEst.calories;
+      finalProtein = aiEst.protein;
+      finalCarbs = aiEst.carbs;
+      finalFats = aiEst.fats;
+      setCalories(aiEst.calories);
+      setProtein(aiEst.protein);
+      setCarbs(aiEst.carbs);
+      setFats(aiEst.fats);
+    }
 
     let imageToUpload = imageBase64;
     if (imageBase64) {
@@ -220,14 +242,16 @@ export default function AddMealPage() {
       }
     }
 
+    const mealTypeLabel = t(`addMeal.mealTypes.${mealTypeKey}`, mealTypeKey);
+
     const basePayload = {
       email,
-      mealType,
+      mealType: mealTypeLabel,
       description: description.trim(),
-      calories: aiEst.calories,
-      protein: aiEst.protein,
-      carbs: aiEst.carbs,
-      fats: aiEst.fats,
+      calories: finalCalories,
+      protein: finalProtein,
+      carbs: finalCarbs,
+      fats: finalFats,
     };
 
     const mealPayload = {
@@ -241,7 +265,7 @@ export default function AddMealPage() {
     };
 
     const saveDirect = async (imageUrl?: string) => {
-      await saveMealLog({ ...mealPayload, imageUrl });
+      await saveMealLog({ ...mealPayload, imageUrl }, { notifyCoach: true });
     };
 
     const trySave = async (imageUrl?: string) => {
@@ -312,7 +336,7 @@ export default function AddMealPage() {
   if (!profileChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        載入中...
+        {t("common.loading", "載入中...")}
       </div>
     );
   }
@@ -322,6 +346,7 @@ export default function AddMealPage() {
       <OnboardingModal
         email={session.email}
         initial={bodyProfile ?? undefined}
+        soloMode={Boolean(session.isSoloStudent)}
         onComplete={(saved) => {
           setBodyProfile(saved);
           setGoalCalories(computeTargetProfile(saved).targetCalories);
@@ -331,7 +356,7 @@ export default function AddMealPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
       {showNutritionDash && (
         <NutritionDashboard
           logs={todayLogs}
@@ -362,18 +387,18 @@ export default function AddMealPage() {
       )}
 
       <PageHeader
-        title="記錄飲食"
+        title={t("addMeal.title", "記錄飲食")}
         onBack={() => router.push("/")}
-        backLabel="← 返回"
+        backLabel={t("header.back", "← 返回")}
       />
 
       <main className="px-4 py-4 space-y-4">
         <button
           type="button"
           onClick={() => setShowNutritionDash(true)}
-          className={`w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
+          className={`w-full bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
         >
-          📊 高級營養分析
+          📊 {t("addMeal.advancedNutrition", "高級營養分析")}
         </button>
 
         <FoodSearchEngine
@@ -383,22 +408,23 @@ export default function AddMealPage() {
             setProtein(item.protein);
             setCarbs(item.carbs);
             setFats(item.fats);
+            setMacrosFromSearch(item.fromSearch);
           }}
         />
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
-              餐別
+              {t("addMeal.mealType", "餐別")}
             </label>
             <select
-              value={mealType}
-              onChange={(e) => setMealType(e.target.value)}
+              value={mealTypeKey}
+              onChange={(e) => setMealTypeKey(e.target.value as MealTypeKey)}
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base bg-white"
             >
-              {MEAL_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {MEAL_TYPE_KEYS.map((key) => (
+                <option key={key} value={key}>
+                  {t(`addMeal.mealTypes.${key}`, key)}
                 </option>
               ))}
             </select>
@@ -406,12 +432,18 @@ export default function AddMealPage() {
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
-              食物描述
+              {t("addMeal.description", "食物描述")}
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="例如：牛肉叉燒拉麵、茶餐廳乾炒牛河..."
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setMacrosFromSearch(false);
+              }}
+              placeholder={t(
+                "addMeal.descriptionPlaceholder",
+                "例如：牛肉叉燒拉麵、茶餐廳乾炒牛河..."
+              )}
               rows={3}
               className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base resize-none"
             />
@@ -419,7 +451,7 @@ export default function AddMealPage() {
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              食物相片
+              {t("addMeal.uploadPhoto", "上傳相片")}
             </label>
             <input
               ref={fileInputRef}
@@ -440,16 +472,18 @@ export default function AddMealPage() {
               }`}
             >
               {imageCompressing ? (
-                <p className="text-zinc-600 font-medium">壓縮相片中...</p>
+                <p className="text-zinc-600 font-medium">
+                  {t("addMeal.compressingPhoto", "壓縮相片中...")}
+                </p>
               ) : imageBase64 ? (
                 <img
                   src={imageBase64}
-                  alt="已上傳食物"
+                  alt={t("addMeal.uploadedPhotoAlt", "已上傳食物")}
                   className="max-h-40 mx-auto rounded-xl object-contain"
                 />
               ) : (
                 <p className="text-zinc-500">
-                  📷 撳一下拍照或選擇相片（自動壓縮至 1MB 內）
+                  📷 {t("addMeal.uploadPhotoHint", "撳一下拍照或選擇相片（自動壓縮至 1MB 內）")}
                 </p>
               )}
             </div>
@@ -457,57 +491,64 @@ export default function AddMealPage() {
         </section>
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">快速份量估算</h2>
+          <h2 className="font-semibold text-zinc-800">
+            {t("addMeal.quickPortion", "快速份量估算")}
+          </h2>
           <p className="text-xs text-zinc-500">
-            AI 已啟用外食隱形熱量修正（湯底、紅油、用油）
+            {t("addMeal.quickPortionHint", "AI 已啟用外食隱形熱量修正（湯底、紅油、用油）")}
           </p>
           <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="text-xs text-zinc-500">碳水（拳頭大小）</label>
+              <label className="text-xs text-zinc-500">
+                {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
+              </label>
               <select
-                value={carbsPortion}
-                onChange={(e) => setCarbsPortion(e.target.value)}
+                value={carbsPortionKey}
+                onChange={(e) => setCarbsPortionKey(e.target.value as CarbsPortionKey)}
                 className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                {CARBS_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
+                {CARBS_PORTION_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`addMeal.portions.${key}`, key)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs text-zinc-500">蛋白質（手掌大小）</label>
+              <label className="text-xs text-zinc-500">
+                {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
+              </label>
               <select
-                value={proteinPortion}
-                onChange={(e) => setProteinPortion(e.target.value)}
+                value={proteinPortionKey}
+                onChange={(e) =>
+                  setProteinPortionKey(e.target.value as ProteinPortionKey)
+                }
                 className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                {PROTEIN_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
+                {PROTEIN_PORTION_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`addMeal.portions.${key}`, key)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs text-zinc-500">蔬菜</label>
+              <label className="text-xs text-zinc-500">
+                {t("addMeal.veggies", "蔬菜")}
+              </label>
               <select
-                value={hasVeggies}
-                onChange={(e) => setHasVeggies(e.target.value)}
+                value={hasVeggies ? "yes" : "none"}
+                onChange={(e) => setHasVeggies(e.target.value === "yes")}
                 className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
               >
-                {VEGGIE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
+                <option value="none">{t("addMeal.portions.none", "無 / 冇食 (0)")}</option>
+                <option value="yes">{t("common.yes", "有")}</option>
               </select>
             </div>
           </div>
 
           <p className="text-xs text-zinc-500">
-            儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）
+            {t("addMeal.autoEstimateHint", "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）")}
           </p>
         </section>
 
@@ -517,7 +558,7 @@ export default function AddMealPage() {
             onClick={() => setSnackOpen(!snackOpen)}
             className={`w-full flex justify-between items-center font-semibold text-zinc-800 ${btnClass}`}
           >
-            <span>🍪 零食計算機</span>
+            <span>🍪 {t("addMeal.calculateCalories", "計算卡路里")}</span>
             <span className="text-zinc-400">{snackOpen ? "▲" : "▼"}</span>
           </button>
           {snackOpen && (
@@ -527,7 +568,9 @@ export default function AddMealPage() {
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-zinc-500">每件卡路里</label>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.perPieceCalories", "每件卡路里")}
+                  </label>
                   <input
                     type="number"
                     value={snackPerPiece}
@@ -536,7 +579,9 @@ export default function AddMealPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500">數量</label>
+                  <label className="text-xs text-zinc-500">
+                    {t("common.quantity", "數量")}
+                  </label>
                   <input
                     type="number"
                     min={1}
@@ -547,28 +592,37 @@ export default function AddMealPage() {
                 </div>
               </div>
               <p className="text-sm text-zinc-600">
-                總計: {snackPerPiece * snackQty} kcal
+                {t("common.total", "總計")}: {snackPerPiece * snackQty} kcal
               </p>
               <button
                 type="button"
                 onClick={applySnackTotal}
-                className={`w-full bg-amber-500 text-white font-medium py-3 rounded-xl ${btnClass}`}
+                className={`w-full bg-emerald-600 text-white font-medium py-3 rounded-xl ${btnClass}`}
               >
-                套用總卡路里
+                {t("addMeal.applyTotalCalories", "套用總卡路里")}
               </button>
             </div>
           )}
         </section>
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">手動調整營養素</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-zinc-800">
+              {t("addMeal.manualMacros", "手動調整營養素")}
+            </h2>
+            {macrosFromSearch && calories > 0 && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                {t("addMeal.fromAiSearch", "來自 AI 搜尋")}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {(
               [
-                ["熱量 (kcal)", calories, setCalories],
-                ["蛋白質 (g)", protein, setProtein],
-                ["碳水 (g)", carbs, setCarbs],
-                ["脂肪 (g)", fats, setFats],
+                [t("addMeal.caloriesKcal", "熱量 (kcal)"), calories, setCalories],
+                [t("addMeal.proteinG", "蛋白質 (g)"), protein, setProtein],
+                [t("addMeal.carbsG", "碳水 (g)"), carbs, setCarbs],
+                [t("addMeal.fatG", "脂肪 (g)"), fats, setFats],
               ] as const
             ).map(([label, val, setter]) => (
               <div key={label}>
@@ -591,10 +645,12 @@ export default function AddMealPage() {
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
           {saveLoading
-            ? "AI 正在火速分析..."
+            ? macrosFromSearch
+              ? t("addMeal.saving", "正在儲存...")
+              : t("addMeal.aiAnalyzing", "AI 正在火速分析...")
             : imageCompressing
-              ? "壓縮相片中..."
-              : "發布記錄"}
+              ? t("addMeal.compressingPhoto", "壓縮相片中...")
+              : t("addMeal.publish", "發布記錄")}
         </button>
       </main>
     </div>

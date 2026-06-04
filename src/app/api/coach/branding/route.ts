@@ -29,11 +29,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     const readable = toReadableError(error, "雲端發布失敗");
+    const hint =
+      error &&
+      typeof error === "object" &&
+      "hint" in error &&
+      typeof (error as { hint: string }).hint === "string"
+        ? (error as { hint: string }).hint
+        : "請在 Supabase 執行 supabase/fix-users-registry-broadcast.sql（及 fix-tenants-branding.sql）";
     console.error("[coach/branding] publish failed:", readable.message, error);
     return NextResponse.json(
       {
         error: readable.message,
-        hint: "請執行 fix-tenants-branding.sql 並確認 SUPABASE_SERVICE_ROLE_KEY",
+        hint,
       },
       { status: 500 }
     );
