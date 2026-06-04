@@ -7,7 +7,7 @@ import {
 } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
-import { fetchTenantById } from "@/lib/tenant";
+import { backfillCoachStudentTenants, fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
 import type { RegistryUser, UserSession } from "@/lib/types";
 
@@ -27,7 +27,16 @@ async function enrichSession(
     try {
       const tenant = await fetchTenantById(user.tenantId);
       session.tenantSlug = tenant?.slug ?? session.tenantSlug;
+      session.tenantId = user.tenantId;
       session.isSoloStudent = isAiSoloTenantSlug(tenant?.slug);
+
+      if (user.role === "coach" && user.name) {
+        await backfillCoachStudentTenants({
+          coachEmail: user.email,
+          coachName: user.name,
+          tenantId: user.tenantId,
+        });
+      }
     } catch (err) {
       console.warn("[auth] tenant lookup skipped:", err);
     }

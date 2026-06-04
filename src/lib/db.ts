@@ -1,5 +1,9 @@
 import { resolveBrandForUser } from "@/lib/branding";
-import { ensureCoachTenant, syncTenantBranding } from "@/lib/tenant";
+import {
+  backfillCoachStudentTenants,
+  ensureCoachTenant,
+  syncTenantBranding,
+} from "@/lib/tenant";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
@@ -201,24 +205,31 @@ export async function fetchUsersForSession(
 
   if (session.role === "admin") return all;
 
-  if (session.tenantId) {
-    return all.filter((u) => u.tenantId === session.tenantId);
-  }
-
   if (session.role === "coach") {
+    const coachEmail = session.email.trim().toLowerCase();
+    const coachName = session.name?.trim();
     return all.filter(
       (u) =>
-        u.addedBy === session.email ||
-        u.email === session.email ||
-        (u.role === "student" && u.coach === session.name)
+        u.email === coachEmail ||
+        u.addedBy === coachEmail ||
+        (coachName && u.coach === coachName) ||
+        (session.tenantId != null && u.tenantId === session.tenantId)
     );
   }
 
   if (session.role === "student") {
+    if (session.tenantId) {
+      return all.filter(
+        (u) =>
+          u.email === session.email ||
+          u.tenantId === session.tenantId ||
+          (session.coach && u.role === "coach" && u.name === session.coach)
+      );
+    }
     return all.filter(
       (u) =>
         u.email === session.email ||
-        (u.role === "coach" && u.name === session.coach)
+        (session.coach && u.role === "coach" && u.name === session.coach)
     );
   }
 
@@ -479,6 +490,15 @@ export async function updateCoachBrandingAdmin(
     logoUrl: payload.logo,
     themeColor: payload.themeColor,
   });
+
+  const coach = await fetchUserByEmailForAuth(email);
+  if (coach?.name) {
+    await backfillCoachStudentTenants({
+      coachEmail: email,
+      coachName: coach.name,
+      tenantId: tenant.id,
+    });
+  }
 
   return { tenantId: tenant.id, tenantSlug: tenant.slug };
 }

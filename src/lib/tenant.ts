@@ -93,14 +93,22 @@ export async function ensureCoachTenant(input: {
     throw new Error("找不到教練帳號，請確認已用教練身份登入。");
   }
 
+  const coachName =
+    input.coachName?.trim() || String(coachRow.name ?? "").trim() || gymName;
+
   if (coachRow.tenant_id) {
     const existing = await fetchTenantById(String(coachRow.tenant_id));
-    if (existing) return existing;
+    if (existing) {
+      await backfillCoachStudentTenants({
+        coachEmail: email,
+        coachName,
+        tenantId: existing.id,
+      });
+      return existing;
+    }
   }
 
   const slug = generateTenantSlug(gymName);
-  const coachName =
-    input.coachName?.trim() || String(coachRow.name ?? "").trim() || gymName;
 
   const { data: tenantRow, error: tenantError } = await supabase
     .from("tenants")
@@ -128,7 +136,50 @@ export async function ensureCoachTenant(input: {
 
   if (linkError) throw linkError;
 
+  await backfillCoachStudentTenants({
+    coachEmail: email,
+    coachName,
+    tenantId: tenant.id,
+  });
+
   return tenant;
+}
+
+/** 將舊學員（以教練名稱/added_by 關聯但無 tenant_id）綁到教練 Tenant */
+export async function backfillCoachStudentTenants(input: {
+  coachEmail: string;
+  coachName: string;
+  tenantId: string;
+}): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const email = input.coachEmail.trim().toLowerCase();
+  const coachName = input.coachName.trim();
+
+  const { data: students, error: studentErr } = await supabase
+    .from("users_registry")
+    .select("email, added_by, coach")
+    .eq("role", "student")
+    .is("tenant_id", null);
+
+  if (studentErr) throw studentErr;
+
+  const emails = (students ?? [])
+    .filter((row) => {
+      const addedBy = String(row.added_by ?? "").trim().toLowerCase();
+      const coach = String(row.coach ?? "").trim();
+      return addedBy === email || (coachName && coach === coachName);
+    })
+    .map((row) => String(row.email));
+
+  if (emails.length === 0) return;
+
+  const { error: updateErr } = await supabase
+    .from("users_registry")
+    .update({ tenant_id: input.tenantId })
+    .eq("role", "student")
+    .in("email", emails);
+
+  if (updateErr) throw updateErr;
 }
 
 export async function createTenantWithCoach(input: {

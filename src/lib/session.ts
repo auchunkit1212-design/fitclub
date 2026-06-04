@@ -50,6 +50,9 @@ export function getSessionRequestHeaders(): Record<string, string> {
     role: session.role,
     name: session.name,
     gym: session.gym,
+    tenantId: session.tenantId,
+    coach: session.coach,
+    addedBy: session.addedBy,
     isLoggedIn: true as const,
   };
   return {
