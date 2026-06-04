@@ -54,19 +54,23 @@ import { getMealImageSrc } from "@/lib/meal-display";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
 import {
+  loadReminderSettingsFromServer,
+  syncReminderSettingsToServer,
+} from "@/lib/reminder-settings-client";
+import {
   DEFAULT_PERSONAL_SETTINGS,
   JOB_KEYS,
   MEAL_SCHEDULE_KEYS,
   TRAINING_TYPE_KEYS,
   WATER_REMINDER_KEYS,
   WEEKLY_FREQUENCY_KEYS,
+  MORNING_REMINDER_TIME_OPTIONS,
   normalizePersonalSettings,
+  formatMorningReminderTimeLabel,
   type PersonalSettings,
 } from "@/lib/personal-settings";
 
 type ActiveTab = "dashboard" | "settings";
-
-type ActiveNotification = { message: string; action?: "logMeal" } | null;
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -199,7 +203,6 @@ export default function StudentDashboard() {
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
-  const [activeNotification, setActiveNotification] = useState<ActiveNotification>(null);
   const [session, setSession] = useState<UserSession | null>(null);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -350,6 +353,14 @@ export default function StudentDashboard() {
             // Keep default settings when parse fails
           }
         }
+        if (role === "student") {
+          const cloudReminder = await loadReminderSettingsFromServer();
+          if (cloudReminder && !cancelled) {
+            setSettings((prev) =>
+              normalizePersonalSettings({ ...prev, ...cloudReminder })
+            );
+          }
+        }
       } catch (error) {
         if (cancelled) return;
         const message =
@@ -374,25 +385,6 @@ export default function StudentDashboard() {
       cancelled = true;
     };
   }, [router, t, lang]);
-
-  useEffect(() => {
-    const timerA = setTimeout(() => {
-      setActiveNotification({
-        message: t("home.notifications.logMeal", "⏰ 到時間記錄上一餐啦，唔好漏打卡！"),
-        action: "logMeal",
-      });
-    }, 4000);
-    const timerB = setTimeout(() => {
-      setActiveNotification({
-        message: t("home.notifications.hydration", "💧 補水提示：依家飲一大杯水先！"),
-      });
-    }, 12000);
-
-    return () => {
-      clearTimeout(timerA);
-      clearTimeout(timerB);
-    };
-  }, [t, lang]);
 
   const isStudent = session?.role === "student";
 
@@ -620,50 +612,6 @@ export default function StudentDashboard() {
           <div className="mx-auto w-full max-w-md pointer-events-auto">
             <div className="bg-white text-gray-900 px-4 py-3 rounded-2xl text-sm font-semibold text-center shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
               {toast}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeNotification && (
-        <div className="fixed inset-x-0 top-safe z-50 px-4 pointer-events-none">
-          <div className="mx-auto w-full max-w-md pointer-events-auto">
-            <div className="bg-white text-gray-900 p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold leading-relaxed min-w-0 flex-1">
-                  {activeNotification.message}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveNotification(null)}
-                  className="shrink-0 text-gray-400 hover:text-gray-600 w-6 h-6 rounded-full active:scale-95 transition-all cursor-pointer"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveNotification(null)}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700 active:scale-95 active:opacity-80 transition-all cursor-pointer"
-                >
-                  {t("home.notifications.later", "稍後")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const action = activeNotification?.action;
-                    setActiveNotification(null);
-                    if (action === "logMeal") {
-                      setMealSearchOpen(true);
-                    }
-                  }}
-                  className={`px-3 py-1.5 text-xs rounded-xl ${BRAND_BTN} ${btnClass}`}
-                >
-                  {t("home.notifications.actNow", "即刻做")}
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -1095,12 +1043,45 @@ export default function StudentDashboard() {
               }
             />
 
-            <PushReminderToggle />
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">
+                {t("settings.morningReminderTime", "朝早提醒時間")}
+              </label>
+              <select
+                value={settings.morningReminderTime}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    morningReminderTime: e.target
+                      .value as PersonalSettings["morningReminderTime"],
+                  }))
+                }
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              >
+                {MORNING_REMINDER_TIME_OPTIONS.map((time) => (
+                  <option key={time} value={time}>
+                    {formatMorningReminderTimeLabel(time)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-zinc-400 leading-relaxed">
+                {t(
+                  "settings.morningReminderHint",
+                  "每日喺你揀嘅時間，鎖屏收到飲水同記錄飲食提醒（需開啟下方推播）。"
+                )}
+              </p>
+            </div>
+
+            <PushReminderToggle
+              reminderSettings={settings}
+              onSettingsSync={syncReminderSettingsToServer}
+            />
 
             <button
               type="button"
               onClick={async () => {
                 localStorage.setItem("student_settings", JSON.stringify(settings));
+                void syncReminderSettingsToServer(settings);
                 const h = Number(bodyForm.heightCm);
                 const w = Number(bodyForm.weightKg);
                 const a = Number(bodyForm.age);

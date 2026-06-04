@@ -69,9 +69,19 @@ export async function POST(request: Request) {
       { useServiceRole: true }
     );
 
-    notifyCoachOfNewMealLog(log).catch((err) =>
-      console.warn("[push] coach alert failed:", err)
-    );
+    try {
+      const pushResult = await notifyCoachOfNewMealLog(log);
+      if (pushResult.skipped) {
+        console.info("[meals/log] coach push skipped:", pushResult.reason);
+      } else if (pushResult.sent === 0) {
+        console.warn(
+          "[meals/log] coach push not delivered to:",
+          pushResult.coachEmails
+        );
+      }
+    } catch (err) {
+      console.warn("[meals/log] coach alert failed:", err);
+    }
 
     void (async () => {
       try {

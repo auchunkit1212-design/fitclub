@@ -251,6 +251,8 @@
     "weeklyFrequency": "每星期訓練次數",
     "mealSchedule": "飲食安排",
     "waterReminder": "飲水提醒",
+    "morningReminderTime": "朝早提醒時間",
+    "morningReminderHint": "每日喺你揀嘅時間，鎖屏收到飲水同記錄飲食提醒（需開啟下方推播）。",
     "trainingType": "訓練類型",
     "saved": "設定已儲存",
     "bodySyncFailed": "身體數據同步失敗，已儲存本地設定。",

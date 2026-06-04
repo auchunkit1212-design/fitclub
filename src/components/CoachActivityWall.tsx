@@ -85,6 +85,7 @@ export function CoachActivityWall({
   const [savingTargets, setSavingTargets] = useState(false);
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
   const [nudgeStudent, setNudgeStudent] = useState<RegistryUser | null>(null);
+  const [nudgeSending, setNudgeSending] = useState(false);
 
   const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
 
@@ -197,6 +198,41 @@ export function CoachActivityWall({
     }
   };
 
+  const sendAppNudge = async (student: RegistryUser) => {
+    setNudgeSending(true);
+    try {
+      const res = await fetch("/api/coach/nudge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ studentEmail: student.email }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        hint?: string;
+        studentName?: string;
+      };
+
+      if (res.ok && data.ok) {
+        onToast(`📲 已發送 App 通知俾 ${data.studentName ?? student.name}`);
+        setNudgeStudent(null);
+        return;
+      }
+
+      onToast(
+        data.hint ? `${data.error} — ${data.hint}` : data.error ?? "發送失敗"
+      );
+    } catch (err) {
+      onToast(errorMessage(err, "發送失敗"));
+    } finally {
+      setNudgeSending(false);
+    }
+  };
+
   const coachName = getSession()?.name ?? "教練";
 
   return (
@@ -216,16 +252,14 @@ export function CoachActivityWall({
                   {s.name}{" "}
                   <span className="text-zinc-400 text-xs">({count} 餐今日)</span>
                 </span>
-                {count === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setNudgeStudent(s)}
-                    className={`shrink-0 text-lg px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 ${btnClass}`}
-                    title="催促記錄飲食"
-                  >
-                    🔔
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setNudgeStudent(s)}
+                  className={`shrink-0 text-lg px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
+                  title="遠端 App 提醒記錄"
+                >
+                  🔔
+                </button>
               </li>
             );
           })}
@@ -362,11 +396,24 @@ export function CoachActivityWall({
       {nudgeStudent && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="font-bold text-zinc-900">🦍 大猩猩催餐訊息</h3>
+            <h3 className="font-bold text-zinc-900">
+              🔔 提醒 {nudgeStudent.name} 記錄
+            </h3>
+            <p className="text-xs text-zinc-500">
+              今日已記錄 {todayMealCountByEmail.get(nudgeStudent.email) ?? 0} 餐
+            </p>
             <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed bg-amber-50 rounded-xl p-3 border border-amber-100">
               {buildNudgeMessage(nudgeStudent.name, coachName)}
             </p>
             <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={nudgeSending}
+                onClick={() => sendAppNudge(nudgeStudent)}
+                className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60 ${btnClass}`}
+              >
+                {nudgeSending ? "發送中..." : "📲 發送 App 通知（鎖屏提醒）"}
+              </button>
               <button
                 type="button"
                 onClick={() =>
@@ -374,13 +421,13 @@ export function CoachActivityWall({
                 }
                 className={`w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold ${btnClass}`}
               >
-                📋 一鍵複製
+                📋 複製文字訊息
               </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(buildNudgeMessage(nudgeStudent.name, coachName))}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold text-center ${btnClass}`}
+                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center ${btnClass}`}
               >
                 💬 WhatsApp 轉發
               </a>

@@ -2,11 +2,20 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
+import type { PersonalSettings } from "@/lib/personal-settings";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-export function PushReminderToggle() {
+interface PushReminderToggleProps {
+  reminderSettings?: PersonalSettings;
+  onSettingsSync?: (settings: PersonalSettings) => Promise<boolean>;
+}
+
+export function PushReminderToggle({
+  reminderSettings,
+  onSettingsSync,
+}: PushReminderToggleProps) {
   const { t } = useI18n();
   const {
     status,
@@ -22,8 +31,14 @@ export function PushReminderToggle() {
   const handleEnable = async () => {
     const result = await enable();
     if (result.ok) {
+      if (reminderSettings && onSettingsSync) {
+        await onSettingsSync(reminderSettings);
+      }
       setMessage(
-        t("push.messages.enabled", "✅ 已開啟系統通知，訂閱已儲存。")
+        t(
+          "push.messages.enabled",
+          "✅ 已開啟系統通知！閂咗 App 都會收到飲水同飲食提醒。"
+        )
       );
     } else {
       setMessage(`❌ ${result.error}`);
@@ -74,7 +89,7 @@ export function PushReminderToggle() {
         <p className="text-xs text-emerald-800/80 mt-1 leading-relaxed">
           {t(
             "push.description",
-            "開啟後即使閂咗 App，都可收到系統通知（需設定 VAPID 並執行 push_subscriptions.sql）。"
+            "開啟後會喺你設定嘅朝早時間，於鎖屏收到飲水同記錄飲食提醒（即使閂咗 App）。"
           )}
         </p>
         <p className="text-[10px] text-emerald-700/70 mt-1">

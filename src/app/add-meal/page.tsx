@@ -265,7 +265,7 @@ export default function AddMealPage() {
     };
 
     const saveDirect = async (imageUrl?: string) => {
-      await saveMealLog({ ...mealPayload, imageUrl });
+      await saveMealLog({ ...mealPayload, imageUrl }, { notifyCoach: true });
     };
 
     const trySave = async (imageUrl?: string) => {

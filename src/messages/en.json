@@ -251,6 +251,8 @@
     "weeklyFrequency": "Weekly training frequency",
     "mealSchedule": "Meal schedule",
     "waterReminder": "Water reminder",
+    "morningReminderTime": "Morning reminder time",
+    "morningReminderHint": "Each day at your chosen time, get a lock-screen nudge to hydrate and log meals (enable push below).",
     "trainingType": "Training type",
     "saved": "Settings saved",
     "bodySyncFailed": "Body data sync failed; local settings were saved.",

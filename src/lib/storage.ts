@@ -5,6 +5,7 @@ import {
   resolveBranding,
   updateCoachBranding,
 } from "@/lib/db";
+import { getSessionRequestHeaders } from "@/lib/session";
 import { DEFAULT_BRANDING, DEFAULT_PROFILE } from "@/lib/types";
 import type {
   CoachBranding,
@@ -52,10 +53,31 @@ export async function getMealLogs(
   return fetchMealLogsForSession(session, registry);
 }
 
+export async function notifyCoachAfterMealLog(log: MealLog): Promise<void> {
+  try {
+    await fetch("/api/meals/notify-coach", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getSessionRequestHeaders(),
+      },
+      credentials: "include",
+      body: JSON.stringify({ log }),
+    });
+  } catch (err) {
+    console.warn("[saveMealLog] coach notify failed:", err);
+  }
+}
+
 export async function saveMealLog(
-  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string }
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string },
+  options?: { notifyCoach?: boolean }
 ): Promise<MealLog> {
-  return insertMealLog(log);
+  const saved = await insertMealLog(log);
+  if (options?.notifyCoach) {
+    void notifyCoachAfterMealLog(saved);
+  }
+  return saved;
 }
 
 export async function saveCoachBranding(

@@ -6,6 +6,24 @@ export type MealScheduleKey = "threeMeals" | "fourMeals" | "fasting168";
 export type WaterReminderKey = "1h" | "2h" | "4h" | "off";
 export type TrainingTypeKey = "weight" | "cardio" | "mixed";
 
+/** 朝早提醒時間（HKT，30 分鐘一格） */
+export const MORNING_REMINDER_TIME_OPTIONS = [
+  "06:00",
+  "06:30",
+  "07:00",
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+] as const;
+
+export type MorningReminderTime =
+  (typeof MORNING_REMINDER_TIME_OPTIONS)[number];
+
 export interface PersonalSettings {
   nickname: string;
   job: JobKey;
@@ -13,6 +31,8 @@ export interface PersonalSettings {
   trainingType: TrainingTypeKey;
   weeklyFrequency: WeeklyFrequencyKey;
   waterReminder: WaterReminderKey;
+  /** 朝早飲水 + 記錄飲食推播時間（香港時間） */
+  morningReminderTime: MorningReminderTime;
 }
 
 export const DEFAULT_PERSONAL_SETTINGS: PersonalSettings = {
@@ -22,6 +42,7 @@ export const DEFAULT_PERSONAL_SETTINGS: PersonalSettings = {
   trainingType: "weight",
   weeklyFrequency: "3",
   waterReminder: "2h",
+  morningReminderTime: "08:00",
 };
 
 export const JOB_KEYS: JobKey[] = ["sedentary", "field", "physical"];
@@ -29,6 +50,15 @@ export const WEEKLY_FREQUENCY_KEYS: WeeklyFrequencyKey[] = ["1-2", "3", "4-5", "
 export const MEAL_SCHEDULE_KEYS: MealScheduleKey[] = ["threeMeals", "fourMeals", "fasting168"];
 export const WATER_REMINDER_KEYS: WaterReminderKey[] = ["1h", "2h", "4h", "off"];
 export const TRAINING_TYPE_KEYS: TrainingTypeKey[] = ["weight", "cardio", "mixed"];
+
+export function isMorningReminderTime(v: string): v is MorningReminderTime {
+  return (MORNING_REMINDER_TIME_OPTIONS as readonly string[]).includes(v);
+}
+
+export function formatMorningReminderTimeLabel(time: MorningReminderTime): string {
+  const [h, m] = time.split(":");
+  return `朝早 ${Number(h)}:${m}`;
+}
 
 const LEGACY_JOB: Record<string, JobKey> = {
   "文職 (長坐)": "sedentary",
@@ -105,6 +135,11 @@ export function normalizePersonalSettings(
   base.trainingType = isTrainingKey(training)
     ? training
     : LEGACY_TRAINING[training] ?? base.trainingType;
+
+  const morning = raw.morningReminderTime ?? "";
+  base.morningReminderTime = isMorningReminderTime(morning)
+    ? morning
+    : base.morningReminderTime;
 
   return base;
 }
