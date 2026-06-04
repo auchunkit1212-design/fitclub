@@ -1,4 +1,13 @@
 {
+  "streak": {
+    "days": "{count} Days",
+    "longestHint": "Longest streak: {days} days",
+    "milestone": {
+      "title": "Amazing! {days}-day healthy logging streak",
+      "body": "Gorilla coach salutes your discipline! You're ahead of 90% of members on a cut — keep it up!",
+      "cta": "Keep going"
+    }
+  },
   "nav": {
     "home": "Home",
     "coach": "Coach",

@@ -12,6 +12,7 @@ import {
   BarChart2,
   Bot,
   Cpu,
+  Flame,
   Hand,
   IconLabel,
   MapPin,
@@ -24,6 +25,7 @@ import {
 import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
+import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
@@ -34,6 +36,11 @@ import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
+import {
+  consumePendingStreakMilestone,
+  storePendingStreakMilestone,
+  type StreakMilestoneDay,
+} from "@/lib/streak";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
@@ -241,6 +248,32 @@ export default function StudentDashboard() {
   const [mealSearchOpen, setMealSearchOpen] = useState(false);
   const [selectedMealLog, setSelectedMealLog] = useState<MealLog | null>(null);
   const [quickMealSaving, setQuickMealSaving] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [milestoneModalDays, setMilestoneModalDays] =
+    useState<StreakMilestoneDay | null>(null);
+
+  const applyStreakApiPayload = (payload?: {
+    currentStreak?: number;
+    longestStreak?: number;
+    milestoneTriggered?: boolean;
+    milestoneDays?: number;
+  }) => {
+    if (!payload) return;
+    if (typeof payload.currentStreak === "number") {
+      setCurrentStreak(payload.currentStreak);
+    }
+    if (typeof payload.longestStreak === "number") {
+      setLongestStreak(payload.longestStreak);
+    }
+    if (
+      payload.milestoneTriggered &&
+      payload.milestoneDays &&
+      [3, 7, 14, 30].includes(payload.milestoneDays)
+    ) {
+      setMilestoneModalDays(payload.milestoneDays as StreakMilestoneDay);
+    }
+  };
 
   const showToast = (message: string) => {
     setToast(message);
@@ -251,6 +284,11 @@ export default function StudentDashboard() {
     clearSession();
     router.push("/register");
   };
+
+  useEffect(() => {
+    const pending = consumePendingStreakMilestone();
+    if (pending) setMilestoneModalDays(pending);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,6 +349,24 @@ export default function StudentDashboard() {
         saveSession(applyBrandToSession(activeSession, brand));
 
         if (role === "student" && activeSession.email) {
+          try {
+            const streakRes = await fetch("/api/student/streak", {
+              credentials: "include",
+              headers: getSessionRequestHeaders(),
+            });
+            if (streakRes.ok) {
+              const streakData = (await streakRes.json()) as {
+                streak?: { currentStreak?: number; longestStreak?: number };
+              };
+              if (!cancelled && streakData.streak) {
+                setCurrentStreak(streakData.streak.currentStreak ?? 0);
+                setLongestStreak(streakData.streak.longestStreak ?? 0);
+              }
+            }
+          } catch {
+            // streak columns may not exist yet
+          }
+
           const body = await fetchStudentBodyProfile(activeSession.email);
           if (!cancelled) {
             setBodyProfile(body);
@@ -467,6 +523,15 @@ export default function StudentDashboard() {
         const data = (await res.json()) as { error?: string };
         throw new Error(data.error ?? "Save failed");
       }
+      const data = (await res.json()) as {
+        streak?: {
+          currentStreak?: number;
+          longestStreak?: number;
+          milestoneTriggered?: boolean;
+          milestoneDays?: number;
+        };
+      };
+      applyStreakApiPayload(data.streak);
       const registry = await fetchUsersForSession(session);
       const mealLogs = await getMealLogs(session, registry);
       setLogs(mealLogs);
@@ -729,14 +794,31 @@ export default function StudentDashboard() {
       <main className="flex flex-col gap-5 w-full">
         {activeTab === "dashboard" && (
           <section className={`${SOFT_CARD} p-5 text-sm`}>
-            <div className="flex justify-between items-center gap-2">
-              <p className="font-semibold text-gray-900 text-base">
+            <div className="flex justify-between items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-900 text-base min-w-0">
                 <IconLabel icon={Hand} iconClassName="text-gray-600">
                   {t("home.welcome", "歡迎，{name}", {
                     name: displayName,
                   })}
                 </IconLabel>
               </p>
+              <div className="flex items-center gap-2 shrink-0">
+                {isStudent && currentStreak > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-sm font-bold text-orange-500"
+                    title={t("streak.longestHint", "最長紀錄 {days} 天", {
+                      days: longestStreak,
+                    })}
+                  >
+                    <Flame
+                      size={18}
+                      strokeWidth={2.5}
+                      className="text-orange-500 fill-orange-400 shrink-0"
+                      aria-hidden
+                    />
+                    {t("streak.days", "{count} 天", { count: currentStreak })}
+                  </span>
+                )}
               <span className={`text-[10px] font-bold uppercase ${BRAND_BTN} px-2.5 py-1 rounded-full`}>
                 {session.role === "admin"
                   ? t("roles.admin", "總控制台")
@@ -744,6 +826,7 @@ export default function StudentDashboard() {
                     ? t("roles.coach", "教練")
                     : t("roles.student", "學員")}
               </span>
+              </div>
             </div>
             <p className="text-gray-500 mt-2 text-xs">{session.email}</p>
             <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-1.5">
@@ -1184,6 +1267,13 @@ export default function StudentDashboard() {
         ) : null}
       </main>
       </div>
+
+      {milestoneModalDays && (
+        <StreakMilestoneModal
+          days={milestoneModalDays}
+          onClose={() => setMilestoneModalDays(null)}
+        />
+      )}
 
       {selectedMealLog && (
         <MealDetailModal

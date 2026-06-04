@@ -18,6 +18,11 @@ import type {
   UserSession,
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
+import {
+  computeStreakAfterMealLog,
+  type StreakUpdateResult,
+  type StudentStreakSnapshot,
+} from "@/lib/streak";
 
 type UserRow = {
   id: string;
@@ -34,6 +39,9 @@ type UserRow = {
   tenant_id: string | null;
   password_hash: string | null;
   created_at: string;
+  current_streak?: number | null;
+  longest_streak?: number | null;
+  last_streak_update?: string | null;
 };
 
 type MealRow = {
@@ -64,6 +72,9 @@ function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
     themeColor: (row.theme_color as ThemeColor) ?? undefined,
     broadcast: row.broadcast ?? undefined,
     hasPassword: Boolean(row.password_hash),
+    currentStreak: Number(row.current_streak) || 0,
+    longestStreak: Number(row.longest_streak) || 0,
+    lastStreakUpdate: row.last_streak_update ?? null,
   };
   if (includePasswordHash && row.password_hash) {
     user.passwordHash = row.password_hash;
@@ -719,4 +730,114 @@ export async function upsertStudentBodyProfile(
 
   writeLocalBodyProfile(saved);
   return saved;
+}
+
+function streakSnapshotFromRow(row: {
+  current_streak?: number | null;
+  longest_streak?: number | null;
+  last_streak_update?: string | null;
+}): StudentStreakSnapshot {
+  return {
+    currentStreak: Math.max(0, Number(row.current_streak) || 0),
+    longestStreak: Math.max(0, Number(row.longest_streak) || 0),
+    lastStreakUpdate: row.last_streak_update ?? null,
+  };
+}
+
+function isMissingStreakColumnError(error: unknown): boolean {
+  const msg =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: string }).message)
+      : "";
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code: string }).code)
+      : "";
+  return (
+    code === "PGRST204" ||
+    msg.includes("current_streak") ||
+    msg.includes("schema cache")
+  );
+}
+
+const EMPTY_STREAK_RESULT: StreakUpdateResult = {
+  currentStreak: 0,
+  longestStreak: 0,
+  lastStreakUpdate: null,
+  streakUpdated: false,
+  milestoneTriggered: false,
+};
+
+export async function fetchStudentStreak(
+  email: string
+): Promise<StudentStreakSnapshot> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("role, current_streak, longest_streak, last_streak_update")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingStreakColumnError(error)) return EMPTY_STREAK_RESULT;
+    throw error;
+  }
+
+  if (!data || data.role !== "student") return EMPTY_STREAK_RESULT;
+  return streakSnapshotFromRow(data);
+}
+
+/** 學員成功記錄飲食後更新連續打卡天數 */
+export async function applyMealLogStreak(
+  email: string
+): Promise<StreakUpdateResult> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("role, current_streak, longest_streak, last_streak_update")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingStreakColumnError(error)) {
+      console.warn("[streak] columns missing — run supabase/student-streak.sql");
+      return EMPTY_STREAK_RESULT;
+    }
+    throw error;
+  }
+
+  if (!data || data.role !== "student") return EMPTY_STREAK_RESULT;
+
+  const snapshot = streakSnapshotFromRow(data);
+  const result = computeStreakAfterMealLog(snapshot);
+
+  if (!result.streakUpdated) {
+    return {
+      ...result,
+      lastStreakUpdate: snapshot.lastStreakUpdate,
+    };
+  }
+
+  const { error: updateError } = await admin
+    .from("users_registry")
+    .update({
+      current_streak: result.currentStreak,
+      longest_streak: result.longestStreak,
+      last_streak_update: result.lastStreakUpdate,
+    })
+    .eq("email", normalized);
+
+  if (updateError) {
+    if (isMissingStreakColumnError(updateError)) {
+      console.warn("[streak] update skipped — run supabase/student-streak.sql");
+      return EMPTY_STREAK_RESULT;
+    }
+    throw updateError;
+  }
+
+  return result;
 }

@@ -42,6 +42,7 @@ import { initUserRegistry } from "@/lib/registry";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
+import { storePendingStreakMilestone } from "@/lib/streak";
 import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
 import type {
   FoodAdvancedNutrients,
@@ -323,11 +324,53 @@ export default function AddMealPage() {
       } catch (networkErr) {
         console.warn("[add-meal] API network error, fallback direct save", networkErr);
         await saveDirect(imageUrl);
+        try {
+          const streakRes = await fetch("/api/student/streak", {
+            method: "POST",
+            credentials: "include",
+            headers: getSessionRequestHeaders(),
+          });
+          if (streakRes.ok) {
+            const streakData = (await streakRes.json()) as {
+              streak?: { milestoneTriggered?: boolean; milestoneDays?: number };
+            };
+            if (
+              streakData.streak?.milestoneTriggered &&
+              streakData.streak.milestoneDays &&
+              [3, 7, 14, 30].includes(streakData.streak.milestoneDays)
+            ) {
+              storePendingStreakMilestone(
+                streakData.streak.milestoneDays as 3 | 7 | 14 | 30
+              );
+            }
+          }
+        } catch {
+          // streak optional
+        }
         router.push("/");
         return;
       }
 
       if (res.ok) {
+        try {
+          const okData = (await res.json()) as {
+            streak?: {
+              milestoneTriggered?: boolean;
+              milestoneDays?: number;
+            };
+          };
+          if (
+            okData.streak?.milestoneTriggered &&
+            okData.streak.milestoneDays &&
+            [3, 7, 14, 30].includes(okData.streak.milestoneDays)
+          ) {
+            storePendingStreakMilestone(
+              okData.streak.milestoneDays as 3 | 7 | 14 | 30
+            );
+          }
+        } catch {
+          // ignore parse
+        }
         router.push("/");
         return;
       }
@@ -348,6 +391,29 @@ export default function AddMealPage() {
       try {
         console.warn("[add-meal] fallback direct Supabase save");
         await saveDirect(imageUrl);
+        try {
+          const streakRes = await fetch("/api/student/streak", {
+            method: "POST",
+            credentials: "include",
+            headers: getSessionRequestHeaders(),
+          });
+          if (streakRes.ok) {
+            const streakData = (await streakRes.json()) as {
+              streak?: { milestoneTriggered?: boolean; milestoneDays?: number };
+            };
+            if (
+              streakData.streak?.milestoneTriggered &&
+              streakData.streak.milestoneDays &&
+              [3, 7, 14, 30].includes(streakData.streak.milestoneDays)
+            ) {
+              storePendingStreakMilestone(
+                streakData.streak.milestoneDays as 3 | 7 | 14 | 30
+              );
+            }
+          }
+        } catch {
+          // streak optional
+        }
         router.push("/");
       } catch (directErr) {
         console.error("[add-meal] direct save failed", directErr);

@@ -43,6 +43,12 @@ export interface Tenant {
   plan: string;
 }
 
+export interface StudentStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastStreakUpdate: string | null;
+}
+
 export interface RegistryUser {
   email: string;
   name: string;
@@ -57,6 +63,9 @@ export interface RegistryUser {
   themeColor?: ThemeColor;
   broadcast?: string;
   hasPassword?: boolean;
+  currentStreak?: number;
+  longestStreak?: number;
+  lastStreakUpdate?: string | null;
   /** 僅伺服器登入驗證用，切勿傳去前端 */
   passwordHash?: string;
 }

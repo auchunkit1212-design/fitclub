@@ -1,4 +1,13 @@
 {
+  "streak": {
+    "days": "{count} 天",
+    "longestHint": "最長紀錄 {days} 天",
+    "milestone": {
+      "title": "震撼！連續 {days} 天健康打卡",
+      "body": "大猩猩為你的自律點讚！你已經超越了 90% 正在減脂的學員，繼續保持！",
+      "cta": "繼續努力"
+    }
+  },
   "nav": {
     "home": "首頁",
     "coach": "教練",

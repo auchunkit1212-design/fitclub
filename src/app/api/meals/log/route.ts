@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { insertMealLog } from "@/lib/db";
+import { applyMealLogStreak, insertMealLog } from "@/lib/db";
 import { resolveMealLogEmail } from "@/lib/meal-log-auth";
 import { MEAL_IMAGES_BUCKET } from "@/lib/meal-image-storage";
 import { notifyCoachOfNewMealLog } from "@/lib/meal-notifications";
@@ -104,8 +104,27 @@ export async function POST(request: Request) {
       }
     })();
 
+    let streak = {
+      currentStreak: 0,
+      longestStreak: 0,
+      milestoneTriggered: false as boolean,
+      milestoneDays: undefined as number | undefined,
+    };
+    try {
+      const streakResult = await applyMealLogStreak(email);
+      streak = {
+        currentStreak: streakResult.currentStreak,
+        longestStreak: streakResult.longestStreak,
+        milestoneTriggered: streakResult.milestoneTriggered,
+        milestoneDays: streakResult.milestoneDays,
+      };
+    } catch (streakErr) {
+      console.warn("[meals/log] streak update failed:", streakErr);
+    }
+
     return NextResponse.json({
       log,
+      streak,
       imageStorage: body.imageUrl ? MEAL_IMAGES_BUCKET : undefined,
     });
   } catch (error) {
