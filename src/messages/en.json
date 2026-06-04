@@ -12,7 +12,10 @@
     "home": "Home",
     "coach": "Coach",
     "settings": "Settings",
-    "addMeal": "Meal"
+    "addMeal": "Meal",
+    "explore": "Explore",
+    "profile": "Profile",
+    "records": "Student records"
   },
   "header": {
     "back": "← Back",
@@ -82,12 +85,16 @@
       "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g",
       "quickSaved": "Logged: {name}",
       "quickSaveFailed": "{message}"
-    }
+    },
+    "profileHint": "Weight, meal history, and personal info are in the Profile tab."
   },
   "common": {
     "loading": "Loading...",
     "loadingCloud": "Loading from cloud…",
-    "save": "Save settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "remove": "Remove",
     "protein": "Protein",
     "carbs": "Carbs",
     "fat": "Fat",
@@ -105,6 +112,8 @@
     "uploadedPhotoAlt": "Uploaded food photo",
     "calculateCalories": "Snack Calculator",
     "publish": "Publish Log",
+    "shareToCommunity": "Share to Community",
+    "shareToCommunityHint": "After saving, your meal name, photo (if any), and macros will appear on the community feed.",
     "saving": "Saving...",
     "aiAnalyzing": "AI is analyzing...",
     "advancedNutrition": "Advanced Nutrition",
@@ -297,7 +306,76 @@
       "cardio": "Cardio",
       "mixed": "Mixed training"
     },
-    "saveButton": "Save settings"
+    "saveButton": "Save settings",
+    "appTitle": "App settings",
+    "appSubtitle": "Language, push notifications, and reminders. Personal data and meal history are under Profile.",
+    "language": "Interface language",
+    "morningTimeAt": "{time}"
+  },
+  "profile": {
+    "subtitle": "Personal info, weight trend, and meal history",
+    "targetCalories": "Daily calorie goal",
+    "targetProtein": "Protein goal",
+    "personalTitle": "Personal info",
+    "saveButton": "Save profile",
+    "saved": "Profile saved",
+    "weightTitle": "Weight trend",
+    "mealHistory": "Meal history",
+    "noMeals": "No logs yet — tap + in the center to start",
+    "photo": {
+      "upload": "Upload photo",
+      "uploading": "Uploading…",
+      "remove": "Remove",
+      "change": "Change profile photo",
+      "fail": "Could not process photo. Please try again.",
+      "cloudNotReady": "Cloud avatars are not set up yet. Run profile-avatar-cloud.sql in Supabase."
+    },
+    "proBadge": "Pro",
+    "proMember": "Pro member",
+    "proOnly": "This feature is for Pro members only."
+  },
+  "community": {
+    "badge": "Community",
+    "title": "Explore",
+    "subtitle": "Share thoughts, photos, and videos, or sync meal logs to the community.",
+    "hub": {
+      "title": "New features"
+    },
+    "feed": {
+      "title": "Community feed",
+      "like": "Like",
+      "photoAlt": "Post photo",
+      "hint": "Your posts appear here; demo posts are marked Demo.",
+      "mockHint": "Sample posts above; a live feed will connect later."
+    },
+    "composer": {
+      "placeholder": "Share your thoughts or meal notes…",
+      "post": "Post",
+      "camera": "Take photo",
+      "photo": "Photo",
+      "video": "Video",
+      "imageFail": "Could not process image",
+      "videoFail": "Could not read video",
+      "storageFull": "Storage full — remove media or use a shorter video",
+      "postFail": "Post failed. Try again."
+    },
+    "post": {
+      "moreActions": "More actions",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this post?",
+      "emptyError": "Text and media cannot both be empty",
+      "saveFailed": "Save failed"
+    }
+  },
+  "microGuide": {
+    "title": "Advanced nutrients guide",
+    "subtitle": "Beyond calories and macros — see suggested intake for fiber, sugar, sodium, and more.",
+    "recommendedDaily": "Suggested daily intake",
+    "nutrient": "Nutrient",
+    "recommend": "Guideline",
+    "todayVsRecommend": "Today vs guideline",
+    "cholesterol": "Cholesterol"
   },
   "ai": {
     "roast": {

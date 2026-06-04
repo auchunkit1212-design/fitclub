@@ -43,6 +43,7 @@ import { fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
+import { syncSessionPlan } from "@/lib/plan-client";
 import { clearSession, getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { withTimeout } from "@/lib/with-timeout";
 import {
@@ -275,12 +276,13 @@ export default function StudentDashboard() {
         parsed.role === "coach" || parsed.role === "admin"
           ? parsed.role
           : "student";
+      const synced = (await syncSessionPlan()) ?? parsed;
       const activeSession: UserSession = {
-        ...parsed,
+        ...synced,
         role,
-        name: parsed.name || t("home.defaults.trialStudent", "體驗學員"),
-        email: parsed.email || "",
-        gym: parsed.gym || t("home.defaults.unboundGym", "未綁定分店"),
+        name: synced.name || t("home.defaults.trialStudent", "體驗學員"),
+        email: synced.email || "",
+        gym: synced.gym || t("home.defaults.unboundGym", "未綁定分店"),
         isLoggedIn: true,
       };
 

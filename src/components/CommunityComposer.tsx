@@ -1,10 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Globe, Image as ImageIcon, Loader2, Video } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { compressFileImage, fileToDataUrl } from "@/lib/image";
 import { publishThoughtPost, validateVideoFile } from "@/lib/community";
+import { syncProfilePhotoFromCloud } from "@/lib/profile-avatar-client";
+import {
+  getProfilePhotoUrl,
+  PROFILE_PHOTO_SYNC_EVENT,
+} from "@/lib/profile-photo";
 import type { UserSession } from "@/lib/types";
 
 const SOFT_CARD =
@@ -29,8 +34,29 @@ export function CommunityComposer({ session, onPosted }: Props) {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const displayName = session.name?.trim() || session.email.split("@")[0];
   const initials =
-    session.name?.trim().slice(0, 2) || session.email.slice(0, 2).toUpperCase();
+    displayName.slice(0, 2) || session.email.slice(0, 2).toUpperCase();
+  const [avatarPhoto, setAvatarPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refresh = () =>
+      setAvatarPhoto(getProfilePhotoUrl(session.email));
+    refresh();
+    void syncProfilePhotoFromCloud(session.email).then((url) => {
+      setAvatarPhoto(url ?? getProfilePhotoUrl(session.email));
+    });
+    const onSync = (e: Event) => {
+      const detail = (e as CustomEvent<{ email?: string }>).detail;
+      if (
+        detail?.email === session.email.trim().toLowerCase()
+      ) {
+        refresh();
+      }
+    };
+    window.addEventListener(PROFILE_PHOTO_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(PROFILE_PHOTO_SYNC_EVENT, onSync);
+  }, [session.email]);
 
   const clearMedia = () => {
     setMediaPreview(null);
@@ -101,10 +127,15 @@ export function CommunityComposer({ session, onPosted }: Props) {
     <section className={`${SOFT_CARD} p-4 space-y-3 min-w-0`}>
       <div className="flex gap-3 min-w-0">
         <div
-          className="w-10 h-10 shrink-0 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center"
+          className="w-10 h-10 shrink-0 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center overflow-hidden"
           aria-hidden
         >
-          {initials}
+          {avatarPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarPhoto} alt="" className="w-full h-full object-cover" />
+          ) : (
+            initials
+          )}
         </div>
         <textarea
           value={text}

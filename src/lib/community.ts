@@ -1,3 +1,4 @@
+import { getProfilePhotoUrl } from "@/lib/profile-photo";
 import type { UserSession } from "@/lib/types";
 
 const STORAGE_KEY = "fitclub_community_posts_v1";
@@ -15,6 +16,8 @@ export type CommunityFeedPost = {
   authorName: string;
   authorInitials: string;
   avatarHue: string;
+  /** 發文時的快照；雲端頭像為 https URL，跨裝置可顯示 */
+  authorAvatarUrl?: string;
   createdAt: string;
   postedAt: string;
   bodyText?: string;
@@ -102,6 +105,12 @@ function writeStoredPosts(posts: CommunityFeedPost[]): void {
   }
 }
 
+function authorAvatarSnapshot(email: string): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const url = getProfilePhotoUrl(email);
+  return url?.trim() || undefined;
+}
+
 function authorFromSession(session: Pick<UserSession, "email" | "name">) {
   const email = session.email.trim().toLowerCase();
   const authorName = session.name?.trim() || email.split("@")[0] || "學員";
@@ -110,6 +119,7 @@ function authorFromSession(session: Pick<UserSession, "email" | "name">) {
     authorName,
     authorInitials: initialsFromName(authorName),
     avatarHue: avatarHueForEmail(email),
+    authorAvatarUrl: authorAvatarSnapshot(email),
   };
 }
 

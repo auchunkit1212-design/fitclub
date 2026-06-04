@@ -9,6 +9,8 @@ import {
   updateCommunityPost,
   type CommunityFeedPost,
 } from "@/lib/community";
+import { fetchPublicAvatarUrl } from "@/lib/profile-avatar-client";
+import { getProfilePhotoUrl } from "@/lib/profile-photo";
 
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden min-w-0";
@@ -130,15 +132,40 @@ export function CommunityFeedCard({
     post.fats != null;
 
   const displayBody = editing ? null : post.bodyText;
+  const [authorPhoto, setAuthorPhoto] = useState<string | null>(() =>
+    post.authorAvatarUrl ?? getProfilePhotoUrl(post.authorEmail)
+  );
+
+  useEffect(() => {
+    const snap = post.authorAvatarUrl ?? getProfilePhotoUrl(post.authorEmail);
+    setAuthorPhoto(snap);
+    if (snap || post.isDemo) return;
+    let cancelled = false;
+    void fetchPublicAvatarUrl(post.authorEmail).then((url) => {
+      if (!cancelled) setAuthorPhoto(url ?? snap);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [post.authorAvatarUrl, post.authorEmail, post.isDemo]);
 
   return (
     <article className={SOFT_CARD}>
       <div className="flex items-start gap-3 p-4 pb-2 min-w-0 relative">
         <div
-          className={`w-10 h-10 shrink-0 rounded-full ${post.avatarHue} text-white text-sm font-bold flex items-center justify-center`}
+          className={`w-10 h-10 shrink-0 rounded-full ${authorPhoto ? "bg-gray-100" : post.avatarHue} text-white text-sm font-bold flex items-center justify-center overflow-hidden`}
           aria-hidden
         >
-          {post.authorInitials}
+          {authorPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={authorPhoto}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            post.authorInitials
+          )}
         </div>
         <div className="min-w-0 flex-1 pr-8">
           <p className="font-semibold text-sm text-gray-900 truncate">

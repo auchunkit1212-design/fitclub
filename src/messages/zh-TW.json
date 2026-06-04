@@ -12,7 +12,10 @@
     "home": "首頁",
     "coach": "教練",
     "settings": "設定",
-    "addMeal": "飲食"
+    "addMeal": "飲食",
+    "explore": "探索",
+    "profile": "我的",
+    "records": "學員記錄"
   },
   "header": {
     "back": "← 返回",
@@ -82,12 +85,16 @@
       "macroLine": "{calories} kcal · 蛋白質 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g",
       "quickSaved": "已記錄：{name}",
       "quickSaveFailed": "{message}"
-    }
+    },
+    "profileHint": "體重、飲食記錄與個人資料請到「我的」分頁查看"
   },
   "common": {
     "loading": "載入中...",
     "loadingCloud": "從雲端載入中...",
-    "save": "儲存設定",
+    "save": "儲存",
+    "cancel": "取消",
+    "saving": "儲存中…",
+    "remove": "移除",
     "protein": "蛋白質",
     "carbs": "碳水",
     "fat": "脂肪",
@@ -105,6 +112,8 @@
     "uploadedPhotoAlt": "已上傳食物",
     "calculateCalories": "零食計算機",
     "publish": "發布紀錄",
+    "shareToCommunity": "分享到 Community",
+    "shareToCommunityHint": "發布紀錄後會將食物名稱、相片（如有）與 P/C/F 營養素顯示在社群動態",
     "saving": "正在儲存...",
     "aiAnalyzing": "AI 正在分析...",
     "advancedNutrition": "進階營養分析",
@@ -297,7 +306,76 @@
       "cardio": "有氧 (Cardio)",
       "mixed": "混合訓練"
     },
-    "saveButton": "儲存設定"
+    "saveButton": "儲存設定",
+    "appTitle": "App 設定",
+    "appSubtitle": "語言、推播與提醒偏好。個人資料與飲食記錄請到「我的」分頁。",
+    "language": "介面語言",
+    "morningTimeAt": "早晨 {time}"
+  },
+  "profile": {
+    "subtitle": "個人資料、體重趨勢與飲食記錄",
+    "targetCalories": "每日熱量目標",
+    "targetProtein": "蛋白質目標",
+    "personalTitle": "個人資料",
+    "saveButton": "儲存個人資料",
+    "saved": "個人資料已儲存",
+    "weightTitle": "體重趨勢",
+    "mealHistory": "飲食記錄",
+    "noMeals": "暫時沒有記錄，點中間 + 開始打卡",
+    "photo": {
+      "upload": "上傳相片",
+      "uploading": "上傳中…",
+      "remove": "移除",
+      "change": "更換頭像",
+      "fail": "相片處理失敗，請再試",
+      "cloudNotReady": "雲端頭像尚未設定，請在 Supabase 執行 profile-avatar-cloud.sql"
+    },
+    "proBadge": "Pro",
+    "proMember": "Pro 會員",
+    "proOnly": "此功能僅供 Pro 會員使用。"
+  },
+  "community": {
+    "badge": "Community",
+    "title": "探索",
+    "subtitle": "分享想法、相片與影片，或將飲食記錄同步到社群。",
+    "hub": {
+      "title": "新功能探索"
+    },
+    "feed": {
+      "title": "大家都在吃什麼",
+      "like": "讚",
+      "photoAlt": "貼文相片",
+      "hint": "你的分享會顯示在這裡；示範帖文標有 Demo。",
+      "mockHint": "以上為示範動態，正式版將連接真實社群"
+    },
+    "composer": {
+      "placeholder": "分享你的想法、飲食心得…",
+      "post": "發布",
+      "camera": "拍照",
+      "photo": "相片",
+      "video": "影片",
+      "imageFail": "相片處理失敗",
+      "videoFail": "影片讀取失敗",
+      "storageFull": "儲存空間已滿，請刪除部分媒體或縮短影片",
+      "postFail": "發布失敗，請稍後再試"
+    },
+    "post": {
+      "moreActions": "更多操作",
+      "edit": "編輯",
+      "delete": "刪除",
+      "deleteConfirm": "確定要刪除這篇貼文？",
+      "emptyError": "文字與媒體不能同時為空",
+      "saveFailed": "儲存失敗"
+    }
+  },
+  "microGuide": {
+    "title": "進階營養素指南",
+    "subtitle": "除熱量與三大營養素外，參考建議攝取量檢視膳食纖維、糖、鈉等今日估算攝取。",
+    "recommendedDaily": "建議每日攝取量",
+    "nutrient": "營養素",
+    "recommend": "建議",
+    "todayVsRecommend": "今日攝取 vs 建議",
+    "cholesterol": "膽固醇"
   },
   "ai": {
     "roast": {

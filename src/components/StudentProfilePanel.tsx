@@ -13,6 +13,9 @@ import {
   ScrollText,
 } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { ProBadge } from "@/components/ProBadge";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
+import { resolveIsPro } from "@/lib/user-plan";
 import { getMealImageSrc } from "@/lib/meal-display";
 import {
   DEFAULT_PERSONAL_SETTINGS,
@@ -106,6 +109,12 @@ export function StudentProfilePanel({
 }: Props) {
   const { t } = useI18n();
   const displayName = settings.nickname || session.name;
+  const isProMember = resolveIsPro({
+    email: session.email,
+    role: session.role,
+    plan: session.plan,
+    isPro: session.isPro,
+  });
 
   const myLogs = logs
     .filter(
@@ -161,13 +170,12 @@ export function StudentProfilePanel({
   return (
     <div className="space-y-5 min-w-0">
       <section className={`${SOFT_CARD} p-5`}>
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-14 h-14 rounded-full bg-emerald-600 text-white text-lg font-bold flex items-center justify-center shrink-0">
-            {displayName.slice(0, 1)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-lg text-gray-900 truncate">
-              {displayName}
+        <div className="flex items-start gap-4 min-w-0">
+          <ProfileAvatar email={session.email} displayName={displayName} size="lg" />
+          <div className="min-w-0 flex-1 pt-1">
+            <h2 className="font-bold text-lg text-gray-900 truncate flex items-center gap-2">
+              <span className="truncate">{displayName}</span>
+              {isProMember && <ProBadge />}
             </h2>
             <p className="text-xs text-gray-500 truncate">{session.email}</p>
             <p className="text-xs text-gray-500 mt-0.5">{session.gym}</p>

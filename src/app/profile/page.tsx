@@ -23,6 +23,7 @@ import {
   type PersonalSettings,
 } from "@/lib/personal-settings";
 import { loadReminderSettingsFromServer } from "@/lib/reminder-settings-client";
+import { syncSessionPlan } from "@/lib/plan-client";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
 import {
   fetchWeightLogsLastDays,
@@ -76,7 +77,8 @@ export default function ProfilePage() {
       router.replace(parsed ? "/" : "/register");
       return;
     }
-    setSession(parsed);
+    const synced = (await syncSessionPlan()) ?? parsed;
+    setSession(synced);
 
     let personal = DEFAULT_PERSONAL_SETTINGS;
     const raw = localStorage.getItem("student_settings");
@@ -95,8 +97,8 @@ export default function ProfilePage() {
     }
 
     await initUserRegistry();
-    const registry = await fetchUsersForSession(parsed);
-    const mealLogs = await getMealLogs(parsed, registry);
+    const registry = await fetchUsersForSession(synced);
+    const mealLogs = await getMealLogs(synced, registry);
     setLogs(mealLogs);
 
     try {

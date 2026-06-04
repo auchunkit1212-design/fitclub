@@ -49,10 +49,14 @@ export interface StudentStreak {
   lastStreakUpdate: string | null;
 }
 
+export type UserPlan = "free" | "pro";
+
 export interface RegistryUser {
   email: string;
   name: string;
   role: "student" | "coach";
+  plan?: UserPlan;
+  avatarUrl?: string | null;
   gym: string;
   coach?: string;
   addedBy?: string;
@@ -83,6 +87,10 @@ export interface UserSession {
   brandLogo?: string;
   /** 無真人教練的 B2C 散客 */
   isSoloStudent?: boolean;
+  /** 訂閱方案；Pro 功能門控用 */
+  plan?: UserPlan;
+  /** 已解析的 Pro 權限（登入／sync 時寫入 session） */
+  isPro?: boolean;
   isLoggedIn: boolean;
 }
 

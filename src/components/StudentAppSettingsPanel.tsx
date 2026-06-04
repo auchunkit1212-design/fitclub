@@ -7,7 +7,6 @@ import { useI18n } from "@/components/I18nProvider";
 import {
   MORNING_REMINDER_TIME_OPTIONS,
   WATER_REMINDER_KEYS,
-  formatMorningReminderTimeLabel,
   normalizePersonalSettings,
   type PersonalSettings,
 } from "@/lib/personal-settings";
@@ -106,7 +105,7 @@ export function StudentAppSettingsPanel({
         >
           {MORNING_REMINDER_TIME_OPTIONS.map((time) => (
             <option key={time} value={time}>
-              {formatMorningReminderTimeLabel(time)}
+              {t("settings.morningTimeAt", "{time}", { time })}
             </option>
           ))}
         </select>

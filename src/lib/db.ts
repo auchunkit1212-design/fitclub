@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+import { applyUserPlanToSession, normalizeUserPlan } from "@/lib/user-plan";
 import type {
   CoachBranding,
   MealLog,
@@ -42,6 +43,8 @@ type UserRow = {
   current_streak?: number | null;
   longest_streak?: number | null;
   last_streak_update?: string | null;
+  plan?: string | null;
+  avatar_url?: string | null;
 };
 
 type MealRow = {
@@ -63,6 +66,8 @@ function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
     email: row.email,
     name: row.name,
     role: row.role,
+    plan: normalizeUserPlan(row.plan),
+    avatarUrl: row.avatar_url ?? null,
     gym: row.gym ?? "",
     coach: row.coach ?? undefined,
     addedBy: row.added_by ?? undefined,
@@ -296,29 +301,62 @@ export async function insertUser(
 }
 
 export function registryUserToSession(user: RegistryUser): UserSession {
-  return {
-    role: user.role,
-    name: user.name,
-    email: user.email,
-    gym: user.gym,
-    coach: user.coach,
-    addedBy: user.addedBy,
-    tenantId: user.tenantId,
-    brandName: user.appTitle ?? user.gym,
-    brandLogo: user.logo,
-    isLoggedIn: true,
-  };
+  return applyUserPlanToSession(
+    {
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      gym: user.gym,
+      coach: user.coach,
+      addedBy: user.addedBy,
+      tenantId: user.tenantId,
+      brandName: user.appTitle ?? user.gym,
+      brandLogo: user.logo,
+      isLoggedIn: true,
+    },
+    user
+  );
 }
 
 export function createAdminSession(email: string): UserSession {
-  return {
+  return applyUserPlanToSession({
     role: "admin",
     name: "最高總裁 (Kit Au)",
     email: email.trim().toLowerCase(),
     gym: "全港連鎖總部",
     brandName: "連鎖總部",
     isLoggedIn: true,
-  };
+  });
+}
+
+export async function fetchUserAvatarUrl(
+  email: string
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("avatar_url")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  const url = data?.avatar_url;
+  return typeof url === "string" && url.trim() ? url.trim() : null;
+}
+
+export async function updateUserAvatarUrl(
+  email: string,
+  avatarUrl: string | null
+): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
+    .from("users_registry")
+    .update({ avatar_url: avatarUrl })
+    .eq("email", normalized);
+
+  if (error) throw error;
 }
 
 export async function fetchMealLogs(options?: {
