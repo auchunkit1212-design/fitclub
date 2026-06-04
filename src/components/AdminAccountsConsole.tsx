@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   CircleUser,
@@ -50,7 +50,15 @@ export function AdminAccountsConsole({
   onToast,
 }: Props) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(registry.length === 0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const onRegistryChangeRef = useRef(onRegistryChange);
+  const onToastRef = useRef(onToast);
+
+  useEffect(() => {
+    onRegistryChangeRef.current = onRegistryChange;
+    onToastRef.current = onToast;
+  });
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
@@ -230,7 +238,13 @@ export function AdminAccountsConsole({
           ))}
         </div>
 
-        {loading ? (
+        {loadError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            {loadError}
+          </p>
+        )}
+
+        {loading && registry.length === 0 ? (
           <p className="text-sm text-zinc-500 text-center py-6 flex items-center justify-center gap-2">
             <Loader2 size={18} className="animate-spin" aria-hidden />
             載入帳戶中…

@@ -15,13 +15,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [users, tenants] = await Promise.all([
-      fetchAllUsersAdmin(),
-      fetchAllTenantsAdmin(),
-    ]);
+    const users = await fetchAllUsersAdmin();
+    let tenants: Awaited<ReturnType<typeof fetchAllTenantsAdmin>> = [];
+    try {
+      tenants = await fetchAllTenantsAdmin();
+    } catch (tenantErr) {
+      console.warn("[admin/accounts] tenants fetch failed:", tenantErr);
+    }
     return NextResponse.json({ users, tenants });
   } catch (error) {
     console.error("[admin/accounts]", error);
-    return NextResponse.json({ error: "讀取帳戶列表失敗" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "讀取帳戶列表失敗";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

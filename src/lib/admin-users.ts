@@ -14,7 +14,13 @@ export async function fetchAllUsersAdmin(): Promise<RegistryUser[]> {
 }
 
 export async function fetchAllTenantsAdmin(): Promise<Tenant[]> {
-  const admin = getSupabaseServiceRole();
+  let admin;
+  try {
+    admin = getSupabaseServiceRole();
+  } catch {
+    const { getSupabaseAdmin } = await import("@/lib/supabase-admin");
+    admin = getSupabaseAdmin();
+  }
   const { data, error } = await admin
     .from("tenants")
     .select("*")
