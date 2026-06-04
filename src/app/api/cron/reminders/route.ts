@@ -12,7 +12,7 @@ export const maxDuration = 60;
 
 /**
  * Vercel Cron：
- * - `0,30 * * * *` — 每 30 分鐘檢查學員自訂朝早提醒時間
+ * - `0 0 * * *` UTC ≈ 08:00 HKT — 朝早提醒（Hobby 每日一次；Pro 可改回 `0,30 * * * *` 支援自訂時間）
  * - `0 14 * * *` UTC ≈ 22:00 HKT — 每晚打卡總結
  */
 export async function GET(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       forced: force || undefined,
       slot: slot ?? "auto",
       schedule: {
-        morningCronUtc: "0,30 * * * *",
+        morningCronUtc: "0 0 * * *",
         defaultMorningTimeHkt: DEFAULT_MORNING_REMINDER_TIME,
         nightlyCronUtc: "0 14 * * *",
         nightlyHourHkt: NIGHTLY_REMINDER_HOUR_HKT,
