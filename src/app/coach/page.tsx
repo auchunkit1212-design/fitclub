@@ -19,6 +19,7 @@ import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
+import { BarChart2, Bot, IconLabel, Loader2 } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
   CoachBranding,
@@ -236,7 +237,9 @@ export default function CoachPage() {
 
         <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
           <h2 className="text-sm font-bold text-emerald-700">
-            🤖 AI 數據智能整合中心
+            <IconLabel icon={Bot} iconClassName="text-emerald-600">
+              AI 數據智能整合中心
+            </IconLabel>
           </h2>
           <button
             type="button"
@@ -244,7 +247,15 @@ export default function CoachPage() {
             onClick={generateAIReport}
             className={`w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
-            {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
+            {isGenerating ? (
+              <IconLabel icon={Loader2} size="md" className="justify-center animate-spin" iconClassName="text-white">
+                從 Supabase 整合緊...
+              </IconLabel>
+            ) : (
+              <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
+                一鍵 AI 整合學員飲食記錄
+              </IconLabel>
+            )}
           </button>
           {aiReport && (
             <pre className="bg-white/10 p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap border border-white/10">

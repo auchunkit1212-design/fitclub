@@ -1,13 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  Bell,
+  ClipboardList,
+  Copy,
+  IconLabel,
+  MEAL_STICKERS,
+  Megaphone,
+  MessageCircle,
+  ScrollText,
+  Smartphone,
+} from "@/components/icons";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
-
-const STICKERS = ["👍", "🔥", "💪", "⭐", "🎯", "❤️", "👏", "🥗"];
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -66,21 +75,21 @@ function buildNudgeMessage(
 ): string {
   const mealLine =
     todayMealCount === 0
-      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！🍽️`
-      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！🍽️`;
+      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！`
+      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！`;
 
-  return `🦍 喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
+  return `喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
 
 ${mealLine}
 
-快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。💧 記得飲水！💪
+快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。記得飲水！
 
 — Nutrition Coach · Coach! what to eat?`;
 }
 
 function buildPushNudgeBody(coachName: string, todayMealCount: number): string {
   if (todayMealCount === 0) {
-    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！💧 記得飲水。`;
+    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！記得飲水。`;
   }
   return `${coachName} 教練提醒你：今日已記 ${todayMealCount} 餐，請繼續補記同飲水，保持完整打卡！`;
 }
@@ -146,7 +155,7 @@ export function CoachActivityWall({
       const data = (await res.json()) as { error?: string; hint?: string };
 
       if (res.ok) {
-        onToast(`已送出 ${sticker} 給學員`);
+        onToast("已送出評價給學員");
         return;
       }
 
@@ -240,7 +249,7 @@ export function CoachActivityWall({
       };
 
       if (res.ok && data.ok) {
-        onToast(`📲 已發送 App 通知俾 ${data.studentName ?? student.name}`);
+        onToast(`已發送 App 通知俾 ${data.studentName ?? student.name}`);
         setNudgeStudent(null);
         return;
       }
@@ -260,7 +269,11 @@ export function CoachActivityWall({
   return (
     <div className="space-y-4">
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
-        <h2 className="font-semibold text-zinc-800">📜 教練聖旨 · 遠端控球</h2>
+        <h2 className="font-semibold text-zinc-800">
+          <IconLabel icon={ScrollText} iconClassName="text-gray-600">
+            教練聖旨 · 遠端控球
+          </IconLabel>
+        </h2>
 
         <ul className="space-y-2">
           {students.map((s) => {
@@ -279,11 +292,11 @@ export function CoachActivityWall({
                 <button
                   type="button"
                   onClick={() => setNudgeStudent(s)}
-                  className={`shrink-0 text-lg px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
+                  className={`shrink-0 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 ${btnClass}`}
                   title="發送 App 提醒（有記錄都可發）"
                   aria-label={`提醒 ${s.name} 記錄飲食`}
                 >
-                  🔔
+                  <Bell size={20} strokeWidth={2} aria-hidden />
                 </button>
               </li>
             );
@@ -351,7 +364,11 @@ export function CoachActivityWall({
       </section>
 
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-        <h2 className="font-semibold text-zinc-800 mb-3">📣 動態牆 · 即時批閱</h2>
+        <h2 className="font-semibold text-zinc-800 mb-3">
+          <IconLabel icon={Megaphone} iconClassName="text-gray-600">
+            動態牆 · 即時批閱
+          </IconLabel>
+        </h2>
         <p className="text-xs text-zinc-400 mb-2">撳卡片查看大圖同完整 Macros</p>
         <ul className="space-y-3 max-h-[480px] overflow-y-auto">
           {recentLogs.map((log) => {
@@ -391,14 +408,15 @@ export function CoachActivityWall({
                   className="flex flex-wrap gap-1.5 mt-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {STICKERS.map((s) => (
+                  {MEAL_STICKERS.map(({ id, Icon }) => (
                     <button
-                      key={s}
+                      key={id}
                       type="button"
-                      onClick={() => sendReaction(log, s)}
-                      className={`text-lg px-2 py-1 rounded-lg bg-white border border-zinc-200 hover:bg-amber-50 ${btnClass}`}
+                      onClick={() => sendReaction(log, id)}
+                      className={`px-2 py-1 rounded-lg bg-white border border-zinc-200 hover:bg-amber-50 text-amber-800 ${btnClass}`}
+                      aria-label={id}
                     >
-                      {s}
+                      <Icon size={20} strokeWidth={2} aria-hidden />
                     </button>
                   ))}
                 </div>
@@ -418,7 +436,7 @@ export function CoachActivityWall({
           onUpdated={(updated) => {
             setSelectedLog(updated);
             onLogUpdated?.(updated);
-            onToast("✅ 飲食記錄已更新");
+            onToast("飲食記錄已更新");
           }}
         />
       )}
@@ -434,7 +452,9 @@ export function CoachActivityWall({
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="font-bold text-zinc-900">
-              🔔 提醒 {nudgeStudent.name} 記錄
+              <IconLabel icon={Bell} iconClassName="text-emerald-600">
+                提醒 {nudgeStudent.name} 記錄
+              </IconLabel>
             </h3>
             <p className="text-xs text-zinc-500">
               今日已記錄 {mealCount} 餐 · 有記錄都可以再發提醒
@@ -449,22 +469,27 @@ export function CoachActivityWall({
                 onClick={() => sendAppNudge(nudgeStudent)}
                 className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60 ${btnClass}`}
               >
-                {nudgeSending ? "發送中..." : "📲 發送 App 通知（鎖屏提醒）"}
+                <IconLabel icon={Smartphone} size="md" className="justify-center" iconClassName="text-white">
+                  {nudgeSending ? "發送中..." : "發送 App 通知（鎖屏提醒）"}
+                </IconLabel>
               </button>
               <button
                 type="button"
                 onClick={() => copyNudge(nudgeText)}
                 className={`w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold ${btnClass}`}
               >
-                📋 複製文字訊息
+                <IconLabel icon={ClipboardList} size="md" className="justify-center" iconClassName="text-white">
+                  複製文字訊息
+                </IconLabel>
               </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(nudgeText)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center ${btnClass}`}
+                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center inline-flex items-center justify-center gap-2 ${btnClass}`}
               >
-                💬 WhatsApp 轉發
+                <MessageCircle size={20} strokeWidth={2} className="shrink-0 text-gray-600" aria-hidden />
+                WhatsApp 轉發
               </a>
               <button
                 type="button"

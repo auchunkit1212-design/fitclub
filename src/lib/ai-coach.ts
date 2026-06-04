@@ -19,9 +19,9 @@ export function buildNightlyAiCoachReview(
   const pro = logs.reduce((s, l) => s + l.protein, 0);
   const roast = generateRoast(cal, targetCalories, pro, targetProtein);
   if (logs.length === 0) {
-    return "🤖 AI 代理教練：今日未見打卡，聽日記得記低第一餐，我會再幫你分析！";
+    return "AI 代理教練：今日未見打卡，聽日記得記低第一餐，我會再幫你分析！";
   }
-  return `🤖 AI 代理教練晚間點評：${roast}`;
+  return `AI 代理教練晚間點評：${roast}`;
 }
 
 export function buildQuotaMealRecommendations(

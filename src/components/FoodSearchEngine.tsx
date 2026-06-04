@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { CheckCircle2, IconLabel, Search } from "@/components/icons";
 import { useDebounce } from "@/hooks/useDebounce";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
@@ -214,7 +215,9 @@ export function FoodSearchEngine({
     <Wrapper className={wrapperClass}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-gray-900">
-          🔍 {t("foodSearch.title", "巨型食物搜尋引擎")}
+          <IconLabel icon={Search} iconClassName="text-gray-600">
+            {t("foodSearch.title", "巨型食物搜尋引擎")}
+          </IconLabel>
         </h2>
         {(lastSource === "openrouter" ||
           results.some((r) => r.source === "openrouter")) && (
@@ -352,14 +355,17 @@ export function FoodSearchEngine({
             ))}
           </div>
           <p className="text-xs text-emerald-700 font-medium">
-            {t("foodSearch.addedHint", "✓ 已帶入表單，撳「發布記錄」即可儲存")}
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-emerald-700" aria-hidden />
+              {t("foodSearch.addedHint", "已帶入表單，撳「發布記錄」即可儲存")}
+            </span>
           </p>
           <button
             type="button"
             onClick={() => saveFavorite(selectedItem)}
             className="text-[11px] text-gray-500 hover:text-amber-600"
           >
-            {t("foodSearch.addFavorite", "⭐ 加入常用")}
+            {t("foodSearch.addFavorite", "加入常用")}
           </button>
         </div>
       )}

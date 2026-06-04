@@ -19,7 +19,7 @@ export function buildInviteCodeMessage(
   brandName?: string
 ): string {
   const label = brandName?.trim() || "教練";
-  return `下載 ${BRAND_NAME} App，註冊時輸入我的專屬邀請碼：${code.trim()}，加入「${label}」飲食打卡！🦍`;
+  return `下載 ${BRAND_NAME} App，註冊時輸入我的專屬邀請碼：${code.trim()}，加入「${label}」飲食打卡！`;
 }
 
 export function buildInviteLinkMessage(
@@ -28,5 +28,5 @@ export function buildInviteLinkMessage(
   brandName?: string
 ): string {
   const label = brandName?.trim() || "教練";
-  return `加入「${label}」飲食打卡 👇\n${registerUrl}\n\n（或註冊時輸入邀請碼：${code.trim()}）`;
+  return `加入「${label}」飲食打卡：\n${registerUrl}\n\n（或註冊時輸入邀請碼：${code.trim()}）`;
 }

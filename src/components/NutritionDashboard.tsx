@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { estimateMicronutrients } from "@/lib/body-profile";
 import { useI18n } from "@/components/I18nProvider";
+import { IconLabel, Lightbulb } from "@/components/icons";
 import { groupLogsByBucket, type MealBucket } from "@/lib/meal-buckets";
 import type { MealLog } from "@/lib/types";
 
@@ -340,7 +341,11 @@ export function NutritionDashboard({
           </section>
 
           <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-4 shadow-sm space-y-3">
-            <h3 className="font-semibold text-zinc-800">{t("nutritionDash.recommendations.title", "💡 剩餘 Quota 配餐推薦")}</h3>
+            <h3 className="font-semibold text-zinc-800">
+              <IconLabel icon={Lightbulb} iconClassName="text-amber-700">
+                {t("nutritionDash.recommendations.title", "剩餘 Quota 配餐推薦")}
+              </IconLabel>
+            </h3>
             {loadingRec ? (
               <p className="text-sm text-zinc-500">{t("nutritionDash.recommendations.loading", "AI 配餐建議生成中...")}</p>
             ) : (

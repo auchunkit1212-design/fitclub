@@ -8,6 +8,19 @@ import {
 } from "@/components/BodyProfileFields";
 import { CoachLogoAvatar } from "@/components/CoachLogoAvatar";
 import { GorillaMascot } from "@/components/GorillaMascot";
+import {
+  BarChart2,
+  Bot,
+  Cpu,
+  Hand,
+  IconLabel,
+  MapPin,
+  Megaphone,
+  MealStickerIcon,
+  ScrollText,
+  Settings,
+  Sparkles,
+} from "@/components/icons";
 import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
@@ -373,7 +386,7 @@ export default function StudentDashboard() {
         setBroadcast("");
         setLogs([]);
         setUserRegistry([]);
-        showToast(t("home.errors.cloudLoadFailed", "❌ 雲端讀取失敗，請檢查網絡或 Supabase。"));
+        showToast(t("home.errors.cloudLoadFailed", "雲端讀取失敗，請檢查網絡或 Supabase。"));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -458,10 +471,10 @@ export default function StudentDashboard() {
       const mealLogs = await getMealLogs(session, registry);
       setLogs(mealLogs);
       setMealSearchOpen(false);
-      showToast(t("home.meals.quickSaved", "✅ 已記錄：{name}", { name: item.description }));
+      showToast(t("home.meals.quickSaved", "已記錄：{name}", { name: item.description }));
     } catch (err) {
       const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
-      showToast(t("home.meals.quickSaveFailed", "❌ {message}", { message }));
+      showToast(t("home.meals.quickSaveFailed", "{message}", { message }));
     } finally {
       setQuickMealSaving(false);
     }
@@ -479,7 +492,7 @@ export default function StudentDashboard() {
       await upsertWeightLog(session.email, w);
       const refreshed = await fetchWeightLogsLastDays(session.email, 7);
       setWeightLogs(refreshed);
-      showToast(t("home.weight.savedToast", "✅ 今日體重已記錄"));
+      showToast(t("home.weight.savedToast", "今日體重已記錄"));
     } catch (err) {
       const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
       alert(t("home.weight.saveFailed", "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql", { message }));
@@ -718,9 +731,11 @@ export default function StudentDashboard() {
           <section className={`${SOFT_CARD} p-5 text-sm`}>
             <div className="flex justify-between items-center gap-2">
               <p className="font-semibold text-gray-900 text-base">
-                {t("home.welcome", "👋 歡迎，{name}", {
-                  name: displayName,
-                })}
+                <IconLabel icon={Hand} iconClassName="text-gray-600">
+                  {t("home.welcome", "歡迎，{name}", {
+                    name: displayName,
+                  })}
+                </IconLabel>
               </p>
               <span className={`text-[10px] font-bold uppercase ${BRAND_BTN} px-2.5 py-1 rounded-full`}>
                 {session.role === "admin"
@@ -731,7 +746,10 @@ export default function StudentDashboard() {
               </span>
             </div>
             <p className="text-gray-500 mt-2 text-xs">{session.email}</p>
-            <p className="text-gray-500 text-xs mt-0.5">📍 {session.gym}</p>
+            <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-1.5">
+              <MapPin size={14} strokeWidth={2} className="shrink-0 text-gray-500" aria-hidden />
+              {session.gym}
+            </p>
           </section>
         )}
 
@@ -748,7 +766,8 @@ export default function StudentDashboard() {
 
         {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 ring-1 ring-emerald-600/30`}>
-            {t("home.targets.lockedBanner", "📜 {source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
+            <IconLabel icon={ScrollText} size="sm" iconClassName="text-emerald-600" className="text-sm font-medium text-gray-800">
+              {t("home.targets.lockedBanner", "{source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
               source: session.isSoloStudent
                 ? t("home.targets.lockedSolo", "AI 大猩猩聖旨")
                 : t("home.targets.lockedCoach", "教練聖旨"),
@@ -757,20 +776,24 @@ export default function StudentDashboard() {
               carbs: coachTargets.targetCarbs,
               fats: coachTargets.targetFats,
             })}
+            </IconLabel>
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-[#ecfdf5]`}>
-            {t("home.soloModeBanner", "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
+            <IconLabel icon={Cpu} iconClassName="text-emerald-600">
+              {t("home.soloModeBanner", "你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
+            </IconLabel>
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && coachReactions.length > 0 && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800`}>
             {coachReactions.slice(0, 3).map((r) => (
-              <p key={r.id} className="font-medium">
-                {t("home.coachReplied", "教練回覆咗你 {sticker}", { sticker: r.sticker })}
+              <p key={r.id} className="font-medium flex items-center gap-2">
+                {t("home.coachReplied", "教練回覆咗你")}
+                <MealStickerIcon sticker={r.sticker} size="sm" className="text-violet-700" />
               </p>
             ))}
           </div>
@@ -778,17 +801,21 @@ export default function StudentDashboard() {
 
         {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-amber-50`}>
-            {t("home.broadcastPrefix", "📣 教練突發警告:")} {broadcast}
+            <IconLabel icon={Megaphone} size="sm" iconClassName="text-amber-700" gapClass="gap-1.5">
+              {t("home.broadcastPrefix", "教練突發警告:")}
+            </IconLabel>{" "}
+            {broadcast}
           </div>
         )}
 
         {activeTab === "dashboard" && isStudent && (
           <section className={`${SOFT_CARD} p-5 bg-gradient-to-br from-[#ecfdf5] to-white`}>
             <p className="text-sm font-semibold text-emerald-700 mb-1">
-              🤖{" "}
-              {session.isSoloStudent
-                ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
-                : t("home.aiCoach.coachTitle", "專屬教練 AI 點評")}
+              <IconLabel icon={Bot} iconClassName="text-emerald-600">
+                {session.isSoloStudent
+                  ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
+                  : t("home.aiCoach.coachTitle", "專屬教練 AI 點評")}
+              </IconLabel>
             </p>
             <p className="text-sm leading-relaxed text-gray-700">
               {session.isSoloStudent
@@ -824,7 +851,9 @@ export default function StudentDashboard() {
           <>
             <section className={`${SOFT_CARD} p-5`}>
               <h2 className="text-sm font-semibold text-emerald-600 mb-2">
-                {t("home.roastTitle", "🤖 AI 教練吐槽")}
+                <IconLabel icon={Sparkles} iconClassName="text-emerald-600">
+                  {t("home.roastTitle", "AI 教練吐槽")}
+                </IconLabel>
               </h2>
               <p className="text-gray-900 leading-relaxed">{roast}</p>
               <p className="text-xs text-gray-500 mt-3">
@@ -840,7 +869,9 @@ export default function StudentDashboard() {
               onClick={() => setShowNutritionDash(true)}
               className={`w-full ${BRAND_BTN} font-bold py-4 rounded-3xl shadow-[0_8px_30px_rgb(5,150,105,0.25)] ${btnClass}`}
             >
-              📊 {t("home.advancedNutrition", "高級營養分析")}
+              <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
+                {t("home.advancedNutrition", "高級營養分析")}
+              </IconLabel>
             </button>
 
             <section className={`${SOFT_CARD} p-5 space-y-4`}>
@@ -932,8 +963,8 @@ export default function StudentDashboard() {
                       </div>
                       </div>
                       {reaction && (
-                        <p className="text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-2 mt-2 leading-relaxed">
-                          {reaction.sticker}
+                        <p className="text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-2 mt-2 leading-relaxed flex items-center gap-1.5">
+                          <MealStickerIcon sticker={reaction.sticker} size="sm" className="text-violet-700" aria-hidden />
                         </p>
                       )}
                     </li>
@@ -945,7 +976,11 @@ export default function StudentDashboard() {
           </>
         ) : isStudent ? (
           <section className={`${SOFT_CARD} p-5 space-y-4`}>
-            <h2 className="font-semibold text-gray-900">{t("settings.title", "⚙️ 個人化設定")}</h2>
+            <h2 className="font-semibold text-gray-900">
+              <IconLabel icon={Settings} iconClassName="text-gray-600">
+                {t("settings.title", "個人化設定")}
+              </IconLabel>
+            </h2>
             <div className="space-y-1">
               <label className="text-xs text-zinc-500">{t("settings.nickname", "暱稱")}</label>
               <input
@@ -1159,7 +1194,7 @@ export default function StudentDashboard() {
             setLogs((prev) =>
               prev.map((l) => (l.id === updated.id ? updated : l))
             );
-            showToast("✅ 飲食記錄已更新");
+            showToast("飲食記錄已更新");
           }}
         />
       )}

@@ -74,7 +74,7 @@ export async function notifyCoachOfNewMealLog(
 
   const { sent, failed } = await sendPushToEmails(coachEmails, {
     title: "學員打卡通知",
-    body: `📢 學員 ${studentName} 剛上傳了新飲食紀錄，快去點評！${detail}`,
+    body: `學員 ${studentName} 剛上傳了新飲食紀錄，快去點評！${detail}`,
     url: "/coach",
     tag: `meal-log-${log.id}`,
   });

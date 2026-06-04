@@ -7,7 +7,7 @@
   },
   "header": {
     "back": "← 返回",
-    "logout": "🚪 登出"
+    "logout": "登出"
   },
   "language": {
     "label": "語言",
@@ -25,25 +25,25 @@
     },
     "todayMealCount": "今日 {count} 餐",
     "healthMgmt": "健康管理",
-    "welcome": "👋 歡迎，{name}",
-    "advancedNutrition": "📊 進階營養分析",
+    "welcome": "歡迎，{name}",
+    "advancedNutrition": "進階營養分析",
     "notifications": {
       "logMeal": "⏰ 該記錄上一餐了，別漏打卡！",
-      "hydration": "💧 補水提醒：現在喝一大杯水吧！",
+      "hydration": "補水提醒：現在喝一大杯水吧！",
       "later": "稍後",
       "actNow": "馬上做"
     },
     "errors": {
-      "cloudLoadFailed": "❌ 雲端讀取失敗，請檢查網路或 Supabase。"
+      "cloudLoadFailed": "雲端讀取失敗，請檢查網路或 Supabase。"
     },
     "targets": {
       "lockedSolo": "AI 大猩猩聖旨",
       "lockedCoach": "教練聖旨",
-      "lockedBanner": "📜 {source}已鎖定目標：{calories} kcal · 蛋白質 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g"
+      "lockedBanner": "{source}已鎖定目標：{calories} kcal · 蛋白質 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g"
     },
-    "soloModeBanner": "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！",
+    "soloModeBanner": "你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！",
     "coachReplied": "教練回覆了你 {sticker}",
-    "broadcastPrefix": "📣 教練突發警告:",
+    "broadcastPrefix": "教練突發警告:",
     "aiCoach": {
       "soloTitle": "大猩猩 AI 私教",
       "coachTitle": "專屬教練 AI 點評",
@@ -53,7 +53,7 @@
       "progressGood": "進度不錯",
       "defaultCoach": "專業教練組"
     },
-    "roastTitle": "🤖 AI 教練吐槽",
+    "roastTitle": "AI 教練吐槽",
     "settingsSummary": "你目前的設定：{trainingType} · 每週 {weeklyFrequency}",
     "progress": {
       "title": "今日進度"
@@ -65,14 +65,14 @@
       "saving": "儲存中...",
       "updateButton": "更新今日體重",
       "invalidAlert": "請輸入有效體重（30–300 kg）",
-      "savedToast": "✅ 今日體重已記錄",
+      "savedToast": "今日體重已記錄",
       "saveFailed": "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql"
     },
     "meals": {
       "today": "今日餐單",
       "macroLine": "{calories} kcal · 蛋白質 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g",
-      "quickSaved": "✅ 已記錄：{name}",
-      "quickSaveFailed": "❌ {message}"
+      "quickSaved": "已記錄：{name}",
+      "quickSaveFailed": "{message}"
     }
   },
   "common": {
@@ -155,7 +155,7 @@
     "networkError": "網路錯誤，請稍後再試",
     "sourceHk": "茶餐廳資料庫",
     "sourceLocal": "智能估算",
-    "addedHint": "✓ 已帶入表單，點「發布紀錄」即可儲存",
+    "addedHint": "已帶入表單，點「發布紀錄」即可儲存",
     "addFavorite": "⭐ 加入常用",
     "favorites": "⭐ 常用 / 歷史",
     "usedTimes": "用過 {count} 次",
@@ -163,12 +163,12 @@
     "loginRequired": "請先登入後再搜尋食物",
     "fatSecretIpBlocked": "FatSecret 拒絕此伺服器 IP。請到 platform.fatsecret.com → 你的應用程式 → 將 Vercel 出口 IP 加入白名單；或在 Vercel 啟用 Static IPs（Project Settings → Connectivity）取得固定 IP。",
     "sheetTitle": "快速記錄飲食",
-    "fullLogCta": "📷 完整記錄（含相片）",
+    "fullLogCta": "完整記錄（含相片）",
     "sheetHint": "選擇食物後會自動記錄；需要相片或詳細設定請用完整記錄頁"
   },
   "snackScanner": {
     "scanning": "AI 辨識標籤中...",
-    "scanButton": "📸 拍攝營養標籤",
+    "scanButton": "拍攝營養標籤",
     "perServing": "每份 {cal} kcal（{size}）· 共 {count} 份",
     "perPiece": "→ 每件約 {cal} kcal（已填入）",
     "engineOpenAi": "引擎：GPT-4o Vision",
@@ -209,12 +209,12 @@
     "verifying": "驗證中...",
     "signup": {
       "registering": "註冊中...",
-      "soloCta": "🦍 立即註冊 AI 私教",
-      "coachCta": "🚀 建立品牌空間",
+      "soloCta": "立即註冊 AI 私教",
+      "coachCta": "建立品牌空間",
       "soloTitle": "註冊 AI 專屬私教（無須教練）",
       "soloHint": "密碼必填 · 自動接入官方 AI Tenant · 大猩猩全面接管目標與批閱",
-      "trackSolo": "🦍 AI 私教散客",
-      "trackCoach": "🏢 教練 / 品牌",
+      "trackSolo": "AI 私教散客",
+      "trackCoach": "教練 / 品牌",
       "passwordPlaceholder": "密碼（至少 6 位，散客必填）",
       "nameCoach": "教練姓名",
       "nameStudent": "你的姓名"
@@ -229,22 +229,22 @@
       "sasLink": "免費開通品牌空間"
     },
     "errors": {
-      "passwordMin": "⚠️ 請設定至少 6 位密碼。",
+      "passwordMin": "請設定至少 6 位密碼。",
       "emailRequired": "請先輸入 Email。",
       "registerFailed": "註冊失敗",
-      "network": "❌ 連線失敗，請稍後再試。",
-      "networkRetry": "❌ 連線失敗，請檢查網路後再試。",
+      "network": "連線失敗，請稍後再試。",
+      "networkRetry": "連線失敗，請檢查網路後再試。",
       "loginFailed": "登入失敗"
     },
     "toast": {
-      "welcome": "🎉 歡迎 {name}",
-      "adminWelcome": "🎉 歡迎 最高總裁",
-      "brandOpened": "🎉 品牌「{gymName}」已開通！",
-      "soloReady": "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。"
+      "welcome": "歡迎 {name}",
+      "adminWelcome": "歡迎 最高總裁",
+      "brandOpened": "品牌「{gymName}」已開通！",
+      "soloReady": "歡迎！AI 大猩猩私教已為你準備好 onboarding。"
     }
   },
   "settings": {
-    "title": "⚙️ 個人化設定",
+    "title": "個人化設定",
     "nickname": "暱稱",
     "nicknamePlaceholder": "你想讓教練怎麼稱呼你",
     "job": "工作型態",
@@ -317,9 +317,9 @@
       "other": "其他"
     },
     "goal": {
-      "cut": "🔥 減脂",
-      "bulk": "💪 增肌",
-      "maintain": "⚖️ 維持"
+      "cut": "減脂",
+      "bulk": "增肌",
+      "maintain": "維持"
     },
     "submit": {
       "saving": "儲存中...",
@@ -339,7 +339,7 @@
     }
   },
   "bodyProfile": {
-    "sectionTitle": "📏 身體數據",
+    "sectionTitle": "身體數據",
     "height": "身高 (cm)",
     "weight": "體重 (kg)",
     "age": "年齡",
@@ -351,13 +351,13 @@
     "exerciseCalories": "今日運動消耗 (kcal)"
   },
   "push": {
-    "title": "📲 飲水與飲食提醒",
+    "title": "飲水與飲食提醒",
     "description": "開啟後即使關閉 App，也可收到系統通知（需 Vercel 設定 VAPID 公鑰 + Supabase 儲存訂閱）。",
     "unsupported": {
-      "title": "📲 系統通知",
+      "title": "系統通知",
       "hint": "此裝置或瀏覽器不支援 Web Push。iPhone 請用 Safari「加入主畫面」後，從主畫面圖示開啟（iOS 16.4+）。"
     },
-    "enable": "🔔 開啟飲水與飲食提醒",
+    "enable": "開啟飲水與飲食提醒",
     "processing": "處理中...",
     "test": "測試通知",
     "disable": "關閉",
@@ -367,28 +367,28 @@
     "messages": {
       "permissionStatus": "權限狀態：{permission}{subscribed}",
       "subscribed": " · 已訂閱",
-      "enabled": "✅ 已開啟系統通知，訂閱已存入 Supabase。",
-      "enabledConsole": "✅ 已開啟通知。Supabase 表未建立，訂閱已印在 Console（F12）供你複製。",
+      "enabled": "已開啟系統通知，訂閱已存入 Supabase。",
+      "enabledConsole": "已開啟通知。Supabase 表未建立，訂閱已印在 Console（F12）供你複製。",
       "disabled": "已關閉推送訂閱。",
-      "testSent": "📲 已發送本機測試通知（若無彈出，請檢查系統通知設定）。",
-      "enableFailed": "❌ {message}",
+      "testSent": "已發送本機測試通知（若無彈出，請檢查系統通知設定）。",
+      "enableFailed": "{message}",
       "disableFailed": "關閉失敗",
       "testFailed": "測試失敗"
     }
   },
   "coachPush": {
-    "title": "📲 學員打卡即時推播",
+    "title": "學員打卡即時推播",
     "description": "開啟後，學員上傳飲食紀錄時你會收到系統級通知，即使 App 在背景或已關閉。",
-    "unsupportedTitle": "📲 學員打卡推播",
+    "unsupportedTitle": "學員打卡推播",
     "unsupportedHint": "此瀏覽器不支援 Web Push。請用 Chrome / Safari，iPhone 需「加入主畫面」後從圖示開啟（iOS 16.4+）。",
-    "enable": "🔔 開啟推播通知",
+    "enable": "開啟推播通知",
     "processing": "處理中...",
     "test": "測試通知",
     "disable": "關閉",
     "permission": "權限：{permission}",
     "subscribed": " · 已訂閱",
-    "enabled": "✅ 已開啟推播！學員打卡時你會收到系統通知。",
-    "testOk": "📲 已發送本機測試通知。",
+    "enabled": "已開啟推播！學員打卡時你會收到系統通知。",
+    "testOk": "已發送本機測試通知。",
     "deniedHelp": "你先前拒絕了通知。請到系統設定 → 瀏覽器 → 通知 → 允許此網站。"
   },
   "nutritionDash": {
@@ -417,7 +417,7 @@
       "noMacroData": "未有營養素數據"
     },
     "recommendations": {
-      "title": "💡 剩餘 Quota 配餐推薦",
+      "title": "剩餘 Quota 配餐推薦",
       "loading": "AI 配餐建議生成中...",
       "itemLine": "約 {calories} kcal · P{protein} C{carbs} F{fats}"
     },

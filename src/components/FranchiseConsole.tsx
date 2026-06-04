@@ -1,6 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import {
+  BarChart2,
+  Brain,
+  ClipboardList,
+  IconLabel,
+  Loader2,
+  Palette,
+  Plus,
+  Rocket,
+  Ticket,
+  Wrench,
+} from "@/components/icons";
 import { generateCoachReport } from "@/lib/ai-mock";
 import {
   emailExists,
@@ -52,13 +64,13 @@ export function FranchiseConsole({
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffEmail.trim() || !newStaffName.trim() || !newBrandName.trim()) {
-      onToast("⚠️ 請輸入品牌名稱、教練姓名與 Email！");
+      onToast("請輸入品牌名稱、教練姓名與 Email！");
       return;
     }
     setSubmitting(true);
     try {
       if (await emailExists(newStaffEmail)) {
-        onToast("🚨 該 Email 已經登記過！");
+        onToast("該 Email 已經登記過！");
         return;
       }
 
@@ -84,7 +96,7 @@ export function FranchiseConsole({
       };
 
       if (!res.ok) {
-        onToast(`❌ ${data.error ?? "建立失敗"}${data.hint ? `（${data.hint}）` : ""}`);
+        onToast(`${data.error ?? "建立失敗"}${data.hint ? `（${data.hint}）` : ""}`);
         return;
       }
 
@@ -94,10 +106,10 @@ export function FranchiseConsole({
       setNewStaffName("");
       setNewBrandName("");
       onToast(
-        `👑 已新增合作品牌「${data.tenant?.gymName ?? newBrandName.trim()}」教練：${newStaffName.trim()}`
+        `已新增合作品牌「${data.tenant?.gymName ?? newBrandName.trim()}」教練：${newStaffName.trim()}`
       );
     } catch {
-      onToast("❌ 雲端寫入失敗，請稍後再試。");
+      onToast("雲端寫入失敗，請稍後再試。");
     } finally {
       setSubmitting(false);
     }
@@ -106,13 +118,13 @@ export function FranchiseConsole({
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudentEmail.trim() || !newStudentName.trim()) {
-      onToast("⚠️ 請輸入學員 Email 與名字！");
+      onToast("請輸入學員 Email 與名字！");
       return;
     }
     setSubmitting(true);
     try {
       if (await emailExists(newStudentEmail)) {
-        onToast("🚨 該學員 Email 已被登記！");
+        onToast("該學員 Email 已被登記！");
         return;
       }
       await insertUser(
@@ -131,9 +143,9 @@ export function FranchiseConsole({
       onRegistryChange(updated);
       setNewStudentEmail("");
       setNewStudentName("");
-      onToast(`💪 已登記學員：${newStudentName}`);
+      onToast(`已登記學員：${newStudentName}`);
     } catch {
-      onToast("❌ 雲端寫入失敗，請稍後再試。");
+      onToast("雲端寫入失敗，請稍後再試。");
     } finally {
       setSubmitting(false);
     }
@@ -145,9 +157,9 @@ export function FranchiseConsole({
     try {
       const logs: MealLog[] = await fetchMealLogsForSession(session, registry);
       setAiReport(generateCoachReport(logs));
-      onToast("✨ 已從 Supabase 拉取最新數據並生成報告！");
+      onToast("已從 Supabase 拉取最新數據並生成報告！");
     } catch {
-      onToast("❌ 無法從雲端讀取飲食記錄。");
+      onToast("無法從雲端讀取飲食記錄。");
     } finally {
       setIsGenerating(false);
     }
@@ -158,7 +170,9 @@ export function FranchiseConsole({
       {(session.role === "admin" || session.role === "coach") && (
         <section className="bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
           <h2 className="text-sm font-bold text-indigo-300">
-            📊 一鍵 AI 智能整合（Supabase 實時）
+            <IconLabel icon={BarChart2} iconClassName="text-indigo-300">
+              一鍵 AI 智能整合（Supabase 實時）
+            </IconLabel>
           </h2>
           <button
             type="button"
@@ -166,7 +180,15 @@ export function FranchiseConsole({
             onClick={handleGenerateReport}
             className={`w-full py-3 bg-indigo-600 font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
           >
-            {isGenerating ? "⏳ 從雲端整合緊..." : "🧠 整合旗下學員飲食記錄"}
+            {isGenerating ? (
+              <IconLabel icon={Loader2} size="md" className="justify-center animate-spin" iconClassName="text-white">
+                從雲端整合緊...
+              </IconLabel>
+            ) : (
+              <IconLabel icon={Brain} size="md" className="justify-center" iconClassName="text-white">
+                整合旗下學員飲食記錄
+              </IconLabel>
+            )}
           </button>
           {aiReport && (
             <pre className="bg-white/10 p-3 rounded-xl text-xs whitespace-pre-wrap border border-white/10">
@@ -179,7 +201,9 @@ export function FranchiseConsole({
       {session.role === "admin" && (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-900 border-l-4 border-zinc-900 pl-2">
-            🛠️ 新增合作 Gym 品牌 / 自由教練
+            <IconLabel icon={Wrench} iconClassName="text-zinc-700">
+              新增合作 Gym 品牌 / 自由教練
+            </IconLabel>
           </h2>
           <p className="text-xs text-zinc-500">
             每次新增會自動建立獨立 Tenant，教練帳號綁定該品牌並擁有教練後台權限。
@@ -213,7 +237,13 @@ export function FranchiseConsole({
               disabled={submitting}
               className={`w-full py-3 bg-zinc-900 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              {submitting ? "建立 Tenant 緊..." : "🚀 建立品牌並授權教練"}
+              {submitting ? (
+                "建立 Tenant 緊..."
+              ) : (
+                <IconLabel icon={Rocket} size="sm" className="justify-center" iconClassName="text-white">
+                  建立品牌並授權教練
+                </IconLabel>
+              )}
             </button>
           </form>
           <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -244,7 +274,11 @@ export function FranchiseConsole({
       {session.role === "coach" && (
         <>
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-            <h2 className="font-semibold text-zinc-800 mb-2">🎨 品牌設定</h2>
+            <h2 className="font-semibold text-zinc-800 mb-2">
+              <IconLabel icon={Palette} iconClassName="text-zinc-600">
+                品牌設定
+              </IconLabel>
+            </h2>
             <button
               type="button"
               onClick={onGoCoach}
@@ -256,7 +290,9 @@ export function FranchiseConsole({
 
           <section className="bg-white rounded-2xl border border-blue-100 p-4 space-y-3 shadow-sm">
             <h2 className="font-semibold text-blue-900 border-l-4 border-blue-600 pl-2">
-              🎟️ 登記學員 Email
+              <IconLabel icon={Ticket} iconClassName="text-blue-700">
+                登記學員 Email
+              </IconLabel>
             </h2>
             <form onSubmit={handleAddStudent} className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
@@ -287,7 +323,13 @@ export function FranchiseConsole({
                 disabled={submitting}
                 className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
               >
-                {submitting ? "寫入雲端緊..." : "➕ 登記學員並開通"}
+                {submitting ? (
+                  "寫入雲端緊..."
+                ) : (
+                  <IconLabel icon={Plus} size="sm" className="justify-center" iconClassName="text-white">
+                    登記學員並開通
+                  </IconLabel>
+                )}
               </button>
             </form>
           </section>
@@ -297,7 +339,9 @@ export function FranchiseConsole({
       {(session.role === "admin" || session.role === "coach") && (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
           <h2 className="font-semibold text-zinc-800 mb-2">
-            📋 旗下學員名單 ({studentList.length})
+            <IconLabel icon={ClipboardList} iconClassName="text-zinc-600">
+              旗下學員名單 ({studentList.length})
+            </IconLabel>
           </h2>
           {studentList.length === 0 ? (
             <p className="text-sm text-zinc-500 text-center py-4">

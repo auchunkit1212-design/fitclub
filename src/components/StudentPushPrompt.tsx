@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { Bell, Droplets, IconLabel, Megaphone, Moon } from "@/components/icons";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import type { PersonalSettings } from "@/lib/personal-settings";
 
@@ -83,7 +84,9 @@ export function StudentPushPrompt({
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 px-5 py-5 text-white">
           <p id="push-prompt-title" className="text-lg font-bold">
-            {t("push.prompt.title", "🔔 開啟 App 通知")}
+            <IconLabel icon={Bell} iconClassName="text-white">
+              {t("push.prompt.title", "開啟 App 通知")}
+            </IconLabel>
           </p>
           <p className="mt-2 text-sm text-emerald-50/95 leading-relaxed">
             {t(
@@ -95,9 +98,18 @@ export function StudentPushPrompt({
 
         <div className="px-5 py-4 space-y-3">
           <ul className="text-xs text-zinc-600 space-y-1.5 leading-relaxed">
-            <li>{t("push.prompt.bullet1", "💧 朝早飲水 + 記錄飲食提醒")}</li>
-            <li>{t("push.prompt.bullet2", "📣 教練遠端催促你打卡")}</li>
-            <li>{t("push.prompt.bullet3", "🌙 每晚總結你今日進度")}</li>
+            <li className="flex items-start gap-2">
+              <Droplets size={16} strokeWidth={2} className="shrink-0 text-emerald-600 mt-0.5" aria-hidden />
+              {t("push.prompt.bullet1", "朝早飲水 + 記錄飲食提醒")}
+            </li>
+            <li className="flex items-start gap-2">
+              <Megaphone size={16} strokeWidth={2} className="shrink-0 text-emerald-600 mt-0.5" aria-hidden />
+              {t("push.prompt.bullet2", "教練遠端催促你打卡")}
+            </li>
+            <li className="flex items-start gap-2">
+              <Moon size={16} strokeWidth={2} className="shrink-0 text-emerald-600 mt-0.5" aria-hidden />
+              {t("push.prompt.bullet3", "每晚總結你今日進度")}
+            </li>
           </ul>
 
           {denied ? (

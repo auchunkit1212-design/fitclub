@@ -8,6 +8,7 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
+import { BarChart2, Camera, Cookie, IconLabel } from "@/components/icons";
 import { estimateMacrosWithBreakdown } from "@/lib/ai-mock";
 import { formatCompositeBreakdown } from "@/lib/composite-meal";
 import {
@@ -427,7 +428,9 @@ export default function AddMealPage() {
           onClick={() => setShowNutritionDash(true)}
           className={`w-full bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
         >
-          📊 {t("addMeal.advancedNutrition", "高級營養分析")}
+          <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
+            {t("addMeal.advancedNutrition", "高級營養分析")}
+          </IconLabel>
         </button>
 
         <FoodSearchEngine
@@ -511,8 +514,9 @@ export default function AddMealPage() {
                   className="max-h-40 mx-auto rounded-xl object-contain"
                 />
               ) : (
-                <p className="text-zinc-500">
-                  📷 {t("addMeal.uploadPhotoHint", "撳一下拍照或選擇相片（自動壓縮至 1MB 內）")}
+                <p className="text-zinc-500 flex items-center justify-center gap-2">
+                  <Camera size={20} strokeWidth={2} className="shrink-0 text-zinc-400" aria-hidden />
+                  {t("addMeal.uploadPhotoHint", "撳一下拍照或選擇相片（自動壓縮至 1MB 內）")}
                 </p>
               )}
             </div>
@@ -587,7 +591,9 @@ export default function AddMealPage() {
             onClick={() => setSnackOpen(!snackOpen)}
             className={`w-full flex justify-between items-center font-semibold text-zinc-800 ${btnClass}`}
           >
-            <span>🍪 {t("addMeal.calculateCalories", "計算卡路里")}</span>
+            <IconLabel icon={Cookie} iconClassName="text-zinc-700">
+              {t("addMeal.calculateCalories", "計算卡路里")}
+            </IconLabel>
             <span className="text-zinc-400">{snackOpen ? "▲" : "▼"}</span>
           </button>
           {snackOpen && (

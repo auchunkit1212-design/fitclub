@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { PageHeader } from "@/components/PageHeader";
+import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
@@ -118,7 +119,7 @@ export default function CoachRecordsPage() {
           </section>
         ) : students.length === 0 ? (
           <section className="bg-white rounded-2xl border border-zinc-100 p-8 text-center shadow-sm">
-            <p className="text-4xl mb-3">📋</p>
+            <ClipboardList size={48} strokeWidth={1.5} className="mx-auto mb-3 text-zinc-300" aria-hidden />
             <p className="font-semibold text-zinc-800">目前尚無學員紀錄</p>
             <p className="text-sm text-zinc-500 mt-2 leading-relaxed">
               請先在教練後台新增學員，或確認學員已完成飲食打卡。

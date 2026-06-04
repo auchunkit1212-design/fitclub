@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Bot, Download, IconLabel } from "@/components/icons";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import {
   buildMealExportRows,
@@ -66,7 +67,9 @@ export function CoachMealHistoryPanel({
           onClick={handleExport}
           className={`shrink-0 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold ${btnClass}`}
         >
-          📥 匯出 Excel
+          <IconLabel icon={Download} size="sm" iconClassName="text-white">
+            匯出 Excel
+          </IconLabel>
         </button>
       </div>
 
@@ -143,7 +146,9 @@ export function CoachMealHistoryPanel({
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-indigo-800 bg-indigo-50 rounded-lg px-2 py-1.5 leading-relaxed">
-                  🤖 {buildMealExportRows([log], students)[0]?.aiComment}
+                  <IconLabel icon={Bot} size="sm" iconClassName="text-indigo-700" gapClass="gap-1.5">
+                    {buildMealExportRows([log], students)[0]?.aiComment}
+                  </IconLabel>
                 </p>
               </li>
             );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IconLabel, Sparkles } from "@/components/icons";
 import { errorMessage } from "@/lib/errors";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
@@ -122,7 +123,7 @@ export function MealDetailModal({
           fats: data.log.fats ?? 0,
         });
       }
-      setAiNote("✅ 已儲存修正");
+      setAiNote("已儲存修正");
     } catch (e) {
       setError(errorMessage(e, "儲存失敗"));
     } finally {
@@ -188,7 +189,7 @@ export function MealDetailModal({
           carbs: data.log.carbs ?? 0,
           fats: data.log.fats ?? 0,
         });
-        setAiNote(`✅ 已用${sourceLabel}重算並儲存${partsHint}`);
+        setAiNote(`已用${sourceLabel}重算並儲存${partsHint}`);
       } else {
         setAiNote(`預覽：${sourceLabel}建議 ${est?.calories ?? "?"} kcal${partsHint} — 按「套用並儲存」寫入`);
       }
@@ -315,7 +316,13 @@ export function MealDetailModal({
                     onClick={() => handleAiReestimate(false)}
                     className={`py-3 rounded-xl border border-violet-200 bg-violet-50 text-violet-900 font-semibold text-sm ${btnClass}`}
                   >
-                    {aiBusy ? "計算中..." : "🤖 AI 預覽"}
+                    {aiBusy ? (
+                      "計算中..."
+                    ) : (
+                      <IconLabel icon={Sparkles} size="md" iconClassName="text-violet-700">
+                        AI 預覽
+                      </IconLabel>
+                    )}
                   </button>
                   <button
                     type="button"

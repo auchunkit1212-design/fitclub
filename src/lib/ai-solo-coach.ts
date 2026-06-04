@@ -112,10 +112,10 @@ export async function generateGorillaMealReview(
   const apiKey = process.env.OPENAI_API_KEY;
   const fallback =
     log.calories > 750
-      ? "油太多啦，今晚罰你做掌上壓！🦍"
+      ? "油太多啦，今晚罰你做掌上壓！— 大猩猩教練"
       : log.protein >= 25
-        ? "嘩！這餐蛋白質很足，繼續保持！🦍"
-        : "記得下一餐加啲蛋白質，大猩猩盯緊你！🦍";
+        ? "嘩！這餐蛋白質很足，繼續保持！— 大猩猩教練"
+        : "記得下一餐加啲蛋白質，大猩猩盯緊你！— 大猩猩教練";
 
   if (!apiKey) return fallback;
 
@@ -134,7 +134,7 @@ export async function generateGorillaMealReview(
           {
             role: "system",
             content:
-              "你是 Nutrition Coach 的大猩猩 AI 私教，用繁體中文、幽默直接、1-2 句，必須以 🦍 結尾。",
+              "你是 Nutrition Coach 的大猩猩 AI 私教，用繁體中文、幽默直接、1-2 句，句末可加「— 大猩猩教練」。",
           },
           {
             role: "user",
@@ -149,7 +149,7 @@ export async function generateGorillaMealReview(
     };
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) return fallback;
-    return text.endsWith("🦍") ? text : `${text} 🦍`;
+    return text;
   } catch {
     return fallback;
   }

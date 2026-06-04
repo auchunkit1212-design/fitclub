@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useBranding } from "@/components/BrandingProvider";
+import { IconLabel, Smartphone } from "@/components/icons";
 import { isStandaloneDisplay } from "@/lib/session";
 
 const btnClass =
@@ -70,7 +71,11 @@ export function PwaShell() {
       {showStandaloneLoginHint && (
         <div className="fixed top-4 left-4 right-4 z-50 max-w-lg mx-auto">
           <div className="bg-amber-50 border border-amber-300 text-amber-950 rounded-xl px-4 py-3 shadow-lg text-xs leading-relaxed">
-            <p className="font-bold">📲 主畫面 App 提示</p>
+            <p className="font-bold">
+              <IconLabel icon={Smartphone} size="sm" iconClassName="text-amber-900">
+                主畫面 App 提示
+              </IconLabel>
+            </p>
             <p className="mt-1">
               主畫面圖示同 Safari 分開儲存登入狀態。若見唔到資料，請喺呢度重新登入一次。
             </p>
@@ -88,7 +93,11 @@ export function PwaShell() {
       {!installed && installEvent && (
         <div className="fixed bottom-24 left-4 right-4 z-50 max-w-lg mx-auto">
           <div className="bg-zinc-900 text-white rounded-2xl p-4 shadow-2xl border border-zinc-700">
-            <p className="text-sm font-semibold">📲 安裝 {brand.gymName} App</p>
+            <p className="text-sm font-semibold">
+              <IconLabel icon={Smartphone} size="sm" iconClassName="text-white">
+                安裝 {brand.gymName} App
+              </IconLabel>
+            </p>
             <p className="text-xs text-zinc-300 mt-1">
               加到主畫面，全屏使用，似真 App 咁順！
             </p>
@@ -115,7 +124,11 @@ export function PwaShell() {
       {!installed && showIosHint && !installEvent && (
         <div className="fixed bottom-24 left-4 right-4 z-50 max-w-lg mx-auto">
           <div className="bg-zinc-900 text-white rounded-2xl p-4 shadow-2xl border border-zinc-700">
-            <p className="text-sm font-semibold">📲 iPhone 安裝教學</p>
+            <p className="text-sm font-semibold">
+              <IconLabel icon={Smartphone} size="sm" iconClassName="text-white">
+                iPhone 安裝教學
+              </IconLabel>
+            </p>
             <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
               Safari 分享掣 →「加入主畫面」。安裝後請用主畫面圖示開啟，並重新登入一次。
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/I18nProvider";
+import { IconLabel, Ruler } from "@/components/icons";
 import type { StudentBodyProfile, StudentGender } from "@/lib/types";
 
 interface BodyProfileFieldsProps {
@@ -21,7 +22,9 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
   return (
     <div className="space-y-3 pt-2 border-t border-zinc-100">
       <h3 className="text-sm font-semibold text-zinc-800">
-        {t("bodyProfile.sectionTitle", "📏 身體數據")}
+        <IconLabel icon={Ruler} iconClassName="text-zinc-600">
+          {t("bodyProfile.sectionTitle", "身體數據")}
+        </IconLabel>
       </h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">

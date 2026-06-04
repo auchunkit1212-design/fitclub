@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import {
+  ClipboardList,
+  IconLabel,
+  Link,
+  Paperclip,
+  Smartphone,
+} from "@/components/icons";
+import {
   buildCoachInviteRegisterUrl,
   buildInviteCodeMessage,
   buildInviteLinkMessage,
@@ -71,7 +78,9 @@ export function CoachInviteCodePanel({
     <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 p-4 shadow-sm space-y-4">
       <div>
         <h2 className="font-bold text-amber-900 text-base">
-          {t("invite.coach.title", "🔗 學員邀請 · 邀請碼 / 連結")}
+          <IconLabel icon={Link} iconClassName="text-amber-800">
+            {t("invite.coach.title", "學員邀請 · 邀請碼 / 連結")}
+          </IconLabel>
         </h2>
         <p className="text-xs text-amber-800/80 mt-1 leading-relaxed">
           {t(
@@ -107,7 +116,7 @@ export function CoachInviteCodePanel({
               <button
                 type="button"
                 onClick={() =>
-                  handleCopy(code, t("invite.coach.copiedCode", "✅ 已複製邀請碼"))
+                  handleCopy(code, t("invite.coach.copiedCode", "已複製邀請碼"))
                 }
                 className={`shrink-0 px-3 rounded-xl bg-amber-500 text-white text-xs font-bold ${btnClass}`}
               >
@@ -131,24 +140,28 @@ export function CoachInviteCodePanel({
                 onClick={() =>
                   handleCopy(
                     registerUrl,
-                    t("invite.coach.copiedLink", "✅ 已複製邀請連結")
+                    t("invite.coach.copiedLink", "已複製邀請連結")
                   )
                 }
                 className={`flex-1 min-w-[7rem] py-2.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold ${btnClass}`}
               >
-                {t("invite.coach.copyLink", "📎 複製連結")}
+                <IconLabel icon={Paperclip} size="sm" iconClassName="text-amber-900">
+                  {t("invite.coach.copyLink", "複製連結")}
+                </IconLabel>
               </button>
               <button
                 type="button"
                 onClick={() =>
                   handleCopy(
                     buildInviteLinkMessage(code, registerUrl, brandName),
-                    t("invite.coach.copiedShare", "✅ 已複製分享文案（連結+碼）")
+                    t("invite.coach.copiedShare", "已複製分享文案（連結+碼）")
                   )
                 }
                 className={`flex-1 min-w-[7rem] py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold ${btnClass}`}
               >
-                {t("invite.coach.copyShare", "📲 複製分享文案")}
+                <IconLabel icon={Smartphone} size="sm" iconClassName="text-white">
+                  {t("invite.coach.copyShare", "複製分享文案")}
+                </IconLabel>
               </button>
             </div>
           </div>
@@ -158,12 +171,14 @@ export function CoachInviteCodePanel({
             onClick={() =>
               handleCopy(
                 buildInviteCodeMessage(code, brandName),
-                t("invite.coach.copiedMessage", "✅ 已複製邀請碼文案")
+                t("invite.coach.copiedMessage", "已複製邀請碼文案")
               )
             }
             className={`w-full py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-semibold ${btnClass}`}
           >
-            {t("invite.coach.copyCodeMessage", "📋 複製邀請碼文案（WhatsApp）")}
+            <IconLabel icon={ClipboardList} size="sm" className="justify-center" iconClassName="text-white">
+              {t("invite.coach.copyCodeMessage", "複製邀請碼文案（WhatsApp）")}
+            </IconLabel>
           </button>
         </>
       )}

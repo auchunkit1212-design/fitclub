@@ -538,19 +538,19 @@ export function generateCoachReport(logs: MealLog[]): string {
           .join("\n")
       : "- 暫時未見明顯優秀餐單，建議提醒學員增加優質蛋白。";
 
-  return `🤖 【AI 學員整合報告】
+  return `【AI 學員整合報告】
 
-📊 數據概覽：
+數據概覽：
 - 打卡總數：${logs.length} 餐
 - 平均熱量：${avgCalories} kcal / 餐
 
-🚨 高風險飲食：
+高風險飲食：
 ${riskLines}
 
-✅ 表現良好：
+表現良好：
 ${goodLines}
 
-💡 教練建議：
+教練建議：
 今個星期優先處理高熱量打卡學員，配合飲水提醒同蛋白質目標，進度會穩定好多。`;
 }
 
