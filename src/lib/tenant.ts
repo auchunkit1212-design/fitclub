@@ -71,6 +71,66 @@ export async function fetchTenantByInviteCode(
   return fetchTenantById(trimmed);
 }
 
+/** 教練發布品牌時：若尚未綁定 Tenant，自動建立並連結邀請碼（slug） */
+export async function ensureCoachTenant(input: {
+  coachEmail: string;
+  gymName: string;
+  coachName?: string;
+}): Promise<Tenant> {
+  const supabase = getSupabaseAdmin();
+  const email = input.coachEmail.trim().toLowerCase();
+  const gymName = input.gymName.trim() || "Nutrition Coach";
+
+  const { data: coachRow, error: coachErr } = await supabase
+    .from("users_registry")
+    .select("email, name, tenant_id")
+    .eq("email", email)
+    .eq("role", "coach")
+    .maybeSingle();
+
+  if (coachErr) throw coachErr;
+  if (!coachRow) {
+    throw new Error("找不到教練帳號，請確認已用教練身份登入。");
+  }
+
+  if (coachRow.tenant_id) {
+    const existing = await fetchTenantById(String(coachRow.tenant_id));
+    if (existing) return existing;
+  }
+
+  const slug = generateTenantSlug(gymName);
+  const coachName =
+    input.coachName?.trim() || String(coachRow.name ?? "").trim() || gymName;
+
+  const { data: tenantRow, error: tenantError } = await supabase
+    .from("tenants")
+    .insert({
+      slug,
+      gym_name: gymName,
+      owner_email: email,
+      plan: "trial",
+    })
+    .select("*")
+    .single();
+
+  if (tenantError) throw tenantError;
+  const tenant = mapTenant(tenantRow as TenantRow);
+
+  const { error: linkError } = await supabase
+    .from("users_registry")
+    .update({
+      tenant_id: tenant.id,
+      gym: gymName,
+      name: coachName,
+    })
+    .eq("email", email)
+    .eq("role", "coach");
+
+  if (linkError) throw linkError;
+
+  return tenant;
+}
+
 export async function createTenantWithCoach(input: {
   email: string;
   passwordHash: string;

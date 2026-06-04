@@ -89,7 +89,7 @@ export function CoachInviteCodePanel({
         <div className="rounded-xl bg-white/80 border border-amber-200 px-3 py-3 text-xs text-amber-900 leading-relaxed">
           {t(
             "invite.coach.noCode",
-            "暫時未有邀請碼。請先完成品牌開通（SAS 註冊）或聯絡總控為你綁定 Tenant；發布品牌設定後會顯示專屬邀請碼。"
+            "暫時未有邀請碼。請喺下方「品牌中心」填好 App 標題，撳「發布到雲端」，系統會自動建立專屬邀請碼同連結。"
           )}
         </div>
       ) : (

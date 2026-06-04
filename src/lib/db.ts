@@ -1,5 +1,5 @@
 import { resolveBrandForUser } from "@/lib/branding";
-import { syncTenantBranding } from "@/lib/tenant";
+import { ensureCoachTenant, syncTenantBranding } from "@/lib/tenant";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
@@ -434,10 +434,17 @@ export async function updateCoachBrandingAdmin(
     logo?: string;
     broadcast: string;
     tenantId?: string;
+    coachName?: string;
   }
-): Promise<void> {
+): Promise<{ tenantId: string; tenantSlug: string }> {
   const admin = getSupabaseAdmin();
   const email = coachEmail.trim().toLowerCase();
+
+  const tenant = await ensureCoachTenant({
+    coachEmail: email,
+    gymName: payload.appTitle,
+    coachName: payload.coachName,
+  });
 
   const { error } = await admin
     .from("users_registry")
@@ -447,6 +454,7 @@ export async function updateCoachBrandingAdmin(
       logo: payload.logo ?? null,
       broadcast: payload.broadcast,
       gym: payload.appTitle,
+      tenant_id: tenant.id,
     })
     .eq("email", email)
     .eq("role", "coach");
@@ -466,13 +474,13 @@ export async function updateCoachBrandingAdmin(
     throw error;
   }
 
-  if (payload.tenantId) {
-    await syncTenantBranding(payload.tenantId, {
-      gymName: payload.appTitle,
-      logoUrl: payload.logo,
-      themeColor: payload.themeColor,
-    });
-  }
+  await syncTenantBranding(tenant.id, {
+    gymName: payload.appTitle,
+    logoUrl: payload.logo,
+    themeColor: payload.themeColor,
+  });
+
+  return { tenantId: tenant.id, tenantSlug: tenant.slug };
 }
 
 /** @deprecated 請改用 API /api/coach/branding（service role） */

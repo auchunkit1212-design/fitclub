@@ -19,14 +19,15 @@ export async function POST(request: Request) {
   };
 
   try {
-    await updateCoachBrandingAdmin(session.email, {
+    const result = await updateCoachBrandingAdmin(session.email, {
       appTitle: body.appTitle?.trim() || "Nutrition Coach",
       themeColor: body.themeColor ?? "emerald",
       logo: body.logo,
       broadcast: body.broadcast?.trim() ?? "",
       tenantId: body.tenantId ?? session.tenantId,
+      coachName: session.name,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const readable = toReadableError(error, "雲端發布失敗");
     const hint =

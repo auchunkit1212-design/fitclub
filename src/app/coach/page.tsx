@@ -128,7 +128,12 @@ export default function CoachPage() {
           tenantId: session.tenantId,
         }),
       });
-      const data = (await res.json()) as { error?: string; hint?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        hint?: string;
+        tenantId?: string;
+        tenantSlug?: string;
+      };
       if (!res.ok) {
         console.error("[coach] branding publish failed:", data);
         alert(
@@ -138,14 +143,24 @@ export default function CoachPage() {
         );
         return;
       }
+      const slug = data.tenantSlug?.trim() ?? "";
+      if (slug) setInviteCode(slug);
       const updated = applyBrandToSession(session, {
         gymName: appTitle.trim(),
         branding: { appTitle: appTitle.trim(), themeColor, logo },
         broadcast: broadcast.trim(),
-        tenantSlug: inviteCode.trim() || session.tenantSlug,
+        tenantSlug: slug || session.tenantSlug,
       });
-      saveSession(updated);
-      alert("品牌已同步到雲端！");
+      saveSession({
+        ...updated,
+        tenantId: data.tenantId ?? updated.tenantId ?? session.tenantId,
+        tenantSlug: slug || updated.tenantSlug,
+      });
+      alert(
+        slug
+          ? `品牌已同步！你的學員邀請碼：${slug}`
+          : "品牌已同步到雲端！"
+      );
     } catch (err) {
       console.error("[coach] branding publish error:", err);
       alert("雲端發布失敗，請稍後再試。");
