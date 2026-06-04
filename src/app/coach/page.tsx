@@ -142,7 +142,7 @@ export default function CoachPage() {
         gymName: appTitle.trim(),
         branding: { appTitle: appTitle.trim(), themeColor, logo },
         broadcast: broadcast.trim(),
-        tenantSlug: session.tenantSlug,
+        tenantSlug: inviteCode.trim() || session.tenantSlug,
       });
       saveSession(updated);
       alert("品牌已同步到雲端！");
@@ -206,6 +206,15 @@ export default function CoachPage() {
       />
 
       <main className="px-4 py-4 space-y-4">
+        {session?.role === "coach" && (
+          <CoachInviteCodePanel
+            inviteCode={inviteCode}
+            brandName={appTitle.trim() || brand.gymName}
+            loading={loading}
+            onCopied={showToast}
+          />
+        )}
+
         {(session?.role === "coach" || session?.role === "admin") && (
           <CoachPushSubscribe />
         )}
@@ -228,13 +237,6 @@ export default function CoachPage() {
             </pre>
           )}
         </section>
-
-        {session?.role === "coach" && (
-          <CoachInviteCodePanel
-            inviteCode={inviteCode}
-            onCopied={showToast}
-          />
-        )}
 
         {session?.role === "coach" && (
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { RegisterInvitePrefill } from "@/components/RegisterInvitePrefill";
 import { useRouter } from "next/navigation";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { IosPwaInstallBanner } from "@/components/IosPwaInstallBanner";
@@ -70,6 +71,13 @@ export default function RegisterPage() {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
   };
+
+  const applyInviteFromUrl = useCallback((code: string) => {
+    setInviteCode(code);
+    setShowInviteField(true);
+    setSignupTrack("solo");
+    setAuthTab("signup");
+  }, []);
 
   const finishSession = (session: UserSession, welcome: string) => {
     saveSession(session);
@@ -148,10 +156,8 @@ export default function RegisterPage() {
           name,
           gymName: isCoach ? gymName : undefined,
           inviteCode:
-            !isCoach && showInviteField && inviteCode.trim()
-              ? inviteCode.trim()
-              : undefined,
-          soloStudent: !isCoach && !showInviteField,
+            !isCoach && inviteCode.trim() ? inviteCode.trim() : undefined,
+          soloStudent: !isCoach && !inviteCode.trim(),
         }),
       });
       const data = (await res.json()) as {
@@ -247,6 +253,10 @@ export default function RegisterPage() {
         </div>
       )}
 
+      <Suspense fallback={null}>
+        <RegisterInvitePrefill onPrefill={applyInviteFromUrl} />
+      </Suspense>
+
       <div className="text-center mb-5">
         <div className="flex justify-center mb-3">
           <GorillaMascot size="lg" />
@@ -286,6 +296,16 @@ export default function RegisterPage() {
         <p className="text-sm text-zinc-600 text-center leading-relaxed px-1">
           {welcomeText}
         </p>
+
+        {inviteCode.trim() && authTab === "signup" && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 text-center leading-relaxed">
+            {t(
+              "auth.invite.prefilled",
+              "🎫 教練邀請已套用 · 邀請碼：{code}",
+              { code: inviteCode.trim() }
+            )}
+          </div>
+        )}
 
         {authTab === "login" ? (
           <form onSubmit={handleLogin} className="space-y-3">
@@ -328,7 +348,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => {
                   setSignupTrack("solo");
-                  setShowInviteField(false);
+                  if (!inviteCode.trim()) setShowInviteField(false);
                 }}
                 className={`py-2 rounded-xl text-xs font-bold border-2 ${btnClass} ${
                   signupTrack === "solo"
