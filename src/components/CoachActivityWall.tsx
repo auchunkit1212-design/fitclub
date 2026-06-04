@@ -59,14 +59,30 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function buildNudgeMessage(studentName: string, coachName: string): string {
+function buildNudgeMessage(
+  studentName: string,
+  coachName: string,
+  todayMealCount = 0
+): string {
+  const mealLine =
+    todayMealCount === 0
+      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！🍽️`
+      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！🍽️`;
+
   return `🦍 喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
 
-${coachName} 教練發現你今日仲未記錄任何飲食！🍽️
+${mealLine}
 
-快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros，唔好等體重偷偷報復你呀！💪
+快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。💧 記得飲水！💪
 
 — Nutrition Coach · Coach! what to eat?`;
+}
+
+function buildPushNudgeBody(coachName: string, todayMealCount: number): string {
+  if (todayMealCount === 0) {
+    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！💧 記得飲水。`;
+  }
+  return `${coachName} 教練提醒你：今日已記 ${todayMealCount} 餐，請繼續補記同飲水，保持完整打卡！`;
 }
 
 interface CoachActivityWallProps {
@@ -199,6 +215,7 @@ export function CoachActivityWall({
   };
 
   const sendAppNudge = async (student: RegistryUser) => {
+    const todayMealCount = todayMealCountByEmail.get(student.email) ?? 0;
     setNudgeSending(true);
     try {
       const res = await fetch("/api/coach/nudge", {
@@ -208,7 +225,10 @@ export function CoachActivityWall({
           ...getSessionRequestHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ studentEmail: student.email }),
+        body: JSON.stringify({
+          studentEmail: student.email,
+          message: buildPushNudgeBody(coachName, todayMealCount),
+        }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -246,17 +266,20 @@ export function CoachActivityWall({
             return (
               <li
                 key={s.email}
-                className="flex items-center justify-between gap-2 text-sm"
+                className="flex items-center justify-between gap-3 text-sm min-w-0"
               >
-                <span className="truncate">
+                <span className="min-w-0 flex-1 truncate">
                   {s.name}{" "}
-                  <span className="text-zinc-400 text-xs">({count} 餐今日)</span>
+                  <span className="text-zinc-400 text-xs whitespace-nowrap">
+                    ({count} 餐今日)
+                  </span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setNudgeStudent(s)}
-                  className={`shrink-0 text-lg px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
-                  title="遠端 App 提醒記錄"
+                  className={`shrink-0 text-lg px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
+                  title="發送 App 提醒（有記錄都可發）"
+                  aria-label={`提醒 ${s.name} 記錄飲食`}
                 >
                   🔔
                 </button>
@@ -393,17 +416,24 @@ export function CoachActivityWall({
         />
       )}
 
-      {nudgeStudent && (
+      {nudgeStudent && (() => {
+        const mealCount = todayMealCountByEmail.get(nudgeStudent.email) ?? 0;
+        const nudgeText = buildNudgeMessage(
+          nudgeStudent.name,
+          coachName,
+          mealCount
+        );
+        return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="font-bold text-zinc-900">
               🔔 提醒 {nudgeStudent.name} 記錄
             </h3>
             <p className="text-xs text-zinc-500">
-              今日已記錄 {todayMealCountByEmail.get(nudgeStudent.email) ?? 0} 餐
+              今日已記錄 {mealCount} 餐 · 有記錄都可以再發提醒
             </p>
             <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed bg-amber-50 rounded-xl p-3 border border-amber-100">
-              {buildNudgeMessage(nudgeStudent.name, coachName)}
+              {nudgeText}
             </p>
             <div className="flex flex-col gap-2">
               <button
@@ -416,15 +446,13 @@ export function CoachActivityWall({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  copyNudge(buildNudgeMessage(nudgeStudent.name, coachName))
-                }
+                onClick={() => copyNudge(nudgeText)}
                 className={`w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold ${btnClass}`}
               >
                 📋 複製文字訊息
               </button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(buildNudgeMessage(nudgeStudent.name, coachName))}`}
+                href={`https://wa.me/?text=${encodeURIComponent(nudgeText)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center ${btnClass}`}
@@ -441,7 +469,8 @@ export function CoachActivityWall({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
