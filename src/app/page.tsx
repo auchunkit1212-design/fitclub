@@ -9,6 +9,7 @@ import {
 import { CoachLogoAvatar } from "@/components/CoachLogoAvatar";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { BottomNav } from "@/components/BottomNav";
+import { MealDetailModal } from "@/components/MealDetailModal";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
@@ -225,6 +226,7 @@ export default function StudentDashboard() {
   const [weightInput, setWeightInput] = useState("");
   const [weightSaving, setWeightSaving] = useState(false);
   const [mealSearchOpen, setMealSearchOpen] = useState(false);
+  const [selectedMealLog, setSelectedMealLog] = useState<MealLog | null>(null);
   const [quickMealSaving, setQuickMealSaving] = useState(false);
 
   const showToast = (message: string) => {
@@ -896,7 +898,16 @@ export default function StudentDashboard() {
                     return (
                     <li
                       key={log.id}
-                      className="p-3 rounded-2xl bg-gray-50"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedMealLog(log)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedMealLog(log);
+                        }
+                      }}
+                      className="p-3 rounded-2xl bg-gray-50 cursor-pointer active:opacity-80"
                     >
                       <div className="flex gap-3">
                       {getMealImageSrc(log) && (
@@ -1138,6 +1149,20 @@ export default function StudentDashboard() {
         ) : null}
       </main>
       </div>
+
+      {selectedMealLog && (
+        <MealDetailModal
+          log={selectedMealLog}
+          onClose={() => setSelectedMealLog(null)}
+          onUpdated={(updated) => {
+            setSelectedMealLog(updated);
+            setLogs((prev) =>
+              prev.map((l) => (l.id === updated.id ? updated : l))
+            );
+            showToast("✅ 飲食記錄已更新");
+          }}
+        />
+      )}
 
       <BottomNav
         activeTab={activeTab}

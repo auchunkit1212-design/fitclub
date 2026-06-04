@@ -131,6 +131,11 @@ export default function CoachRecordsPage() {
                 logs={logs}
                 students={students}
                 onToast={showToast}
+                onLogUpdated={(updated) =>
+                  setLogs((prev) =>
+                    prev.map((l) => (l.id === updated.id ? updated : l))
+                  )
+                }
               />
             )}
 

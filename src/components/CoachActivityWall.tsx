@@ -89,12 +89,14 @@ interface CoachActivityWallProps {
   logs: MealLog[];
   students: RegistryUser[];
   onToast: (msg: string) => void;
+  onLogUpdated?: (log: MealLog) => void;
 }
 
 export function CoachActivityWall({
   logs,
   students,
   onToast,
+  onLogUpdated,
 }: CoachActivityWallProps) {
   const [targetStudent, setTargetStudent] = useState(students[0]?.email ?? "");
   const [targets, setTargets] = useState<TargetFormState>(DEFAULT_TARGETS);
@@ -413,6 +415,11 @@ export function CoachActivityWall({
             students.find((s) => s.email === selectedLog.email)?.name
           }
           onClose={() => setSelectedLog(null)}
+          onUpdated={(updated) => {
+            setSelectedLog(updated);
+            onLogUpdated?.(updated);
+            onToast("✅ 飲食記錄已更新");
+          }}
         />
       )}
 

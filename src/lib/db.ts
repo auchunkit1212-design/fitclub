@@ -401,6 +401,59 @@ export async function insertMealLog(
   throw new Error("meal_logs 寫入失敗");
 }
 
+export async function fetchMealLogById(
+  id: string,
+  options?: { useServiceRole?: boolean }
+): Promise<MealLog | null> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { data, error } = await client
+    .from("meal_logs")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapMeal(data as MealRow) : null;
+}
+
+export async function updateMealLog(
+  id: string,
+  patch: {
+    description?: string;
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fats?: number;
+    mealType?: string;
+  },
+  options?: { useServiceRole?: boolean }
+): Promise<MealLog> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const row: Record<string, unknown> = {};
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.mealType !== undefined) row.meal_type = patch.mealType;
+  if (patch.calories !== undefined) row.calories = patch.calories;
+  if (patch.protein !== undefined) row.protein = patch.protein;
+  if (patch.carbs !== undefined) row.carbs = patch.carbs;
+  if (patch.fats !== undefined) row.fats = patch.fats;
+
+  const { data, error } = await client
+    .from("meal_logs")
+    .update(row)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw toReadableError(error, "meal_logs 更新失敗");
+  return mapMeal(data as MealRow);
+}
+
 export async function fetchMealLogsForSession(
   session: UserSession,
   registry: RegistryUser[],
