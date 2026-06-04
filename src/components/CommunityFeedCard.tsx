@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Heart } from "@/components/icons";
-import type { CommunityFeedPost } from "@/lib/community-mock";
+import type { CommunityFeedPost } from "@/lib/community";
 import { useI18n } from "@/components/I18nProvider";
 
 const SOFT_CARD =
@@ -46,9 +46,16 @@ export function CommunityFeedCard({ post }: Props) {
     });
   };
 
+  const hasMacros =
+    post.kind === "meal" &&
+    post.calories != null &&
+    post.protein != null &&
+    post.carbs != null &&
+    post.fats != null;
+
   return (
-    <article className={`${SOFT_CARD}`}>
-      <div className="flex items-center gap-3 p-4 pb-3 min-w-0">
+    <article className={SOFT_CARD}>
+      <div className="flex items-center gap-3 p-4 pb-2 min-w-0">
         <div
           className={`w-10 h-10 shrink-0 rounded-full ${post.avatarHue} text-white text-sm font-bold flex items-center justify-center`}
           aria-hidden
@@ -58,35 +65,65 @@ export function CommunityFeedCard({ post }: Props) {
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm text-gray-900 truncate">
             {post.authorName}
+            {post.isDemo && (
+              <span className="ml-1.5 text-[9px] font-bold text-gray-400 uppercase">
+                Demo
+              </span>
+            )}
           </p>
           <p className="text-[11px] text-gray-500">{post.postedAt}</p>
         </div>
       </div>
 
-      <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={post.imageUrl}
-          alt={post.mealName}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
+      {post.bodyText && (
+        <p className="px-4 pb-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+          {post.bodyText}
+        </p>
+      )}
+
+      {post.mediaUrl && post.mediaType === "image" && (
+        <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.mediaUrl}
+            alt={post.mealName ?? t("community.feed.photoAlt", "貼文相片")}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      )}
+
+      {post.mediaUrl && post.mediaType === "video" && (
+        <div className="relative w-full bg-black overflow-hidden">
+          <video
+            src={post.mediaUrl}
+            controls
+            playsInline
+            className="w-full max-h-80 object-contain"
+          />
+        </div>
+      )}
 
       <div className="p-4 space-y-3 min-w-0">
-        <div>
-          <h3 className="font-semibold text-gray-900">{post.mealName}</h3>
-          <p className="text-sm text-emerald-700 font-bold mt-0.5">
-            {post.calories} kcal
-          </p>
-        </div>
+        {post.mealName && (
+          <div>
+            <h3 className="font-semibold text-gray-900">{post.mealName}</h3>
+            {hasMacros && (
+              <p className="text-sm text-emerald-700 font-bold mt-0.5">
+                {post.calories} kcal
+              </p>
+            )}
+          </div>
+        )}
 
-        <div className="flex flex-wrap gap-1.5">
-          <MacroTag label="P" value={post.protein} unit="g" />
-          <MacroTag label="C" value={post.carbs} unit="g" />
-          <MacroTag label="F" value={post.fats} unit="g" />
-        </div>
+        {hasMacros && (
+          <div className="flex flex-wrap gap-1.5">
+            <MacroTag label="P" value={post.protein!} unit="g" />
+            <MacroTag label="C" value={post.carbs!} unit="g" />
+            <MacroTag label="F" value={post.fats!} unit="g" />
+          </div>
+        )}
 
         <button
           type="button"

@@ -9,7 +9,8 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { BarChart2, Camera, Cookie, IconLabel } from "@/components/icons";
+import { BarChart2, Camera, Cookie, Globe, IconLabel } from "@/components/icons";
+import { publishMealSharePost } from "@/lib/community";
 import { estimateMacrosWithBreakdown } from "@/lib/ai-mock";
 import { formatCompositeBreakdown } from "@/lib/composite-meal";
 import {
@@ -89,6 +90,7 @@ export default function AddMealPage() {
     FoodAdvancedNutrients | undefined
   >();
   const [proNutrition, setProNutrition] = useState(false);
+  const [shareToCommunity, setShareToCommunity] = useState(false);
 
   useEffect(() => {
     const parsed = getSession();
@@ -309,6 +311,25 @@ export default function AddMealPage() {
       await saveMealLog({ ...mealPayload, imageUrl }, { notifyCoach: true });
     };
 
+    const finishAfterSave = async (imageUrl?: string) => {
+      if (shareToCommunity && currentSession) {
+        try {
+          publishMealSharePost({
+            session: currentSession,
+            mealType: mealTypeLabel,
+            description: basePayload.description,
+            calories: finalCalories,
+            protein: finalProtein,
+            carbs: finalCarbs,
+            fats: finalFats,
+            imageUrl: imageUrl ?? uploadedImageUrl,
+          });
+        } catch (shareErr) {
+          console.warn("[add-meal] community share failed", shareErr);
+        }
+      }
+    };
+
     const trySave = async (imageUrl?: string) => {
       let res: Response | null = null;
       try {
@@ -347,7 +368,8 @@ export default function AddMealPage() {
         } catch {
           // streak optional
         }
-        router.push("/");
+        await finishAfterSave(imageUrl);
+        router.push(shareToCommunity ? "/community" : "/");
         return;
       }
 
@@ -371,7 +393,8 @@ export default function AddMealPage() {
         } catch {
           // ignore parse
         }
-        router.push("/");
+        await finishAfterSave(imageUrl);
+        router.push(shareToCommunity ? "/community" : "/");
         return;
       }
 
@@ -414,7 +437,8 @@ export default function AddMealPage() {
         } catch {
           // streak optional
         }
-        router.push("/");
+        await finishAfterSave(imageUrl);
+        router.push(shareToCommunity ? "/community" : "/");
       } catch (directErr) {
         console.error("[add-meal] direct save failed", directErr);
         throw new Error(
@@ -760,6 +784,29 @@ export default function AddMealPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={shareToCommunity}
+              onChange={(e) => setShareToCommunity(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-semibold text-zinc-800 text-sm">
+                <Globe size={16} className="text-emerald-600 shrink-0" aria-hidden />
+                {t("addMeal.shareToCommunity", "分享到 Community")}
+              </span>
+              <span className="block text-xs text-zinc-500 mt-1 leading-relaxed">
+                {t(
+                  "addMeal.shareToCommunityHint",
+                  "發布記錄後會將食物名稱、相片（如有）同 P/C/F 營養素顯示喺社群動態"
+                )}
+              </span>
+            </span>
+          </label>
         </section>
 
         <button

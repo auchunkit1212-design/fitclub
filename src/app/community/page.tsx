@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
+import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
-import { CommunityHubStrip } from "@/components/CommunityHubStrip";
 import { Globe, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
-import { COMMUNITY_FEED_MOCK } from "@/lib/community-mock";
+import { loadCommunityFeed, type CommunityFeedPost } from "@/lib/community";
 import { getSession } from "@/lib/session";
 import type { UserSession } from "@/lib/types";
 
@@ -15,7 +15,12 @@ export default function CommunityPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [session, setSession] = useState<UserSession | null>(null);
+  const [posts, setPosts] = useState<CommunityFeedPost[]>([]);
   const [ready, setReady] = useState(false);
+
+  const refreshFeed = useCallback(() => {
+    setPosts(loadCommunityFeed());
+  }, []);
 
   useEffect(() => {
     const current = getSession();
@@ -24,10 +29,11 @@ export default function CommunityPage() {
       return;
     }
     setSession(current);
+    refreshFeed();
     setReady(true);
-  }, [router]);
+  }, [router, refreshFeed]);
 
-  if (!ready) {
+  if (!ready || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500 text-sm">
         {t("common.loading", "載入中…")}
@@ -49,37 +55,36 @@ export default function CommunityPage() {
         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
           {t(
             "community.subtitle",
-            "發掘新功能，同其他學員分享你今日食咗咩。"
+            "分享想法、相片同影片，或者將飲食記錄同步到社群。"
           )}
         </p>
       </header>
 
-      <main className="px-4 py-5 space-y-8 min-w-0">
-        <CommunityHubStrip />
+      <main className="px-4 py-5 space-y-6 min-w-0">
+        <CommunityComposer session={session} onPosted={refreshFeed} />
 
         <section className="space-y-4 min-w-0">
           <h2 className="text-sm font-semibold text-gray-900">
             {t("community.feed.title", "大家都在吃什麼")}
           </h2>
           <div className="space-y-4">
-            {COMMUNITY_FEED_MOCK.map((post) => (
+            {posts.map((post) => (
               <CommunityFeedCard key={post.id} post={post} />
             ))}
           </div>
-          <p className="text-center text-[11px] text-gray-400 pt-2">
-            {t("community.feed.mockHint", "以上為示範動態，正式版將連接真實社群")}
+          <p className="text-center text-[11px] text-gray-400 pt-2 leading-relaxed">
+            {t(
+              "community.feed.hint",
+              "你嘅分享會顯示喺呢度；示範帖文標有 Demo。"
+            )}
           </p>
         </section>
       </main>
 
       <BottomNav
-        activeTab="dashboard"
-        role={session?.role ?? "student"}
-        onTabChange={(tab) => {
-          router.push(tab === "settings" ? "/?tab=settings" : "/");
-        }}
+        role={session.role ?? "student"}
         onFabClick={
-          session?.role === "student"
+          session.role === "student"
             ? () => router.push("/add-meal")
             : () => router.push("/coach/records")
         }
