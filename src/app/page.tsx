@@ -16,6 +16,7 @@ import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
+import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
@@ -566,6 +567,13 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-white pb-32">
+      {isStudent && (
+        <StudentPushPrompt
+          reminderSettings={settings}
+          onSettingsSync={syncReminderSettingsToServer}
+        />
+      )}
+
       {showNutritionDash && isStudent && (
         <NutritionDashboard
           logs={todayLogs}
