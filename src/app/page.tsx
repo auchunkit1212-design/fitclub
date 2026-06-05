@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "@/components/icons";
 import { BottomNav } from "@/components/BottomNav";
+import { CoachSuggestCard } from "@/components/CoachSuggestCard";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
 import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
@@ -927,6 +928,17 @@ export default function StudentDashboard() {
                 barClass="bg-rose-400"
               />
             </section>
+
+            <CoachSuggestCard
+              targetCalories={targetCalories}
+              targetProtein={targetProtein}
+              targetCarbs={targetCarbs}
+              targetFats={targetFats}
+              consumedCalories={todayCalories}
+              consumedProtein={todayProtein}
+              consumedCarbs={todayCarbs}
+              consumedFats={todayFats}
+            />
 
             <StudentMicronutrientPanel
               todayCalories={todayCalories}

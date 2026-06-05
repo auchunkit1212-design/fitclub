@@ -538,6 +538,16 @@
     "caution": "Caution",
     "danger": "High"
   },
+  "coachSuggest": {
+    "title": "Ask Coach",
+    "subtitle": "Coach! What to eat? — Gorilla picks your next meal from what's left today",
+    "cravingLabel": "What are you craving for your next meal?",
+    "cravingPlaceholder": "e.g. Japanese, fast food, cha chaan teng — or leave blank",
+    "cta": "Coach! What to eat?",
+    "loading": "Coach is thinking…",
+    "error": "Coach is busy — try again shortly",
+    "empty": "No reply from coach — please try again"
+  },
   "history": {
     "title": "History Calendar",
     "subtitle": "Review meal logs and AI feedback — green on target, red over",

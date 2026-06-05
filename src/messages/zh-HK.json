@@ -538,6 +538,16 @@
     "caution": "注意",
     "danger": "危險"
   },
+  "coachSuggest": {
+    "title": "問問教練",
+    "subtitle": "Coach! What to eat? — 根據你今日剩餘額度，大猩猩幫你諗下一餐",
+    "cravingLabel": "你下一餐想吃什麼種類？",
+    "cravingPlaceholder": "例如：日式、快餐、茶餐廳，或留空讓教練決定",
+    "cta": "Coach! What to eat?",
+    "loading": "大猩猩諗緊…",
+    "error": "教練暫時忙緊，請稍後再試",
+    "empty": "教練冇回覆，請再試一次"
+  },
   "history": {
     "title": "歷史紀錄日曆",
     "subtitle": "回顧打卡紀錄與 AI 點評，綠燈達標、紅燈超標",
