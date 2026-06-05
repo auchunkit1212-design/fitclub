@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { GorillaMascot } from "@/components/GorillaMascot";
-import { IconLabel, Loader2, MessageSquare, Sparkles } from "@/components/icons";
+import {
+  IconLabel,
+  Loader2,
+  MessageSquare,
+  ScrollText,
+  Sparkles,
+} from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
+import type { RestOfDayMeal } from "@/lib/coach-suggest";
 
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -20,7 +27,57 @@ type MacroProps = {
   consumedProtein: number;
   consumedCarbs: number;
   consumedFats: number;
+  mealsLoggedToday?: number;
 };
+
+function MealPlanList({
+  meals,
+  mode,
+}: {
+  meals: RestOfDayMeal[];
+  mode: "craving_plus_plan" | "full_day_plan";
+}) {
+  const { t } = useI18n();
+  if (meals.length === 0) return null;
+
+  const title =
+    mode === "full_day_plan"
+      ? t("coachSuggest.fullDayPlan", "全日飲食建議")
+      : t("coachSuggest.restOfDayPlan", "食完之後，今日仲可以食");
+
+  return (
+    <div className="mt-4 space-y-2.5">
+      <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5 pl-1">
+        <ScrollText size={14} className="text-emerald-600 shrink-0" />
+        {title}
+      </p>
+      <ul className="space-y-2">
+        {meals.map((meal, i) => (
+          <li
+            key={`${meal.slot}-${meal.title}-${i}`}
+            className="rounded-2xl bg-white border border-emerald-100/80 px-3.5 py-3 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                {meal.slot}
+              </span>
+              {(meal.estimated_calories ?? 0) > 0 && (
+                <span className="text-[10px] text-gray-400 tabular-nums shrink-0">
+                  ~{meal.estimated_calories} kcal
+                  {meal.protein_g ? ` · P${meal.protein_g}g` : ""}
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-gray-900 mt-2">{meal.title}</p>
+            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+              {meal.description}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function CoachSuggestCard({
   targetCalories,
@@ -31,6 +88,7 @@ export function CoachSuggestCard({
   consumedProtein,
   consumedCarbs,
   consumedFats,
+  mealsLoggedToday = 0,
 }: MacroProps) {
   const { t, lang } = useI18n();
   const [craving, setCraving] = useState("");
@@ -39,6 +97,8 @@ export function CoachSuggestCard({
   const [suggestion, setSuggestion] = useState<{
     text: string;
     tags: string[];
+    restOfDayMeals: RestOfDayMeal[];
+    mode: "craving_plus_plan" | "full_day_plan";
   } | null>(null);
 
   const handleAsk = async () => {
@@ -62,6 +122,7 @@ export function CoachSuggestCard({
           consumedProtein,
           consumedCarbs,
           consumedFats,
+          mealsLoggedToday,
           craving: craving.trim() || undefined,
           lang,
         }),
@@ -69,6 +130,8 @@ export function CoachSuggestCard({
       const data = (await res.json()) as {
         suggestion_text?: string;
         tags?: string[];
+        rest_of_day_meals?: RestOfDayMeal[];
+        mode?: "craving_plus_plan" | "full_day_plan";
         error?: string;
       };
       if (!res.ok) {
@@ -82,6 +145,8 @@ export function CoachSuggestCard({
       setSuggestion({
         text: data.suggestion_text.trim(),
         tags: data.tags ?? [],
+        restOfDayMeals: data.rest_of_day_meals ?? [],
+        mode: data.mode ?? (craving.trim() ? "craving_plus_plan" : "full_day_plan"),
       });
     } catch {
       setError(t("coachSuggest.error", "教練暫時忙緊，請稍後再試"));
@@ -100,7 +165,10 @@ export function CoachSuggestCard({
         </IconLabel>
       </h2>
       <p className="text-xs text-gray-500 -mt-2">
-        {t("coachSuggest.subtitle", "Coach! What to eat? — 根據你今日剩餘額度，大猩猩幫你諗下一餐")}
+        {t(
+          "coachSuggest.subtitle",
+          "Coach! What to eat? — 根據你今日剩餘額度，大猩猩幫你諗下一餐同埋剩餘餐單"
+        )}
       </p>
 
       <label className="block space-y-1.5">
@@ -165,6 +233,10 @@ export function CoachSuggestCard({
                   ))}
                 </div>
               )}
+              <MealPlanList
+                meals={suggestion.restOfDayMeals}
+                mode={suggestion.mode}
+              />
             </div>
           </div>
         </div>

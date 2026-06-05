@@ -540,7 +540,9 @@
   },
   "coachSuggest": {
     "title": "Ask Coach",
-    "subtitle": "Coach! What to eat? — Gorilla picks your next meal from what's left today",
+    "subtitle": "Coach! What to eat? — Next meal plus your rest-of-day eating plan",
+    "restOfDayPlan": "After that, you can still eat today",
+    "fullDayPlan": "Full-day meal plan",
     "cravingLabel": "What are you craving for your next meal?",
     "cravingPlaceholder": "e.g. Japanese, fast food, cha chaan teng — or leave blank",
     "cta": "Coach! What to eat?",

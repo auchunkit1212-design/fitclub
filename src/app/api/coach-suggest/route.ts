@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     consumedFats?: unknown;
     craving?: string;
     lang?: string;
+    mealsLoggedToday?: unknown;
   };
 
   const targets = {
@@ -46,16 +47,21 @@ export async function POST(request: Request) {
   const lang = normalizeLanguage(body.lang);
 
   try {
+    const mealsLoggedToday = readMacro(body.mealsLoggedToday);
+
     const result = await generateCoachMealSuggestion({
       targets,
       consumed,
       craving,
       lang,
+      mealsLoggedToday,
     });
 
     return NextResponse.json({
       suggestion_text: result.suggestion_text,
       tags: result.tags,
+      rest_of_day_meals: result.rest_of_day_meals,
+      mode: result.mode,
       remaining: result.remaining,
     });
   } catch (error) {

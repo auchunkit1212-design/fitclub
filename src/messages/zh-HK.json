@@ -540,7 +540,9 @@
   },
   "coachSuggest": {
     "title": "問問教練",
-    "subtitle": "Coach! What to eat? — 根據你今日剩餘額度，大猩猩幫你諗下一餐",
+    "subtitle": "Coach! What to eat? — 根據你今日剩餘額度，大猩猩幫你諗下一餐同埋剩餘餐單",
+    "restOfDayPlan": "食完之後，今日仲可以食",
+    "fullDayPlan": "全日飲食建議",
     "cravingLabel": "你下一餐想吃什麼種類？",
     "cravingPlaceholder": "例如：日式、快餐、茶餐廳，或留空讓教練決定",
     "cta": "Coach! What to eat?",

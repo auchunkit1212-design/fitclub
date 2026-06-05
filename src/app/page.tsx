@@ -938,6 +938,7 @@ export default function StudentDashboard() {
               consumedProtein={todayProtein}
               consumedCarbs={todayCarbs}
               consumedFats={todayFats}
+              mealsLoggedToday={todayLogs.length}
             />
 
             <StudentMicronutrientPanel
