@@ -245,7 +245,10 @@
     "invite": {
       "hide": "Hide coach invite code",
       "show": "I have a coach invite code (optional)",
-      "placeholder": "Enter coach invite code (leave blank if none)"
+      "placeholder": "Enter coach invite code (leave blank if none)",
+      "prefilled": "Coach invite applied · code: {code}",
+      "loginTabHint": "You opened a coach invite link. New students: switch to Sign Up. Already registered: log in with your password.",
+      "alreadyRegisteredHint": "This email already has an account — enter your password to log in. Contact your coach if you forgot it."
     },
     "footer": {
       "ownerPrompt": "Gym owner?",

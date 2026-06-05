@@ -54,6 +54,9 @@ export default function RegisterPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [showInviteField, setShowInviteField] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginHint, setLoginHint] = useState<"already_registered" | null>(
+    null
+  );
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIosBanner, setShowIosBanner] = useState(false);
@@ -188,14 +191,10 @@ export default function RegisterPage() {
 
       if (!res.ok || !data.session) {
         const err = data.error ?? t("auth.errors.registerFailed", "註冊失敗");
-        if (err.includes("已被註冊")) {
+        if (err.includes("已被註冊") || err.includes("已註冊")) {
           setAuthTab("login");
-          setLoginError(
-            t(
-              "auth.errors.alreadyRegisteredLogin",
-              "此 Email 已註冊。請用相同密碼喺「登入」分頁登入；若剛註冊過，請勿重複註冊。"
-            )
-          );
+          setLoginError(null);
+          setLoginHint("already_registered");
         }
         showToast(err);
         return;
@@ -232,6 +231,7 @@ export default function RegisterPage() {
     }
 
     setLoginError(null);
+    setLoginHint(null);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -317,6 +317,7 @@ export default function RegisterPage() {
               onClick={() => {
                 setAuthTab(tab);
                 setLoginError(null);
+                if (tab === "signup") setLoginHint(null);
               }}
               className={`py-2.5 rounded-lg text-sm font-bold transition-all ${btnClass} ${
                 authTab === tab
@@ -345,11 +346,22 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {authTab === "login" && hasInviteInUrl() && (
-          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 leading-relaxed">
+        {authTab === "login" &&
+          hasInviteInUrl() &&
+          loginHint !== "already_registered" && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 leading-relaxed text-center">
+              {t(
+                "auth.invite.loginTabHint",
+                "你透過教練邀請連結進入。新學員請切換「註冊」；已有帳號請直接輸入密碼登入。"
+              )}
+            </div>
+          )}
+
+        {authTab === "login" && loginHint === "already_registered" && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-xs text-emerald-900 leading-relaxed text-center">
             {t(
-              "auth.invite.useSignupTab",
-              "你透過教練邀請連結進入。請切換到「註冊」分頁，填寫 Email 同密碼完成加入；完成後先用「登入」分頁登入。"
+              "auth.invite.alreadyRegisteredHint",
+              "此 Email 已有帳號，請輸入密碼登入。若忘記密碼請聯絡教練。"
             )}
           </div>
         )}
@@ -359,7 +371,10 @@ export default function RegisterPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setLoginHint(null);
+              }}
               placeholder={t("auth.placeholder.email", "Email")}
               autoComplete="email"
               className="w-full rounded-xl border border-zinc-200 px-3 py-3"
@@ -370,6 +385,7 @@ export default function RegisterPage() {
               onChange={(e) => {
                 setLoginPassword(e.target.value);
                 setLoginError(null);
+                setLoginHint(null);
               }}
               placeholder={t("auth.placeholder.password", "密碼（舊學員若未設定可留空）")}
               autoComplete="current-password"

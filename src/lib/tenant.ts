@@ -189,6 +189,7 @@ export async function backfillCoachStudentTenants(input: {
 export async function createTenantWithCoach(input: {
   email: string;
   passwordHash: string;
+  passwordPlain?: string;
   gymName: string;
   coachName?: string;
 }): Promise<{ tenant: Tenant; coachEmail: string }> {
@@ -221,6 +222,7 @@ export async function createTenantWithCoach(input: {
     app_title: input.gymName.trim(),
     theme_color: "emerald",
     password_hash: input.passwordHash,
+    password_plain: input.passwordPlain ?? null,
   });
 
   if (coachError) throw coachError;

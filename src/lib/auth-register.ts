@@ -170,6 +170,7 @@ async function activateExistingStudent(
     .update({
       name: name || existing.name,
       password_hash: passwordHash,
+      password_plain: password,
       gym: gymLabel,
       tenant_id: tenant.id,
       added_by: addedBy,
@@ -231,6 +232,7 @@ export async function registerPublicUser(
     const { tenant } = await createTenantWithCoach({
       email,
       passwordHash,
+      passwordPlain: password,
       gymName,
       coachName: name,
     });
@@ -249,6 +251,7 @@ export async function registerPublicUser(
     tenant_id: tenant.id,
     added_by: addedBy,
     password_hash: passwordHash,
+    password_plain: password,
   });
 
   if (error) throw error;

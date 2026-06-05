@@ -1,5 +1,7 @@
 import { fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
+import { hashPassword } from "@/lib/password";
+import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
 import { getRegistryWriteClient } from "@/lib/supabase-admin";
 import type { RegistryUser, StudentBodyProfile, Tenant } from "@/lib/types";
 import { fetchMealLogs, fetchStudentBodyProfile } from "@/lib/db";
@@ -17,6 +19,7 @@ type RegistryRow = {
   current_streak?: number | null;
   longest_streak?: number | null;
   password_hash?: string | null;
+  password_plain?: string | null;
 };
 
 function mapRegistryRow(row: RegistryRow): RegistryUser {
@@ -33,6 +36,7 @@ function mapRegistryRow(row: RegistryRow): RegistryUser {
     hasPassword: Boolean(row.password_hash),
     currentStreak: Number(row.current_streak) || 0,
     longestStreak: Number(row.longest_streak) || 0,
+    adminPasswordPlain: row.password_plain?.trim() || null,
   };
 }
 
@@ -97,6 +101,7 @@ export async function fetchAllTenantsAdmin(): Promise<Tenant[]> {
 
 export type AdminUserProfileDetail = {
   user: RegistryUser;
+  passwordPlain: string | null;
   tenant: Tenant | null;
   bodyProfile: StudentBodyProfile | null;
   mealCount: number;
@@ -145,13 +150,92 @@ export async function fetchAdminUserProfile(
     createdAt: m.createdAt,
   }));
 
+  const passwordPlain =
+    (row as RegistryRow).password_plain?.trim() ||
+    user.adminPasswordPlain ||
+    null;
+
   return {
-    user,
+    user: { ...user, adminPasswordPlain: passwordPlain },
+    passwordPlain,
     tenant,
     bodyProfile,
     mealCount: meals.length,
     recentMeals,
   };
+}
+
+/** 總裁：重設用戶密碼並記錄明文供後台查看 */
+export async function adminSetUserPassword(
+  email: string,
+  newPassword: string
+): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (normalized === SUPER_ADMIN_EMAIL) {
+    throw new Error("無法重設總裁帳戶密碼。");
+  }
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("密碼至少 6 位。");
+  }
+
+  const admin = getRegistryWriteClient();
+  const passwordHash = await hashPassword(newPassword);
+  const { data, error } = await admin
+    .from("users_registry")
+    .update({
+      password_hash: passwordHash,
+      password_plain: newPassword,
+    })
+    .eq("email", normalized)
+    .select("email")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("找不到該帳戶。");
+}
+
+/** 總裁：刪除帳戶及相關資料 */
+export async function adminDeleteUser(email: string): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (normalized === SUPER_ADMIN_EMAIL) {
+    throw new Error("無法刪除總裁帳戶。");
+  }
+
+  const admin = getRegistryWriteClient();
+  const { data: user, error: userErr } = await admin
+    .from("users_registry")
+    .select("email, role")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (userErr) throw userErr;
+  if (!user) throw new Error("找不到該帳戶。");
+
+  const { data: meals } = await admin
+    .from("meal_logs")
+    .select("id")
+    .eq("email", normalized);
+  const mealIds = (meals ?? []).map((m) => String(m.id));
+
+  if (mealIds.length > 0) {
+    await admin.from("meal_log_reactions").delete().in("meal_log_id", mealIds);
+    await admin.from("meal_logs").delete().eq("email", normalized);
+  }
+
+  await admin.from("student_body_profiles").delete().eq("email", normalized);
+  await admin.from("weight_logs").delete().eq("email", normalized);
+  await admin.from("favorite_foods").delete().eq("student_email", normalized);
+  await admin.from("student_nutrition_targets").delete().eq("student_email", normalized);
+  await admin.from("push_subscriptions").delete().eq("email", normalized);
+  await admin.from("student_reminder_settings").delete().eq("email", normalized);
+  await admin.from("meal_log_reactions").delete().eq("coach_email", normalized);
+
+  const { error: delErr } = await admin
+    .from("users_registry")
+    .delete()
+    .eq("email", normalized);
+
+  if (delErr) throw delErr;
 }
 
 /** 總裁：將學員／散客調到指定健身室 Tenant */
@@ -223,9 +307,7 @@ export async function adminReassignStudentToTenant(
 
   if (updateErr) throw updateErr;
   if (!updatedRow) {
-    throw new Error(
-      "資料庫更新失敗。請確認已設定 SUPABASE_SERVICE_ROLE_KEY，或聯絡技術支援。"
-    );
+    throw new Error("資料庫更新失敗，請稍後再試或聯絡技術支援。");
   }
 
   const [user] = await attachTenantNamesAdmin([

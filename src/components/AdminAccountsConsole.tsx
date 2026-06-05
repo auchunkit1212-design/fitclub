@@ -7,6 +7,7 @@ import {
   IconLabel,
   Loader2,
   Search,
+  Trash2,
   Users,
 } from "@/components/icons";
 import { AI_SOLO_TENANT_SLUG } from "@/lib/registry-constants";
@@ -68,6 +69,9 @@ export function AdminAccountsConsole({
   const [profileLoading, setProfileLoading] = useState(false);
   const [assignTenantId, setAssignTenantId] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadAccounts = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -149,6 +153,101 @@ export function AdminAccountsConsole({
     setSelectedEmail(null);
     setProfile(null);
     setAssignTenantId("");
+    setResetPassword("");
+  };
+
+  const handleResetPassword = async () => {
+    if (!profile || resetPassword.length < 6) {
+      onToastRef.current("請輸入至少 6 位新密碼");
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const res = await fetch("/api/admin/users/password", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        body: JSON.stringify({
+          email: profile.user.email,
+          password: resetPassword,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        onToastRef.current(data.error ?? "重設密碼失敗");
+        return;
+      }
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              passwordPlain: resetPassword,
+              user: {
+                ...prev.user,
+                adminPasswordPlain: resetPassword,
+                hasPassword: true,
+              },
+            }
+          : prev
+      );
+      onRegistryChangeRef.current(
+        registryRef.current.map((u) =>
+          u.email.toLowerCase() === profile.user.email.toLowerCase()
+            ? {
+                ...u,
+                adminPasswordPlain: resetPassword,
+                hasPassword: true,
+              }
+            : u
+        )
+      );
+      setResetPassword("");
+      onToastRef.current("密碼已重設");
+    } catch {
+      onToastRef.current("重設密碼失敗");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!profile) return;
+    const ok = window.confirm(
+      `確定永久刪除「${profile.user.name}」（${profile.user.email}）？\n此操作無法復原，相關飲食記錄亦會一併刪除。`
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `/api/admin/users/delete?email=${encodeURIComponent(profile.user.email)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: getSessionRequestHeaders(),
+        }
+      );
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        onToastRef.current(data.error ?? "刪除失敗");
+        return;
+      }
+      onRegistryChangeRef.current(
+        registryRef.current.filter(
+          (u) => u.email.toLowerCase() !== profile.user.email.toLowerCase()
+        )
+      );
+      onToastRef.current(`已刪除 ${profile.user.email}`);
+      closeProfile();
+      void loadAccounts({ silent: true });
+    } catch {
+      onToastRef.current("刪除失敗");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleAssign = async () => {
@@ -172,7 +271,11 @@ export function AdminAccountsConsole({
           tenantId: assignTenantId,
         }),
       });
-      const data = (await res.json()) as { user?: RegistryUser; error?: string };
+      const data = (await res.json()) as {
+        user?: RegistryUser;
+        unchanged?: boolean;
+        error?: string;
+      };
       if (!res.ok) {
         onToastRef.current(data.error ?? "調配失敗");
         return;
@@ -204,7 +307,9 @@ export function AdminAccountsConsole({
       );
 
       onToastRef.current(
-        `已調至「${targetTenant?.gymName ?? nextUser.gym}」`
+        data.unchanged
+          ? `該學員已在「${targetTenant?.gymName ?? nextUser.gym}」，無需調配`
+          : `已調至「${targetTenant?.gymName ?? nextUser.gym}」`
       );
       void loadAccounts({ silent: true });
     } catch {
@@ -233,7 +338,7 @@ export function AdminAccountsConsole({
           </button>
         </div>
         <p className="text-xs text-zinc-500">
-          撳學員或教練姓名查看 profile；學員可調到不同健身室／AI 散客空間。
+          撳姓名查看 profile（含密碼）；學員可調健身室；可重設密碼或刪除帳戶。
         </p>
 
         <div className="relative">
@@ -316,6 +421,9 @@ export function AdminAccountsConsole({
                       教練：{user.coach}
                     </p>
                   )}
+                  <p className="text-[10px] text-zinc-600 mt-1.5 font-mono truncate">
+                    密碼：{user.adminPasswordPlain ?? "（未記錄明文）"}
+                  </p>
                 </button>
               </li>
             ))}
@@ -421,6 +529,30 @@ export function AdminAccountsConsole({
                   )}
                 </dl>
 
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 space-y-2">
+                  <p className="text-xs font-bold text-zinc-800">登入密碼</p>
+                  <p className="font-mono text-sm text-zinc-900 break-all">
+                    {profile.passwordPlain ?? "（未記錄明文 — 舊帳戶或註冊前建立）"}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="重設新密碼（至少 6 位）"
+                      className="flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm font-mono"
+                    />
+                    <button
+                      type="button"
+                      disabled={resettingPassword || resetPassword.length < 6}
+                      onClick={() => void handleResetPassword()}
+                      className={`shrink-0 px-3 py-2 rounded-xl bg-zinc-800 text-white text-xs font-bold disabled:opacity-50 ${btnClass}`}
+                    >
+                      {resettingPassword ? "…" : "重設"}
+                    </button>
+                  </div>
+                </div>
+
                 {profile.bodyProfile && (
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs space-y-1">
                     <p className="font-bold text-emerald-900">身體檔案</p>
@@ -487,6 +619,16 @@ export function AdminAccountsConsole({
                     教練帳戶請在「新增合作 Gym」區塊管理品牌綁定。
                   </p>
                 )}
+
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => void handleDeleteAccount()}
+                  className={`w-full py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-700 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 ${btnClass}`}
+                >
+                  <Trash2 size={16} aria-hidden />
+                  {deleting ? "刪除中…" : "永久刪除此帳戶"}
+                </button>
               </div>
             )}
           </div>

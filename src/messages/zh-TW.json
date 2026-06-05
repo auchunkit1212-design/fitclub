@@ -245,7 +245,10 @@
     "invite": {
       "hide": "隱藏教練邀請碼",
       "show": "我有教練邀請碼（選填）",
-      "placeholder": "請輸入教練專屬邀請碼（若無教練請留空）"
+      "placeholder": "請輸入教練專屬邀請碼（若無教練請留空）",
+      "prefilled": "教練邀請已套用 · 邀請碼：{code}",
+      "loginTabHint": "你透過教練邀請連結進入。新學員請切換「註冊」；已有帳號請直接輸入密碼登入。",
+      "alreadyRegisteredHint": "此 Email 已有帳號，請輸入密碼登入。若忘記密碼請聯絡教練。"
     },
     "footer": {
       "ownerPrompt": "Gym 老闆？",

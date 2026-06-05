@@ -72,6 +72,8 @@ export interface RegistryUser {
   lastStreakUpdate?: string | null;
   /** 僅伺服器登入驗證用，切勿傳去前端 */
   passwordHash?: string;
+  /** 僅總裁後台 API 回傳，新註冊／重設後才有明文 */
+  adminPasswordPlain?: string | null;
 }
 
 export interface UserSession {
