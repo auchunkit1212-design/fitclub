@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   isOcrResultEmpty,
   OcrNutritionError,
-  scanNutritionLabelWithOpenRouter,
+  scanNutritionLabel,
 } from "@/lib/ocr-nutrition";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await scanNutritionLabelWithOpenRouter(imageBase64);
+    const result = await scanNutritionLabel(imageBase64);
     if (isOcrResultEmpty(result)) {
       return NextResponse.json(
         { error: "標籤有點模糊，大猩猩看不清楚！請重新拍攝或手動輸入。", blur: true },

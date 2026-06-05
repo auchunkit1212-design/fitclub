@@ -1,6 +1,13 @@
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEFAULT_VISION_MODEL = "google/gemini-2.0-flash";
+const DEFAULT_VISION_MODEL = "google/gemini-2.5-flash";
+
+const OPENROUTER_VISION_FALLBACKS = [
+  "google/gemini-2.5-flash",
+  "google/gemini-2.0-flash-001",
+  "openai/gpt-4o-mini",
+  "google/gemini-flash-1.5-8b",
+] as const;
 
 const SYSTEM_PROMPT = `你是一位專業的營養標籤 OCR 專家。請從相片中的營養標籤讀取以下數值（每份）：
 - calories（熱量，kcal）
@@ -39,6 +46,133 @@ export function getOpenRouterVisionModel(): string {
     process.env.OPENROUTER_MODEL?.trim() ||
     DEFAULT_VISION_MODEL
   );
+}
+
+function getVisionModelCandidates(): string[] {
+  const preferred = [
+    process.env.OPENROUTER_VISION_MODEL?.trim(),
+    process.env.OPENROUTER_MODEL?.trim(),
+    DEFAULT_VISION_MODEL,
+    ...OPENROUTER_VISION_FALLBACKS,
+  ].filter((m): m is string => Boolean(m));
+  return Array.from(new Set(preferred));
+}
+
+function getOpenRouterHeaders(apiKey: string): Record<string, string> {
+  const referer =
+    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "https://fitclub.hk";
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": referer,
+    "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
+  };
+}
+
+function parseOpenRouterVisionContent(data: {
+  choices?: { message?: { content?: string } }[];
+  error?: { message?: string };
+}): OcrNutritionValues {
+  if (data.error?.message) {
+    throw new OcrNutritionError(`OpenRouter: ${data.error.message}`, 502);
+  }
+  const content = data.choices?.[0]?.message?.content ?? "";
+  if (!content.trim()) {
+    throw new OcrNutritionError("AI 未回傳標籤數據，請重新拍攝", 502);
+  }
+  return toOcrNutritionValues(parseOcrJson(content));
+}
+
+async function requestOpenRouterVision(
+  model: string,
+  dataUrl: string,
+  apiKey: string
+): Promise<OcrNutritionValues> {
+  const res = await fetch(OPENROUTER_CHAT_URL, {
+    method: "POST",
+    headers: getOpenRouterHeaders(apiKey),
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      max_tokens: 400,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "請讀取這張營養標籤相片並回傳 JSON。" },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    console.warn(
+      `[ocr-nutrition] openrouter ${model} error`,
+      res.status,
+      detail.slice(0, 300)
+    );
+    throw new OcrNutritionError(
+      res.status === 401 || res.status === 403
+        ? "OpenRouter API 金鑰無效或未授權"
+        : `OpenRouter ${model} 失敗 (${res.status})`,
+      res.status === 429 ? 429 : 502
+    );
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    error?: { message?: string };
+  };
+  return parseOpenRouterVisionContent(data);
+}
+
+async function requestOpenAiVision(dataUrl: string): Promise<OcrNutritionValues> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new OcrNutritionError("OPENAI_API_KEY 未設定", 503);
+  }
+  const model = process.env.OPENAI_VISION_MODEL?.trim() || "gpt-4o-mini";
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      max_tokens: 400,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "請讀取這張營養標籤相片並回傳 JSON。" },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    console.warn("[ocr-nutrition] openai error", res.status, detail.slice(0, 300));
+    throw new OcrNutritionError(`OpenAI Vision 失敗 (${res.status})`, 502);
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    error?: { message?: string };
+  };
+  return parseOpenRouterVisionContent(data);
 }
 
 export function isOcrNutritionConfigured(): boolean {
@@ -89,73 +223,52 @@ export function isOcrResultEmpty(values: OcrNutritionValues): boolean {
   );
 }
 
-export async function scanNutritionLabelWithOpenRouter(
+/** OpenRouter 多模型重試 + OpenAI Vision 後備 */
+export async function scanNutritionLabel(
   imageBase64: string
 ): Promise<OcrNutritionValues> {
+  const dataUrl = normalizeImageBase64(imageBase64);
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) {
+  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+
+  if (!apiKey && !openAiKey) {
     throw new OcrNutritionError(
-      "AI 營養標籤 OCR 尚未設定，請在環境變數加入 OPENROUTER_API_KEY",
+      "AI 營養標籤 OCR 尚未設定，請在 Vercel 加入 OPENROUTER_API_KEY 或 OPENAI_API_KEY",
       503
     );
   }
 
-  const model = getOpenRouterVisionModel();
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk";
-  const dataUrl = normalizeImageBase64(imageBase64);
-
-  const res = await fetch(OPENROUTER_CHAT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": referer,
-      "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      max_tokens: 400,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "請讀取這張營養標籤相片並回傳 JSON。" },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    console.error("[ocr-nutrition] openrouter error", res.status, detail.slice(0, 500));
-    throw new OcrNutritionError(
-      res.status === 401 || res.status === 403
-        ? "OpenRouter API 金鑰無效或未授權"
-        : "AI 標籤辨識服務暫時不可用，請稍後再試",
-      res.status === 429 ? 429 : 502
-    );
+  if (apiKey) {
+    for (const model of getVisionModelCandidates()) {
+      try {
+        return await requestOpenRouterVision(model, dataUrl, apiKey);
+      } catch (err) {
+        if (err instanceof OcrNutritionError && (err.status === 401 || err.status === 403)) {
+          throw err;
+        }
+        console.warn(`[ocr-nutrition] ${model} skipped:`, err);
+      }
+    }
   }
 
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-    error?: { message?: string };
-  };
-
-  if (data.error?.message) {
-    throw new OcrNutritionError(`OpenRouter: ${data.error.message}`, 502);
+  if (openAiKey) {
+    try {
+      return await requestOpenAiVision(dataUrl);
+    } catch (err) {
+      console.warn("[ocr-nutrition] openai fallback failed:", err);
+      if (err instanceof OcrNutritionError) throw err;
+    }
   }
 
-  const content = data.choices?.[0]?.message?.content ?? "";
-  if (!content.trim()) {
-    throw new OcrNutritionError("AI 未回傳標籤數據，請重新拍攝", 502);
-  }
+  throw new OcrNutritionError(
+    "AI 標籤辨識服務暫時不可用，請稍後再試",
+    502
+  );
+}
 
-  return toOcrNutritionValues(parseOcrJson(content));
+/** @deprecated Use scanNutritionLabel */
+export async function scanNutritionLabelWithOpenRouter(
+  imageBase64: string
+): Promise<OcrNutritionValues> {
+  return scanNutritionLabel(imageBase64);
 }
