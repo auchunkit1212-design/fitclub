@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { IconLabel, Loader2, MessageSquare, Sparkles } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { getSessionRequestHeaders } from "@/lib/session";
 
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -48,7 +49,10 @@ export function CoachSuggestCard({
       const res = await fetch("/api/coach-suggest", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
         body: JSON.stringify({
           targetCalories,
           targetProtein,

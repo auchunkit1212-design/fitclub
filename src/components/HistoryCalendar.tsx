@@ -16,6 +16,7 @@ import {
 import { zhHK, zhTW, enUS } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { getSessionRequestHeaders } from "@/lib/session";
 import { HistoryDayDetailPanel } from "@/components/HistoryDayDetail";
 import type {
   HistoryDayDetail,
@@ -60,7 +61,7 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     try {
       const res = await fetch(
         `/api/history/month?year=${year}&month=${month}`,
-        { credentials: "include" }
+        { credentials: "include", headers: getSessionRequestHeaders() }
       );
       if (!res.ok) throw new Error("month fetch failed");
       const data = (await res.json()) as MonthPayload;
@@ -82,6 +83,7 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     try {
       const res = await fetch(`/api/history/day?date=${date}`, {
         credentials: "include",
+        headers: getSessionRequestHeaders(),
       });
       if (!res.ok) throw new Error("day fetch failed");
       const data = (await res.json()) as HistoryDayDetail;
