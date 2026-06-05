@@ -8,6 +8,7 @@ import { GorillaMascot } from "@/components/GorillaMascot";
 import {
   BarChart2,
   Bot,
+  Calendar,
   Cpu,
   Flame,
   Hand,
@@ -653,13 +654,26 @@ export default function StudentDashboard() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2.5 py-1.5 rounded-xl whitespace-nowrap ${btnClass}`}
-            >
-              {t("header.logout", "登出")}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {isStudent && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/history")}
+                  className={`p-2 rounded-xl bg-emerald-50 text-emerald-600 ${btnClass}`}
+                  aria-label={t("history.open", "歷史紀錄日曆")}
+                  title={t("history.open", "歷史紀錄日曆")}
+                >
+                  <Calendar size={18} strokeWidth={2.25} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={`text-[10px] bg-gray-100 text-gray-500 px-2.5 py-1.5 rounded-xl whitespace-nowrap ${btnClass}`}
+              >
+                {t("header.logout", "登出")}
+              </button>
+            </div>
           </div>
 
           {isStudent && (

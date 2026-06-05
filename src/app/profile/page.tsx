@@ -8,7 +8,8 @@ import {
 import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { StudentProfilePanel } from "@/components/StudentProfilePanel";
-import { CircleUser, IconLabel } from "@/components/icons";
+import { HistoryCalendar } from "@/components/HistoryCalendar";
+import { Calendar, CircleUser, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
   computeTargetProfile,
@@ -224,7 +225,25 @@ export default function ProfilePage() {
         </p>
       </header>
 
-      <main className="px-4 py-5 min-w-0">
+      <main className="px-4 py-5 min-w-0 space-y-6">
+        <section>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-bold text-gray-900">
+              <IconLabel icon={Calendar} size="sm" iconClassName="text-emerald-600">
+                {t("history.title", "歷史紀錄日曆")}
+              </IconLabel>
+            </h2>
+            <button
+              type="button"
+              onClick={() => router.push("/history")}
+              className="text-[11px] font-semibold text-emerald-600 active:opacity-70"
+            >
+              {t("history.fullView", "全螢幕")}
+            </button>
+          </div>
+          <HistoryCalendar embedded />
+        </section>
+
         <StudentProfilePanel
           session={session}
           settings={settings}

@@ -537,5 +537,29 @@
     "good": "良好",
     "caution": "注意",
     "danger": "危險"
+  },
+  "history": {
+    "title": "歷史紀錄日曆",
+    "subtitle": "回顧打卡紀錄與 AI 點評，綠燈達標、紅燈超標",
+    "open": "歷史紀錄日曆",
+    "fullView": "全螢幕",
+    "prevMonth": "上個月",
+    "nextMonth": "下個月",
+    "loading": "載入日曆…",
+    "targetHint": "目標 {calories} kcal/日",
+    "legend": {
+      "under": "達標",
+      "over": "超標"
+    },
+    "day": {
+      "loading": "載入當日紀錄…",
+      "pickDate": "點選日曆上的日期以查看詳情",
+      "noLogs": "這天沒有飲食紀錄",
+      "title": "{date} 詳情",
+      "mealCount": "共 {count} 餐",
+      "macros": "P / C / F 達成率",
+      "meals": "飲食清單",
+      "aiReviews": "大猩猩 AI 點評"
+    }
   }
 }

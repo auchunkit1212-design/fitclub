@@ -537,5 +537,29 @@
     "good": "Good",
     "caution": "Caution",
     "danger": "High"
+  },
+  "history": {
+    "title": "History Calendar",
+    "subtitle": "Review meal logs and AI feedback — green on target, red over",
+    "open": "History calendar",
+    "fullView": "Full screen",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loading": "Loading calendar…",
+    "targetHint": "Target {calories} kcal/day",
+    "legend": {
+      "under": "On target",
+      "over": "Over"
+    },
+    "day": {
+      "loading": "Loading day…",
+      "pickDate": "Tap a date on the calendar to see details",
+      "noLogs": "No meals logged this day",
+      "title": "{date} details",
+      "mealCount": "{count} meals",
+      "macros": "P / C / F progress",
+      "meals": "Meals",
+      "aiReviews": "Gorilla AI reviews"
+    }
   }
 }
