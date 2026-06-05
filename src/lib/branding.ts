@@ -1,3 +1,4 @@
+import { fetchCoachByName, fetchCoachByTenantId } from "@/lib/db-coach-lookup";
 import { fetchTenantById } from "@/lib/tenant";
 import type {
   CoachBranding,
@@ -83,6 +84,43 @@ export async function resolveBrandForUser(
   }
 
   return brandingFromCoach(coachRow);
+}
+
+/** 登入專用：輕量查詢，避免 fetchAllUsers 拖慢或逾時 */
+export async function resolveBrandForLogin(
+  session: UserSession,
+  user: RegistryUser
+): Promise<ResolvedBrand> {
+  if (user.tenantId) {
+    const tenant = await fetchTenantById(user.tenantId);
+    if (tenant) {
+      const base = brandingFromTenant(tenant);
+      const coach = await fetchCoachByTenantId(user.tenantId);
+      if (coach?.logo) base.branding.logo = coach.logo;
+      if (coach?.themeColor) base.branding.themeColor = coach.themeColor;
+      if (coach?.broadcast) base.broadcast = coach.broadcast;
+      return base;
+    }
+  }
+
+  if (user.role === "coach") {
+    return brandingFromCoach(user);
+  }
+
+  if (user.coach) {
+    const coach = await fetchCoachByName(user.coach);
+    if (coach) return brandingFromCoach(coach);
+  }
+
+  return {
+    gymName: user.appTitle ?? user.gym ?? session.gym ?? DEFAULT_BRANDING.appTitle,
+    broadcast: user.broadcast ?? "",
+    branding: {
+      appTitle: user.appTitle ?? user.gym ?? DEFAULT_BRANDING.appTitle,
+      themeColor: user.themeColor ?? DEFAULT_BRANDING.themeColor,
+      logo: user.logo,
+    },
+  };
 }
 
 export function applyBrandToSession(

@@ -268,6 +268,7 @@
       "registerFailed": "Registration failed",
       "network": "Connection failed. Please try again later.",
       "networkRetry": "Connection failed. Check your network and try again.",
+      "serverResponse": "Server returned an unexpected response. Please try again or contact support.",
       "loginFailed": "Login failed"
     },
     "toast": {

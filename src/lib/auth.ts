@@ -1,9 +1,8 @@
-import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
+import { applyBrandToSession, resolveBrandForLogin } from "@/lib/branding";
 import {
   createAdminSession,
   fetchPasswordHashForEmail,
   fetchUserByEmailForAuth,
-  fetchUsersForSession,
   registryUserToSession,
 } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
@@ -18,8 +17,7 @@ export async function enrichSession(
   user: RegistryUser
 ): Promise<UserSession> {
   try {
-    const registry = await fetchUsersForSession(session);
-    const brand = await resolveBrandForUser(session, registry);
+    const brand = await resolveBrandForLogin(session, user);
     session = applyBrandToSession(session, brand);
   } catch (err) {
     console.warn("[auth] branding resolution skipped:", err);

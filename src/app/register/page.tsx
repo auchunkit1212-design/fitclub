@@ -31,6 +31,7 @@ import {
   initUserRegistry,
 } from "@/lib/registry";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+import { readApiJson } from "@/lib/api-client";
 import { getSession, saveSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import type { UserSession } from "@/lib/types";
@@ -243,10 +244,20 @@ export default function RegisterPage() {
           password: loginPassword.trim() || undefined,
         }),
       });
-      const data = (await res.json()) as {
+      const { data, parseError } = await readApiJson<{
         error?: string;
         session?: UserSession;
-      };
+      }>(res);
+
+      if (parseError || !data) {
+        const serverMsg = t(
+          "auth.errors.serverResponse",
+          "伺服器回應異常，請稍後再試；如持續發生請聯絡管理員。"
+        );
+        setLoginError(serverMsg);
+        showToast(serverMsg);
+        return;
+      }
 
       if (res.ok && data.session) {
         finishSession(data.session, t("auth.toast.welcome", "歡迎 {name}", { name: data.session.name }));

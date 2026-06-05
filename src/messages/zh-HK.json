@@ -268,6 +268,7 @@
       "registerFailed": "註冊失敗",
       "network": "連線失敗，請稍後再試。",
       "networkRetry": "連線失敗，請檢查網絡後再試。",
+      "serverResponse": "伺服器回應異常，請稍後再試；如持續發生請聯絡管理員。",
       "loginFailed": "登入失敗"
     },
     "toast": {
