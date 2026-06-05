@@ -184,11 +184,21 @@ export default function RegisterPage() {
           soloStudent: !isCoach && !effectiveInvite,
         }),
       });
-      const data = (await res.json()) as {
+      const { data, parseError } = await readApiJson<{
         error?: string;
         session?: UserSession;
         gymName?: string;
-      };
+      }>(res);
+
+      if (parseError || !data) {
+        showToast(
+          t(
+            "auth.errors.serverResponse",
+            "伺服器回應異常，請稍後再試；如持續發生請聯絡管理員。"
+          )
+        );
+        return;
+      }
 
       if (!res.ok || !data.session) {
         const err = data.error ?? t("auth.errors.registerFailed", "註冊失敗");

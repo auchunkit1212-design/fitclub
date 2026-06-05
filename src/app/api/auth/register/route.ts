@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registerPublicUser } from "@/lib/auth-register";
+import { sanitizeSessionForApi } from "@/lib/session-sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "請選擇註冊身份" }, { status: 400 });
     }
 
-    const { session, tenant } = await registerPublicUser({
+    const { session: rawSession, tenant } = await registerPublicUser({
       role: body.role,
       email: body.email ?? "",
       password: body.password ?? "",
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
       inviteCode: body.inviteCode,
       soloStudent: body.soloStudent,
     });
+
+    const session = sanitizeSessionForApi(rawSession);
 
     const response = NextResponse.json({
       ok: true,

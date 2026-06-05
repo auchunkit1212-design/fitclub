@@ -31,10 +31,12 @@ export async function enrichSession(
       session.isSoloStudent = isAiSoloTenantSlug(tenant?.slug);
 
       if (user.role === "coach" && user.name) {
-        await backfillCoachStudentTenants({
+        void backfillCoachStudentTenants({
           coachEmail: user.email,
           coachName: user.name,
           tenantId: user.tenantId,
+        }).catch((err) => {
+          console.warn("[auth] tenant backfill skipped:", err);
         });
       }
     } catch (err) {

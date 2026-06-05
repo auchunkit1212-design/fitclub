@@ -1,4 +1,5 @@
 import { fetchCoachByName, fetchCoachByTenantId } from "@/lib/db-coach-lookup";
+import { safeBrandLogo } from "@/lib/session-sanitize";
 import { fetchTenantById } from "@/lib/tenant";
 import type {
   CoachBranding,
@@ -15,6 +16,16 @@ export interface ResolvedBrand {
   tenantSlug?: string;
 }
 
+function resolveBrandingLogo(
+  ...candidates: (string | null | undefined)[]
+): string | undefined {
+  for (const raw of candidates) {
+    const safe = safeBrandLogo(raw);
+    if (safe) return safe;
+  }
+  return undefined;
+}
+
 export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
   return {
     gymName: tenant.gymName,
@@ -23,7 +34,7 @@ export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
     branding: {
       appTitle: tenant.gymName,
       themeColor: "emerald",
-      logo: tenant.logoUrl,
+      logo: resolveBrandingLogo(tenant.logoUrl),
     },
   };
 }
@@ -35,7 +46,7 @@ export function brandingFromCoach(coach: RegistryUser): ResolvedBrand {
     branding: {
       appTitle: coach.appTitle ?? coach.gym ?? DEFAULT_BRANDING.appTitle,
       themeColor: coach.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: coach.logo,
+      logo: resolveBrandingLogo(coach.logo),
     },
   };
 }
@@ -118,7 +129,7 @@ export async function resolveBrandForLogin(
     branding: {
       appTitle: user.appTitle ?? user.gym ?? DEFAULT_BRANDING.appTitle,
       themeColor: user.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: user.logo,
+      logo: resolveBrandingLogo(user.logo),
     },
   };
 }

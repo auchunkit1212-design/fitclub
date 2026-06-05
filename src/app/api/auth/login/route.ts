@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginWithCredentials } from "@/lib/auth";
+import { sanitizeSessionForApi } from "@/lib/session-sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "請輸入 Email。" }, { status: 400 });
     }
 
-    const session = await loginWithCredentials(email, password);
+    const session = sanitizeSessionForApi(await loginWithCredentials(email, password));
 
     const response = NextResponse.json({ ok: true, session });
     try {
