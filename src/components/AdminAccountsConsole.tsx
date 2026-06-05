@@ -11,6 +11,7 @@ import {
   Users,
 } from "@/components/icons";
 import { AI_SOLO_TENANT_SLUG } from "@/lib/registry-constants";
+import { readApiJson } from "@/lib/api-client";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { AdminUserProfileDetail } from "@/lib/admin-users";
 import type { RegistryUser, Tenant } from "@/lib/types";
@@ -230,7 +231,11 @@ export function AdminAccountsConsole({
           headers: getSessionRequestHeaders(),
         }
       );
-      const data = (await res.json()) as { error?: string };
+      const { data, parseError } = await readApiJson<{ error?: string }>(res);
+      if (parseError || !data) {
+        onToastRef.current("伺服器回應異常，刪除可能未完成，請重新整理後確認。");
+        return;
+      }
       if (!res.ok) {
         onToastRef.current(data.error ?? "刪除失敗");
         return;

@@ -268,7 +268,7 @@ export function CoachSuggestCard({
             ) : (
               <>
                 <RefreshCw size={18} strokeWidth={2.25} className="shrink-0" aria-hidden />
-                {t("coachSuggest.regenerate", "🔄 再諗其他選擇")}
+                {t("coachSuggest.regenerate", "再諗其他選擇")}
               </>
             )}
           </button>

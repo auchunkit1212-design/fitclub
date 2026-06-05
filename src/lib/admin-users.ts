@@ -2,7 +2,11 @@ import { fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
 import { hashPassword } from "@/lib/password";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
-import { getRegistryWriteClient } from "@/lib/supabase-admin";
+import {
+  getRegistryWriteClient,
+  getSupabaseServiceRole,
+} from "@/lib/supabase-admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RegistryUser, StudentBodyProfile, Tenant } from "@/lib/types";
 import { fetchMealLogs, fetchStudentBodyProfile } from "@/lib/db";
 
@@ -194,14 +198,68 @@ export async function adminSetUserPassword(
   if (!data) throw new Error("找不到該帳戶。");
 }
 
-/** 總裁：刪除帳戶及相關資料 */
+async function safeDeleteEq(
+  admin: SupabaseClient,
+  table: string,
+  column: string,
+  value: string
+): Promise<void> {
+  const { error } = await admin.from(table).delete().eq(column, value);
+  if (error) {
+    console.warn(`[admin-delete] ${table}.${column}:`, error.message);
+  }
+}
+
+/** 一併刪除 Supabase Auth 用戶，避免日後以相同 Email 幽靈登入 */
+async function deleteSupabaseAuthUserByEmail(
+  admin: SupabaseClient,
+  email: string
+): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  try {
+    for (let page = 1; page <= 20; page++) {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (error) {
+        console.warn("[admin-delete] auth listUsers:", error.message);
+        return;
+      }
+      const users = data?.users ?? [];
+      const match = users.find(
+        (u) => u.email?.trim().toLowerCase() === normalized
+      );
+      if (match) {
+        const { error: delErr } = await admin.auth.admin.deleteUser(match.id);
+        if (delErr) {
+          console.warn("[admin-delete] auth deleteUser:", delErr.message);
+        }
+        return;
+      }
+      if (users.length < 200) break;
+    }
+  } catch (err) {
+    console.warn("[admin-delete] auth cleanup skipped:", err);
+  }
+}
+
+/** 總裁：刪除帳戶及相關資料（必須 Service Role，並驗證 registry 列已刪除） */
 export async function adminDeleteUser(email: string): Promise<void> {
   const normalized = email.trim().toLowerCase();
   if (normalized === SUPER_ADMIN_EMAIL) {
     throw new Error("無法刪除總裁帳戶。");
   }
 
-  const admin = getRegistryWriteClient();
+  let admin: SupabaseClient;
+  try {
+    admin = getSupabaseServiceRole();
+  } catch {
+    throw new Error(
+      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法永久刪除帳戶。請在 Vercel 設定 Service Role 後重試。"
+    );
+  }
+
   const { data: user, error: userErr } = await admin
     .from("users_registry")
     .select("email, role")
@@ -211,31 +269,52 @@ export async function adminDeleteUser(email: string): Promise<void> {
   if (userErr) throw userErr;
   if (!user) throw new Error("找不到該帳戶。");
 
-  const { data: meals } = await admin
+  const { data: meals, error: mealsErr } = await admin
     .from("meal_logs")
     .select("id")
     .eq("email", normalized);
+  if (mealsErr) throw mealsErr;
+
   const mealIds = (meals ?? []).map((m) => String(m.id));
 
   if (mealIds.length > 0) {
-    await admin.from("meal_log_reactions").delete().in("meal_log_id", mealIds);
-    await admin.from("meal_logs").delete().eq("email", normalized);
+    const { error: reactErr } = await admin
+      .from("meal_log_reactions")
+      .delete()
+      .in("meal_log_id", mealIds);
+    if (reactErr) throw reactErr;
+
+    const { error: mealDelErr } = await admin
+      .from("meal_logs")
+      .delete()
+      .eq("email", normalized);
+    if (mealDelErr) throw mealDelErr;
   }
 
-  await admin.from("student_body_profiles").delete().eq("email", normalized);
-  await admin.from("weight_logs").delete().eq("email", normalized);
-  await admin.from("favorite_foods").delete().eq("student_email", normalized);
-  await admin.from("student_nutrition_targets").delete().eq("student_email", normalized);
-  await admin.from("push_subscriptions").delete().eq("email", normalized);
-  await admin.from("student_reminder_settings").delete().eq("email", normalized);
-  await admin.from("meal_log_reactions").delete().eq("coach_email", normalized);
+  await Promise.all([
+    safeDeleteEq(admin, "student_body_profiles", "email", normalized),
+    safeDeleteEq(admin, "weight_logs", "email", normalized),
+    safeDeleteEq(admin, "favorite_foods", "student_email", normalized),
+    safeDeleteEq(admin, "student_nutrition_targets", "student_email", normalized),
+    safeDeleteEq(admin, "push_subscriptions", "email", normalized),
+    safeDeleteEq(admin, "student_reminder_settings", "email", normalized),
+    safeDeleteEq(admin, "meal_log_reactions", "coach_email", normalized),
+  ]);
 
-  const { error: delErr } = await admin
+  const { data: deletedRows, error: delErr } = await admin
     .from("users_registry")
     .delete()
-    .eq("email", normalized);
+    .eq("email", normalized)
+    .select("email");
 
   if (delErr) throw delErr;
+  if (!deletedRows?.length) {
+    throw new Error(
+      "刪除失敗：資料庫未移除該帳戶（可能權限不足）。請確認已設定 SUPABASE_SERVICE_ROLE_KEY。"
+    );
+  }
+
+  await deleteSupabaseAuthUserByEmail(admin, normalized);
 }
 
 /** 總裁：將學員／散客調到指定健身室 Tenant */
