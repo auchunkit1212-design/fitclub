@@ -26,6 +26,8 @@ export async function POST(request: Request) {
     craving?: string;
     lang?: string;
     mealsLoggedToday?: unknown;
+    regenerate?: boolean;
+    avoidTitles?: unknown;
   };
 
   const targets = {
@@ -45,6 +47,13 @@ export async function POST(request: Request) {
   const craving =
     typeof body.craving === "string" ? body.craving.trim().slice(0, 80) : "";
   const lang = normalizeLanguage(body.lang);
+  const regenerate = body.regenerate === true;
+  const avoidTitles = Array.isArray(body.avoidTitles)
+    ? body.avoidTitles
+        .map((t) => (typeof t === "string" ? t.trim() : ""))
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
 
   try {
     const mealsLoggedToday = readMacro(body.mealsLoggedToday);
@@ -55,6 +64,8 @@ export async function POST(request: Request) {
       craving,
       lang,
       mealsLoggedToday,
+      regenerate,
+      avoidTitles,
     });
 
     return NextResponse.json({

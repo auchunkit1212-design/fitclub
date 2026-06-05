@@ -1,0 +1,4125 @@
+[
+  {
+    "food_name": "茶走",
+    "aliases": [
+      "茶走",
+      "奶茶走甜",
+      "走甜奶茶"
+    ],
+    "calories": 95,
+    "protein": 3,
+    "carbs": 8,
+    "fat": 5,
+    "weight_g": 350,
+    "region": "HK"
+  },
+  {
+    "food_name": "奶茶",
+    "aliases": [
+      "奶茶",
+      "港式奶茶",
+      "絲襪奶茶"
+    ],
+    "calories": 310,
+    "protein": 4,
+    "carbs": 48,
+    "fat": 12,
+    "weight_g": 350,
+    "region": "HK"
+  },
+  {
+    "food_name": "檸茶",
+    "aliases": [
+      "檸茶",
+      "凍檸茶",
+      "檸檬茶"
+    ],
+    "calories": 280,
+    "protein": 0,
+    "carbs": 52,
+    "fat": 0,
+    "weight_g": 400,
+    "region": "HK"
+  },
+  {
+    "food_name": "叉燒飯",
+    "aliases": [
+      "叉燒飯",
+      "叉燒蛋飯",
+      "冰室叉燒飯"
+    ],
+    "calories": 820,
+    "protein": 32,
+    "carbs": 95,
+    "fat": 32,
+    "weight_g": 450,
+    "region": "HK"
+  },
+  {
+    "food_name": "乾炒牛河",
+    "aliases": [
+      "乾炒牛河",
+      "炒牛河",
+      "濕炒牛河"
+    ],
+    "calories": 950,
+    "protein": 28,
+    "carbs": 88,
+    "fat": 48,
+    "weight_g": 420,
+    "region": "HK"
+  },
+  {
+    "food_name": "公仔麵",
+    "aliases": [
+      "公仔麵",
+      "即食麵",
+      "出前一丁"
+    ],
+    "calories": 430,
+    "protein": 10,
+    "carbs": 58,
+    "fat": 18,
+    "weight_g": 380,
+    "region": "HK"
+  },
+  {
+    "food_name": "菠蘿油",
+    "aliases": [
+      "菠蘿油",
+      "菠萝油"
+    ],
+    "calories": 420,
+    "protein": 6,
+    "carbs": 42,
+    "fat": 26,
+    "weight_g": 120,
+    "region": "HK"
+  },
+  {
+    "food_name": "西多士",
+    "aliases": [
+      "西多士",
+      "法式吐司",
+      "花生西多"
+    ],
+    "calories": 520,
+    "protein": 14,
+    "carbs": 48,
+    "fat": 30,
+    "weight_g": 180,
+    "region": "HK"
+  },
+  {
+    "food_name": "雲吞麵",
+    "aliases": [
+      "雲吞麵",
+      "餛飩麵"
+    ],
+    "calories": 480,
+    "protein": 22,
+    "carbs": 62,
+    "fat": 16,
+    "weight_g": 400,
+    "region": "HK"
+  },
+  {
+    "food_name": "燒味飯",
+    "aliases": [
+      "燒味飯",
+      "雙拼飯",
+      "燒鴨飯",
+      "燒肉飯"
+    ],
+    "calories": 880,
+    "protein": 38,
+    "carbs": 92,
+    "fat": 36,
+    "weight_g": 480,
+    "region": "HK"
+  },
+  {
+    "food_name": "常餐",
+    "aliases": [
+      "常餐",
+      "茶餐廳常餐",
+      "B餐"
+    ],
+    "calories": 920,
+    "protein": 32,
+    "carbs": 88,
+    "fat": 42,
+    "weight_g": 550,
+    "region": "HK"
+  },
+  {
+    "food_name": "蛋撻",
+    "aliases": [
+      "蛋撻",
+      "蛋塔"
+    ],
+    "calories": 220,
+    "protein": 4,
+    "carbs": 24,
+    "fat": 12,
+    "weight_g": 65,
+    "region": "HK"
+  },
+  {
+    "food_name": "沙爹牛肉麵",
+    "aliases": [
+      "沙爹牛肉麵",
+      "沙嗲牛",
+      "沙爹牛麵"
+    ],
+    "calories": 680,
+    "protein": 24,
+    "carbs": 75,
+    "fat": 32,
+    "weight_g": 500,
+    "region": "HK"
+  },
+  {
+    "food_name": "焗豬扒飯",
+    "aliases": [
+      "焗豬扒飯",
+      "焗豬",
+      "一哥焗豬"
+    ],
+    "calories": 1150,
+    "protein": 38,
+    "carbs": 125,
+    "fat": 55,
+    "weight_g": 600,
+    "region": "HK"
+  },
+  {
+    "food_name": "雪菜肉絲米",
+    "aliases": [
+      "雪菜肉絲米",
+      "雪菜米",
+      "雪菜肉絲米粉"
+    ],
+    "calories": 380,
+    "protein": 15,
+    "carbs": 55,
+    "fat": 11,
+    "weight_g": 450,
+    "region": "HK"
+  },
+  {
+    "food_name": "五香肉丁麵",
+    "aliases": [
+      "五香肉丁麵",
+      "肉丁麵"
+    ],
+    "calories": 620,
+    "protein": 18,
+    "carbs": 60,
+    "fat": 34,
+    "weight_g": 450,
+    "region": "HK"
+  },
+  {
+    "food_name": "星洲炒米",
+    "aliases": [
+      "星洲炒米",
+      "星洲炒米粉"
+    ],
+    "calories": 780,
+    "protein": 22,
+    "carbs": 85,
+    "fat": 39,
+    "weight_g": 400,
+    "region": "HK"
+  },
+  {
+    "food_name": "揚州炒飯",
+    "aliases": [
+      "揚州炒飯",
+      "炒飯"
+    ],
+    "calories": 850,
+    "protein": 26,
+    "carbs": 95,
+    "fat": 40,
+    "weight_g": 450,
+    "region": "HK"
+  },
+  {
+    "food_name": "豆腐火腩飯",
+    "aliases": [
+      "豆腐火腩飯",
+      "男人的浪漫",
+      "火腩飯"
+    ],
+    "calories": 920,
+    "protein": 28,
+    "carbs": 90,
+    "fat": 50,
+    "weight_g": 500,
+    "region": "HK"
+  },
+  {
+    "food_name": "粟米肉粒飯",
+    "aliases": [
+      "粟米肉粒飯",
+      "粟米肉粒",
+      "Show me your love"
+    ],
+    "calories": 720,
+    "protein": 24,
+    "carbs": 105,
+    "fat": 22,
+    "weight_g": 550,
+    "region": "HK"
+  },
+  {
+    "food_name": "魚香茄子煲",
+    "aliases": [
+      "魚香茄子煲",
+      "魚香茄子",
+      "茄子煲"
+    ],
+    "calories": 810,
+    "protein": 18,
+    "carbs": 25,
+    "fat": 70,
+    "weight_g": 400,
+    "region": "HK"
+  },
+  {
+    "food_name": "椒鹽豬扒",
+    "aliases": [
+      "椒鹽豬扒",
+      "炸豬扒"
+    ],
+    "calories": 580,
+    "protein": 35,
+    "carbs": 20,
+    "fat": 40,
+    "weight_g": 200,
+    "region": "HK"
+  },
+  {
+    "food_name": "蝦餃",
+    "aliases": [
+      "蝦餃",
+      "水晶蝦餃",
+      "點心蝦餃"
+    ],
+    "calories": 160,
+    "protein": 6,
+    "carbs": 16,
+    "fat": 8,
+    "weight_g": 120,
+    "region": "HK"
+  },
+  {
+    "food_name": "燒賣",
+    "aliases": [
+      "燒賣",
+      "乾蒸燒賣",
+      "豬肉燒賣"
+    ],
+    "calories": 220,
+    "protein": 10,
+    "carbs": 14,
+    "fat": 14,
+    "weight_g": 120,
+    "region": "HK"
+  },
+  {
+    "food_name": "鳳爪",
+    "aliases": [
+      "鳳爪",
+      "豉汁鳳爪"
+    ],
+    "calories": 250,
+    "protein": 12,
+    "carbs": 8,
+    "fat": 19,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "排骨",
+    "aliases": [
+      "排骨",
+      "豉汁排骨",
+      "點心排骨"
+    ],
+    "calories": 280,
+    "protein": 14,
+    "carbs": 5,
+    "fat": 22,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "蘿蔔糕",
+    "aliases": [
+      "蘿蔔糕",
+      "煎蘿蔔糕"
+    ],
+    "calories": 210,
+    "protein": 5,
+    "carbs": 22,
+    "fat": 11,
+    "weight_g": 150,
+    "region": "HK"
+  },
+  {
+    "food_name": "馬拉糕",
+    "aliases": [
+      "馬拉糕",
+      "點心馬拉糕"
+    ],
+    "calories": 280,
+    "protein": 6,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "叉燒包",
+    "aliases": [
+      "叉燒包",
+      "蠔皇叉燒包"
+    ],
+    "calories": 260,
+    "protein": 8,
+    "carbs": 38,
+    "fat": 8,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "春卷",
+    "aliases": [
+      "春卷",
+      "炸春卷"
+    ],
+    "calories": 300,
+    "protein": 8,
+    "carbs": 24,
+    "fat": 19,
+    "weight_g": 120,
+    "region": "HK"
+  },
+  {
+    "food_name": "鮮蝦腸粉",
+    "aliases": [
+      "鮮蝦腸粉",
+      "蝦腸",
+      "腸粉"
+    ],
+    "calories": 180,
+    "protein": 8,
+    "carbs": 28,
+    "fat": 4,
+    "weight_g": 200,
+    "region": "HK"
+  },
+  {
+    "food_name": "珍珠雞",
+    "aliases": [
+      "珍珠雞",
+      "糯米雞"
+    ],
+    "calories": 450,
+    "protein": 14,
+    "carbs": 65,
+    "fat": 15,
+    "weight_g": 200,
+    "region": "HK"
+  },
+  {
+    "food_name": "咖喱魚蛋",
+    "aliases": [
+      "咖喱魚蛋",
+      "魚蛋",
+      "街頭魚蛋"
+    ],
+    "calories": 150,
+    "protein": 12,
+    "carbs": 15,
+    "fat": 5,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "雞蛋仔",
+    "aliases": [
+      "雞蛋仔",
+      "原味雞蛋仔"
+    ],
+    "calories": 390,
+    "protein": 9,
+    "carbs": 58,
+    "fat": 13,
+    "weight_g": 150,
+    "region": "HK"
+  },
+  {
+    "food_name": "格仔餅",
+    "aliases": [
+      "格仔餅",
+      "夾餅",
+      "花生醬格仔餅"
+    ],
+    "calories": 550,
+    "protein": 12,
+    "carbs": 60,
+    "fat": 28,
+    "weight_g": 160,
+    "region": "HK"
+  },
+  {
+    "food_name": "碗仔翅",
+    "aliases": [
+      "碗仔翅",
+      "街頭碗仔翅"
+    ],
+    "calories": 180,
+    "protein": 10,
+    "carbs": 26,
+    "fat": 4,
+    "weight_g": 300,
+    "region": "HK"
+  },
+  {
+    "food_name": "生菜魚肉",
+    "aliases": [
+      "生菜魚肉",
+      "魚肉湯"
+    ],
+    "calories": 140,
+    "protein": 14,
+    "carbs": 12,
+    "fat": 4,
+    "weight_g": 350,
+    "region": "HK"
+  },
+  {
+    "food_name": "炸脾",
+    "aliases": [
+      "炸脾",
+      "炸雞脾"
+    ],
+    "calories": 480,
+    "protein": 32,
+    "carbs": 15,
+    "fat": 32,
+    "weight_g": 200,
+    "region": "HK"
+  },
+  {
+    "food_name": "司華力腸",
+    "aliases": [
+      "司華力腸",
+      "大肉腸",
+      "炸腸"
+    ],
+    "calories": 350,
+    "protein": 12,
+    "carbs": 5,
+    "fat": 31,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "豬腸粉",
+    "aliases": [
+      "豬腸粉",
+      "混醬腸粉",
+      "滑腸粉"
+    ],
+    "calories": 320,
+    "protein": 6,
+    "carbs": 50,
+    "fat": 10,
+    "weight_g": 250,
+    "region": "HK"
+  },
+  {
+    "food_name": "雞尾包",
+    "aliases": [
+      "雞尾包"
+    ],
+    "calories": 380,
+    "protein": 7,
+    "carbs": 45,
+    "fat": 19,
+    "weight_g": 100,
+    "region": "HK"
+  },
+  {
+    "food_name": "菠蘿包",
+    "aliases": [
+      "菠蘿包",
+      "無牛油菠蘿包"
+    ],
+    "calories": 290,
+    "protein": 6,
+    "carbs": 48,
+    "fat": 8,
+    "weight_g": 90,
+    "region": "HK"
+  },
+  {
+    "food_name": "腸仔包",
+    "aliases": [
+      "腸仔包",
+      "熱狗包"
+    ],
+    "calories": 280,
+    "protein": 9,
+    "carbs": 32,
+    "fat": 13,
+    "weight_g": 90,
+    "region": "HK"
+  },
+  {
+    "food_name": "老婆餅",
+    "aliases": [
+      "老婆餅"
+    ],
+    "calories": 320,
+    "protein": 4,
+    "carbs": 45,
+    "fat": 14,
+    "weight_g": 80,
+    "region": "HK"
+  },
+  {
+    "food_name": "芝麻糊",
+    "aliases": [
+      "芝麻糊",
+      "黑芝麻糊",
+      "糖水"
+    ],
+    "calories": 280,
+    "protein": 7,
+    "carbs": 35,
+    "fat": 13,
+    "weight_g": 300,
+    "region": "HK"
+  },
+  {
+    "food_name": "紅豆沙",
+    "aliases": [
+      "紅豆沙",
+      "陳皮紅豆沙"
+    ],
+    "calories": 240,
+    "protein": 8,
+    "carbs": 48,
+    "fat": 2,
+    "weight_g": 300,
+    "region": "HK"
+  },
+  {
+    "food_name": "綠豆沙",
+    "aliases": [
+      "綠豆沙",
+      "海帶綠豆沙"
+    ],
+    "calories": 220,
+    "protein": 7,
+    "carbs": 45,
+    "fat": 1,
+    "weight_g": 300,
+    "region": "HK"
+  },
+  {
+    "food_name": "楊枝甘露",
+    "aliases": [
+      "楊枝甘露"
+    ],
+    "calories": 310,
+    "protein": 4,
+    "carbs": 45,
+    "fat": 12,
+    "weight_g": 350,
+    "region": "HK"
+  },
+  {
+    "food_name": "豆腐花",
+    "aliases": [
+      "豆腐花",
+      "豆花"
+    ],
+    "calories": 150,
+    "protein": 8,
+    "carbs": 22,
+    "fat": 3,
+    "weight_g": 300,
+    "region": "HK"
+  },
+  {
+    "food_name": "鴛鴦",
+    "aliases": [
+      "鴛鴦",
+      "凍鴛鴦",
+      "熱鴛鴦"
+    ],
+    "calories": 290,
+    "protein": 5,
+    "carbs": 45,
+    "fat": 10,
+    "weight_g": 350,
+    "region": "HK"
+  },
+  {
+    "food_name": "滷肉飯",
+    "aliases": [
+      "滷肉飯",
+      "魯肉飯",
+      "肉燥飯"
+    ],
+    "calories": 650,
+    "protein": 22,
+    "carbs": 85,
+    "fat": 28,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞肉飯",
+    "aliases": [
+      "雞肉飯",
+      "嘉義雞肉飯"
+    ],
+    "calories": 520,
+    "protein": 28,
+    "carbs": 72,
+    "fat": 14,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "便當",
+    "aliases": [
+      "便當",
+      "台式便當",
+      "排骨便當"
+    ],
+    "calories": 780,
+    "protein": 26,
+    "carbs": 95,
+    "fat": 32,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞排",
+    "aliases": [
+      "雞排",
+      "炸雞排",
+      "鹽酥雞排"
+    ],
+    "calories": 480,
+    "protein": 32,
+    "carbs": 28,
+    "fat": 28,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "鹽酥雞",
+    "aliases": [
+      "鹽酥雞",
+      "台式炸雞"
+    ],
+    "calories": 420,
+    "protein": 28,
+    "carbs": 22,
+    "fat": 26,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "珍珠奶茶",
+    "aliases": [
+      "珍珠奶茶",
+      "波霸奶茶",
+      "珍奶"
+    ],
+    "calories": 350,
+    "protein": 4,
+    "carbs": 62,
+    "fat": 10,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "紅茶",
+    "aliases": [
+      "紅茶",
+      "台灣紅茶",
+      "三分糖紅茶"
+    ],
+    "calories": 120,
+    "protein": 0,
+    "carbs": 30,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "綠茶",
+    "aliases": [
+      "綠茶",
+      "無糖綠茶"
+    ],
+    "calories": 5,
+    "protein": 0,
+    "carbs": 1,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "冬瓜茶",
+    "aliases": [
+      "冬瓜茶",
+      "古早味冬瓜茶"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 35,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "青草茶",
+    "aliases": [
+      "青草茶"
+    ],
+    "calories": 80,
+    "protein": 0,
+    "carbs": 20,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "愛玉",
+    "aliases": [
+      "愛玉",
+      "愛玉冰"
+    ],
+    "calories": 180,
+    "protein": 0,
+    "carbs": 45,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "仙草凍",
+    "aliases": [
+      "仙草凍",
+      "仙草冰"
+    ],
+    "calories": 160,
+    "protein": 1,
+    "carbs": 38,
+    "fat": 1,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "芋圓",
+    "aliases": [
+      "芋圓",
+      "芋圓仙草"
+    ],
+    "calories": 280,
+    "protein": 3,
+    "carbs": 58,
+    "fat": 4,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "刨冰",
+    "aliases": [
+      "刨冰",
+      "芒果刨冰",
+      "八寶刨冰"
+    ],
+    "calories": 320,
+    "protein": 2,
+    "carbs": 72,
+    "fat": 2,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "豆花",
+    "aliases": [
+      "豆花",
+      "花生豆花",
+      "芋圓豆花"
+    ],
+    "calories": 220,
+    "protein": 8,
+    "carbs": 38,
+    "fat": 4,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "地瓜球",
+    "aliases": [
+      "地瓜球",
+      "QQ地瓜球"
+    ],
+    "calories": 380,
+    "protein": 4,
+    "carbs": 58,
+    "fat": 14,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "蔥油餅",
+    "aliases": [
+      "蔥油餅",
+      "蛋餅"
+    ],
+    "calories": 420,
+    "protein": 10,
+    "carbs": 48,
+    "fat": 22,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "蛋餅",
+    "aliases": [
+      "蛋餅",
+      "原味蛋餅",
+      "玉米蛋餅"
+    ],
+    "calories": 380,
+    "protein": 12,
+    "carbs": 42,
+    "fat": 20,
+    "weight_g": 140,
+    "region": "TW"
+  },
+  {
+    "food_name": "飯糰",
+    "aliases": [
+      "飯糰",
+      "台式飯糰",
+      "肉鬆飯糰"
+    ],
+    "calories": 320,
+    "protein": 8,
+    "carbs": 52,
+    "fat": 10,
+    "weight_g": 180,
+    "region": "TW"
+  },
+  {
+    "food_name": "肉圓",
+    "aliases": [
+      "肉圓",
+      "彰化肉圓"
+    ],
+    "calories": 280,
+    "protein": 8,
+    "carbs": 42,
+    "fat": 8,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "碗粿",
+    "aliases": [
+      "碗粿"
+    ],
+    "calories": 200,
+    "protein": 4,
+    "carbs": 38,
+    "fat": 3,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "米糕",
+    "aliases": [
+      "米糕",
+      "筒仔米糕"
+    ],
+    "calories": 360,
+    "protein": 8,
+    "carbs": 58,
+    "fat": 12,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "刈包",
+    "aliases": [
+      "刈包",
+      "虎咬豬"
+    ],
+    "calories": 420,
+    "protein": 18,
+    "carbs": 45,
+    "fat": 20,
+    "weight_g": 180,
+    "region": "TW"
+  },
+  {
+    "food_name": "蚵仔煎",
+    "aliases": [
+      "蚵仔煎"
+    ],
+    "calories": 380,
+    "protein": 14,
+    "carbs": 42,
+    "fat": 18,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "臭豆腐",
+    "aliases": [
+      "臭豆腐",
+      "炸臭豆腐"
+    ],
+    "calories": 320,
+    "protein": 12,
+    "carbs": 18,
+    "fat": 24,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "大腸包小腸",
+    "aliases": [
+      "大腸包小腸"
+    ],
+    "calories": 520,
+    "protein": 14,
+    "carbs": 48,
+    "fat": 30,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "胡椒餅",
+    "aliases": [
+      "胡椒餅"
+    ],
+    "calories": 280,
+    "protein": 10,
+    "carbs": 32,
+    "fat": 12,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "車輪餅",
+    "aliases": [
+      "車輪餅",
+      "紅豆餅"
+    ],
+    "calories": 220,
+    "protein": 4,
+    "carbs": 38,
+    "fat": 6,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞蛋糕",
+    "aliases": [
+      "雞蛋糕",
+      "古早味雞蛋糕"
+    ],
+    "calories": 180,
+    "protein": 5,
+    "carbs": 28,
+    "fat": 5,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "麻糬",
+    "aliases": [
+      "麻糬",
+      "花生麻糬"
+    ],
+    "calories": 160,
+    "protein": 2,
+    "carbs": 32,
+    "fat": 3,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "鳳梨酥",
+    "aliases": [
+      "鳳梨酥",
+      "土鳳梨酥"
+    ],
+    "calories": 240,
+    "protein": 3,
+    "carbs": 32,
+    "fat": 11,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "太陽餅",
+    "aliases": [
+      "太陽餅",
+      "台中太陽餅"
+    ],
+    "calories": 200,
+    "protein": 3,
+    "carbs": 28,
+    "fat": 9,
+    "weight_g": 40,
+    "region": "TW"
+  },
+  {
+    "food_name": "牛軋糖",
+    "aliases": [
+      "牛軋糖"
+    ],
+    "calories": 120,
+    "protein": 2,
+    "carbs": 18,
+    "fat": 5,
+    "weight_g": 25,
+    "region": "TW"
+  },
+  {
+    "food_name": "鐵蛋",
+    "aliases": [
+      "鐵蛋",
+      "滷蛋"
+    ],
+    "calories": 80,
+    "protein": 7,
+    "carbs": 2,
+    "fat": 5,
+    "weight_g": 40,
+    "region": "TW"
+  },
+  {
+    "food_name": "茶葉蛋",
+    "aliases": [
+      "茶葉蛋"
+    ],
+    "calories": 78,
+    "protein": 6,
+    "carbs": 1,
+    "fat": 5,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷味",
+    "aliases": [
+      "滷味",
+      "滷味拼盤"
+    ],
+    "calories": 350,
+    "protein": 18,
+    "carbs": 12,
+    "fat": 24,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷豆干",
+    "aliases": [
+      "滷豆干"
+    ],
+    "calories": 120,
+    "protein": 12,
+    "carbs": 6,
+    "fat": 6,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷海帶",
+    "aliases": [
+      "滷海帶"
+    ],
+    "calories": 60,
+    "protein": 2,
+    "carbs": 8,
+    "fat": 2,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷米血",
+    "aliases": [
+      "滷米血",
+      "米血糕"
+    ],
+    "calories": 180,
+    "protein": 3,
+    "carbs": 32,
+    "fat": 4,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "甜不辣",
+    "aliases": [
+      "甜不辣"
+    ],
+    "calories": 200,
+    "protein": 8,
+    "carbs": 28,
+    "fat": 6,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "黑輪",
+    "aliases": [
+      "黑輪",
+      "關東煮黑輪"
+    ],
+    "calories": 90,
+    "protein": 6,
+    "carbs": 10,
+    "fat": 3,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "魚丸湯",
+    "aliases": [
+      "魚丸湯"
+    ],
+    "calories": 140,
+    "protein": 12,
+    "carbs": 8,
+    "fat": 6,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "貢丸湯",
+    "aliases": [
+      "貢丸湯"
+    ],
+    "calories": 160,
+    "protein": 14,
+    "carbs": 6,
+    "fat": 8,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "魷魚羹",
+    "aliases": [
+      "魷魚羹"
+    ],
+    "calories": 180,
+    "protein": 12,
+    "carbs": 18,
+    "fat": 6,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "肉羹麵",
+    "aliases": [
+      "肉羹麵"
+    ],
+    "calories": 480,
+    "protein": 18,
+    "carbs": 62,
+    "fat": 16,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "擔仔麵",
+    "aliases": [
+      "擔仔麵",
+      "台南擔仔麵"
+    ],
+    "calories": 420,
+    "protein": 16,
+    "carbs": 58,
+    "fat": 14,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "牛肉麵",
+    "aliases": [
+      "牛肉麵",
+      "紅燒牛肉麵",
+      "清燉牛肉麵"
+    ],
+    "calories": 580,
+    "protein": 32,
+    "carbs": 55,
+    "fat": 24,
+    "weight_g": 550,
+    "region": "TW"
+  },
+  {
+    "food_name": "陽春麵",
+    "aliases": [
+      "陽春麵"
+    ],
+    "calories": 320,
+    "protein": 10,
+    "carbs": 58,
+    "fat": 6,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "麻醬麵",
+    "aliases": [
+      "麻醬麵"
+    ],
+    "calories": 450,
+    "protein": 14,
+    "carbs": 58,
+    "fat": 18,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "炸醬麵",
+    "aliases": [
+      "炸醬麵"
+    ],
+    "calories": 480,
+    "protein": 16,
+    "carbs": 62,
+    "fat": 18,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "切仔麵",
+    "aliases": [
+      "切仔麵"
+    ],
+    "calories": 380,
+    "protein": 12,
+    "carbs": 55,
+    "fat": 10,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "意麵",
+    "aliases": [
+      "意麵",
+      "台式意麵"
+    ],
+    "calories": 350,
+    "protein": 10,
+    "carbs": 58,
+    "fat": 8,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "米粉湯",
+    "aliases": [
+      "米粉湯"
+    ],
+    "calories": 280,
+    "protein": 8,
+    "carbs": 48,
+    "fat": 6,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "炒米粉",
+    "aliases": [
+      "炒米粉"
+    ],
+    "calories": 420,
+    "protein": 10,
+    "carbs": 58,
+    "fat": 16,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "炒麵",
+    "aliases": [
+      "炒麵",
+      "台式炒麵"
+    ],
+    "calories": 480,
+    "protein": 12,
+    "carbs": 62,
+    "fat": 20,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "潤餅",
+    "aliases": [
+      "潤餅",
+      "春捲"
+    ],
+    "calories": 280,
+    "protein": 8,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "割包",
+    "aliases": [
+      "割包"
+    ],
+    "calories": 380,
+    "protein": 14,
+    "carbs": 48,
+    "fat": 16,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "水餃",
+    "aliases": [
+      "水餃",
+      "鍋貼"
+    ],
+    "calories": 45,
+    "protein": 2,
+    "carbs": 6,
+    "fat": 1,
+    "weight_g": 20,
+    "region": "TW"
+  },
+  {
+    "food_name": "鍋貼",
+    "aliases": [
+      "鍋貼",
+      "煎鍋貼"
+    ],
+    "calories": 55,
+    "protein": 3,
+    "carbs": 6,
+    "fat": 2,
+    "weight_g": 25,
+    "region": "TW"
+  },
+  {
+    "food_name": "小籠包",
+    "aliases": [
+      "小籠包"
+    ],
+    "calories": 50,
+    "protein": 3,
+    "carbs": 5,
+    "fat": 2,
+    "weight_g": 25,
+    "region": "TW"
+  },
+  {
+    "food_name": "燒餅",
+    "aliases": [
+      "燒餅",
+      "燒餅油條"
+    ],
+    "calories": 280,
+    "protein": 8,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "油條",
+    "aliases": [
+      "油條"
+    ],
+    "calories": 180,
+    "protein": 4,
+    "carbs": 22,
+    "fat": 8,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "豆漿",
+    "aliases": [
+      "豆漿",
+      "無糖豆漿"
+    ],
+    "calories": 80,
+    "protein": 7,
+    "carbs": 6,
+    "fat": 3,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "米漿",
+    "aliases": [
+      "米漿"
+    ],
+    "calories": 120,
+    "protein": 2,
+    "carbs": 24,
+    "fat": 2,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "鹹粥",
+    "aliases": [
+      "鹹粥",
+      "廣東粥"
+    ],
+    "calories": 280,
+    "protein": 10,
+    "carbs": 45,
+    "fat": 6,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "虱目魚粥",
+    "aliases": [
+      "虱目魚粥"
+    ],
+    "calories": 320,
+    "protein": 18,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "麻油雞麵線",
+    "aliases": [
+      "麻油雞麵線"
+    ],
+    "calories": 520,
+    "protein": 22,
+    "carbs": 48,
+    "fat": 26,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "蚵仔麵線",
+    "aliases": [
+      "蚵仔麵線"
+    ],
+    "calories": 380,
+    "protein": 12,
+    "carbs": 52,
+    "fat": 14,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "大腸麵線",
+    "aliases": [
+      "大腸麵線"
+    ],
+    "calories": 420,
+    "protein": 10,
+    "carbs": 52,
+    "fat": 18,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "控肉飯",
+    "aliases": [
+      "控肉飯",
+      "爌肉飯"
+    ],
+    "calories": 720,
+    "protein": 24,
+    "carbs": 78,
+    "fat": 36,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "排骨飯",
+    "aliases": [
+      "排骨飯",
+      "炸排骨飯"
+    ],
+    "calories": 680,
+    "protein": 28,
+    "carbs": 72,
+    "fat": 32,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞腿飯",
+    "aliases": [
+      "雞腿飯",
+      "油雞腿飯"
+    ],
+    "calories": 620,
+    "protein": 32,
+    "carbs": 65,
+    "fat": 28,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "鯖魚飯",
+    "aliases": [
+      "鯖魚飯",
+      "鹽烤鯖魚飯"
+    ],
+    "calories": 520,
+    "protein": 28,
+    "carbs": 58,
+    "fat": 22,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "便當雙主菜",
+    "aliases": [
+      "雙主菜便當"
+    ],
+    "calories": 920,
+    "protein": 32,
+    "carbs": 98,
+    "fat": 42,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "7-ELEVEN 茶葉蛋",
+    "aliases": [
+      "7-11茶葉蛋",
+      "超商茶葉蛋"
+    ],
+    "calories": 78,
+    "protein": 6,
+    "carbs": 1,
+    "fat": 5,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "全家便當",
+    "aliases": [
+      "全家便當"
+    ],
+    "calories": 650,
+    "protein": 22,
+    "carbs": 85,
+    "fat": 24,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "7-ELEVEN 御飯糰",
+    "aliases": [
+      "御飯糰",
+      "超商飯糰"
+    ],
+    "calories": 200,
+    "protein": 5,
+    "carbs": 38,
+    "fat": 4,
+    "weight_g": 110,
+    "region": "TW"
+  },
+  {
+    "food_name": "7-ELEVEN 三明治",
+    "aliases": [
+      "超商三明治"
+    ],
+    "calories": 320,
+    "protein": 12,
+    "carbs": 38,
+    "fat": 14,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "統一肉燥麵",
+    "aliases": [
+      "統一肉燥麵",
+      "肉燥麵"
+    ],
+    "calories": 420,
+    "protein": 12,
+    "carbs": 58,
+    "fat": 16,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "統一泡麵",
+    "aliases": [
+      "統一泡麵",
+      "統一麵"
+    ],
+    "calories": 380,
+    "protein": 8,
+    "carbs": 52,
+    "fat": 14,
+    "weight_g": 85,
+    "region": "TW"
+  },
+  {
+    "food_name": "來一客",
+    "aliases": [
+      "來一客",
+      "來一客杯麵"
+    ],
+    "calories": 350,
+    "protein": 7,
+    "carbs": 50,
+    "fat": 12,
+    "weight_g": 70,
+    "region": "TW"
+  },
+  {
+    "food_name": "維力炸醬麵",
+    "aliases": [
+      "維力炸醬麵",
+      "維力麵"
+    ],
+    "calories": 400,
+    "protein": 10,
+    "carbs": 56,
+    "fat": 14,
+    "weight_g": 90,
+    "region": "TW"
+  },
+  {
+    "food_name": "味味A",
+    "aliases": [
+      "味味A",
+      "味味A排骨麵"
+    ],
+    "calories": 390,
+    "protein": 9,
+    "carbs": 54,
+    "fat": 13,
+    "weight_g": 85,
+    "region": "TW"
+  },
+  {
+    "food_name": "滿漢大餐",
+    "aliases": [
+      "滿漢大餐"
+    ],
+    "calories": 410,
+    "protein": 10,
+    "carbs": 55,
+    "fat": 15,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "統一麵",
+    "aliases": [
+      "統一麵",
+      "統一肉骨茶麵"
+    ],
+    "calories": 400,
+    "protein": 9,
+    "carbs": 54,
+    "fat": 14,
+    "weight_g": 90,
+    "region": "TW"
+  },
+  {
+    "food_name": "科學麵",
+    "aliases": [
+      "科學麵"
+    ],
+    "calories": 360,
+    "protein": 7,
+    "carbs": 50,
+    "fat": 12,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "小王子麵",
+    "aliases": [
+      "小王子麵"
+    ],
+    "calories": 340,
+    "protein": 7,
+    "carbs": 48,
+    "fat": 11,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "維他奶",
+    "aliases": [
+      "維他奶",
+      "豆奶"
+    ],
+    "calories": 120,
+    "protein": 4,
+    "carbs": 20,
+    "fat": 3,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "多多綠茶",
+    "aliases": [
+      "多多綠茶"
+    ],
+    "calories": 180,
+    "protein": 0,
+    "carbs": 45,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "舒跑",
+    "aliases": [
+      "舒跑",
+      "運動飲料"
+    ],
+    "calories": 60,
+    "protein": 0,
+    "carbs": 15,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "黑松沙士",
+    "aliases": [
+      "黑松沙士",
+      "沙士"
+    ],
+    "calories": 150,
+    "protein": 0,
+    "carbs": 38,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "蘋果西打",
+    "aliases": [
+      "蘋果西打"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 35,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "金門高粱",
+    "aliases": [
+      "高粱酒",
+      "58度高粱"
+    ],
+    "calories": 70,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 0,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "台啤",
+    "aliases": [
+      "台灣啤酒",
+      "金牌台啤"
+    ],
+    "calories": 150,
+    "protein": 1,
+    "carbs": 12,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "芒果冰",
+    "aliases": [
+      "芒果冰",
+      "芒果雪花冰"
+    ],
+    "calories": 380,
+    "protein": 2,
+    "carbs": 78,
+    "fat": 4,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "花生冰",
+    "aliases": [
+      "花生冰"
+    ],
+    "calories": 320,
+    "protein": 8,
+    "carbs": 42,
+    "fat": 14,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "八寶冰",
+    "aliases": [
+      "八寶冰"
+    ],
+    "calories": 300,
+    "protein": 4,
+    "carbs": 62,
+    "fat": 4,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "豆漿蛋餅",
+    "aliases": [
+      "豆漿蛋餅套餐"
+    ],
+    "calories": 520,
+    "protein": 16,
+    "carbs": 58,
+    "fat": 24,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "燒肉飯",
+    "aliases": [
+      "燒肉飯",
+      "日式燒肉飯"
+    ],
+    "calories": 580,
+    "protein": 24,
+    "carbs": 72,
+    "fat": 22,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "咖哩飯",
+    "aliases": [
+      "咖哩飯",
+      "日式咖哩飯"
+    ],
+    "calories": 650,
+    "protein": 16,
+    "carbs": 88,
+    "fat": 24,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "丼飯",
+    "aliases": [
+      "丼飯",
+      "親子丼"
+    ],
+    "calories": 520,
+    "protein": 22,
+    "carbs": 68,
+    "fat": 18,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "牛丼",
+    "aliases": [
+      "牛丼",
+      "吉野家牛丼"
+    ],
+    "calories": 480,
+    "protein": 20,
+    "carbs": 65,
+    "fat": 16,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "親子丼",
+    "aliases": [
+      "親子丼"
+    ],
+    "calories": 520,
+    "protein": 24,
+    "carbs": 62,
+    "fat": 20,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "天婦羅飯",
+    "aliases": [
+      "天婦羅飯"
+    ],
+    "calories": 620,
+    "protein": 16,
+    "carbs": 85,
+    "fat": 24,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "壽司",
+    "aliases": [
+      "壽司",
+      "握壽司"
+    ],
+    "calories": 45,
+    "protein": 2,
+    "carbs": 7,
+    "fat": 1,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "生魚片",
+    "aliases": [
+      "生魚片"
+    ],
+    "calories": 120,
+    "protein": 24,
+    "carbs": 0,
+    "fat": 3,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "拉麵",
+    "aliases": [
+      "拉麵",
+      "豚骨拉麵"
+    ],
+    "calories": 580,
+    "protein": 22,
+    "carbs": 68,
+    "fat": 24,
+    "weight_g": 550,
+    "region": "TW"
+  },
+  {
+    "food_name": "烏龍麵",
+    "aliases": [
+      "烏龍麵"
+    ],
+    "calories": 380,
+    "protein": 10,
+    "carbs": 62,
+    "fat": 8,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "炒飯",
+    "aliases": [
+      "炒飯",
+      "揚州炒飯"
+    ],
+    "calories": 520,
+    "protein": 12,
+    "carbs": 72,
+    "fat": 18,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "蛋炒飯",
+    "aliases": [
+      "蛋炒飯"
+    ],
+    "calories": 480,
+    "protein": 14,
+    "carbs": 65,
+    "fat": 18,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷肉飯便當",
+    "aliases": [
+      "滷肉飯便當"
+    ],
+    "calories": 720,
+    "protein": 22,
+    "carbs": 88,
+    "fat": 32,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞肉便當",
+    "aliases": [
+      "雞肉便當"
+    ],
+    "calories": 580,
+    "protein": 30,
+    "carbs": 68,
+    "fat": 22,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "素食便當",
+    "aliases": [
+      "素食便當"
+    ],
+    "calories": 420,
+    "protein": 12,
+    "carbs": 72,
+    "fat": 12,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "水餃便當",
+    "aliases": [
+      "水餃便當"
+    ],
+    "calories": 520,
+    "protein": 18,
+    "carbs": 72,
+    "fat": 16,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "鍋燒意麵",
+    "aliases": [
+      "鍋燒意麵"
+    ],
+    "calories": 420,
+    "protein": 14,
+    "carbs": 55,
+    "fat": 14,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "沙茶麵",
+    "aliases": [
+      "沙茶麵"
+    ],
+    "calories": 480,
+    "protein": 16,
+    "carbs": 58,
+    "fat": 20,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "擔擔麵",
+    "aliases": [
+      "擔擔麵"
+    ],
+    "calories": 520,
+    "protein": 18,
+    "carbs": 58,
+    "fat": 24,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "牛肉湯麵",
+    "aliases": [
+      "牛肉湯麵"
+    ],
+    "calories": 450,
+    "protein": 22,
+    "carbs": 52,
+    "fat": 14,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "餛飩麵",
+    "aliases": [
+      "餛飩麵"
+    ],
+    "calories": 380,
+    "protein": 14,
+    "carbs": 55,
+    "fat": 10,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "餛飩湯",
+    "aliases": [
+      "餛飩湯"
+    ],
+    "calories": 180,
+    "protein": 10,
+    "carbs": 18,
+    "fat": 6,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "貢丸麵",
+    "aliases": [
+      "貢丸麵"
+    ],
+    "calories": 420,
+    "protein": 16,
+    "carbs": 58,
+    "fat": 14,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "魷魚麵",
+    "aliases": [
+      "魷魚麵"
+    ],
+    "calories": 440,
+    "protein": 18,
+    "carbs": 56,
+    "fat": 16,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "海鮮麵",
+    "aliases": [
+      "海鮮麵"
+    ],
+    "calories": 480,
+    "protein": 20,
+    "carbs": 58,
+    "fat": 18,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "蛤蜊湯",
+    "aliases": [
+      "蛤蜊湯"
+    ],
+    "calories": 120,
+    "protein": 14,
+    "carbs": 4,
+    "fat": 2,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "紫菜湯",
+    "aliases": [
+      "紫菜湯"
+    ],
+    "calories": 40,
+    "protein": 4,
+    "carbs": 4,
+    "fat": 1,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "味噌湯",
+    "aliases": [
+      "味噌湯"
+    ],
+    "calories": 60,
+    "protein": 4,
+    "carbs": 6,
+    "fat": 2,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "玉米濃湯",
+    "aliases": [
+      "玉米濃湯"
+    ],
+    "calories": 180,
+    "protein": 4,
+    "carbs": 28,
+    "fat": 6,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "南瓜濃湯",
+    "aliases": [
+      "南瓜濃湯"
+    ],
+    "calories": 160,
+    "protein": 3,
+    "carbs": 24,
+    "fat": 6,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "薯條",
+    "aliases": [
+      "薯條",
+      "麥當勞薯條"
+    ],
+    "calories": 320,
+    "protein": 4,
+    "carbs": 42,
+    "fat": 15,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "漢堡",
+    "aliases": [
+      "漢堡",
+      "麥當勞大麥克"
+    ],
+    "calories": 540,
+    "protein": 25,
+    "carbs": 45,
+    "fat": 28,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞塊",
+    "aliases": [
+      "雞塊",
+      "麥克雞塊"
+    ],
+    "calories": 280,
+    "protein": 14,
+    "carbs": 18,
+    "fat": 18,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "炸雞",
+    "aliases": [
+      "炸雞",
+      "肯德基炸雞"
+    ],
+    "calories": 320,
+    "protein": 22,
+    "carbs": 12,
+    "fat": 20,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "蛋塔",
+    "aliases": [
+      "蛋塔",
+      "葡式蛋塔"
+    ],
+    "calories": 200,
+    "protein": 4,
+    "carbs": 22,
+    "fat": 10,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "甜甜圈",
+    "aliases": [
+      "甜甜圈"
+    ],
+    "calories": 260,
+    "protein": 3,
+    "carbs": 32,
+    "fat": 14,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "馬芬",
+    "aliases": [
+      "馬芬"
+    ],
+    "calories": 280,
+    "protein": 4,
+    "carbs": 38,
+    "fat": 12,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "可頌",
+    "aliases": [
+      "可頌",
+      "牛角麵包"
+    ],
+    "calories": 240,
+    "protein": 5,
+    "carbs": 28,
+    "fat": 12,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "貝果",
+    "aliases": [
+      "貝果"
+    ],
+    "calories": 280,
+    "protein": 10,
+    "carbs": 52,
+    "fat": 2,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "吐司",
+    "aliases": [
+      "吐司",
+      "白吐司"
+    ],
+    "calories": 80,
+    "protein": 3,
+    "carbs": 15,
+    "fat": 1,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "全麥吐司",
+    "aliases": [
+      "全麥吐司"
+    ],
+    "calories": 70,
+    "protein": 4,
+    "carbs": 12,
+    "fat": 1,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "花生吐司",
+    "aliases": [
+      "花生吐司"
+    ],
+    "calories": 280,
+    "protein": 8,
+    "carbs": 32,
+    "fat": 14,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "草莓吐司",
+    "aliases": [
+      "草莓吐司"
+    ],
+    "calories": 260,
+    "protein": 4,
+    "carbs": 42,
+    "fat": 8,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "巧克力吐司",
+    "aliases": [
+      "巧克力吐司"
+    ],
+    "calories": 300,
+    "protein": 5,
+    "carbs": 40,
+    "fat": 14,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "蘋果",
+    "aliases": [
+      "蘋果"
+    ],
+    "calories": 95,
+    "protein": 0,
+    "carbs": 25,
+    "fat": 0,
+    "weight_g": 180,
+    "region": "TW"
+  },
+  {
+    "food_name": "香蕉",
+    "aliases": [
+      "香蕉"
+    ],
+    "calories": 105,
+    "protein": 1,
+    "carbs": 27,
+    "fat": 0,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "芭樂",
+    "aliases": [
+      "芭樂",
+      "珍珠芭樂"
+    ],
+    "calories": 60,
+    "protein": 1,
+    "carbs": 14,
+    "fat": 0,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "芒果",
+    "aliases": [
+      "芒果",
+      "愛文芒果"
+    ],
+    "calories": 100,
+    "protein": 1,
+    "carbs": 25,
+    "fat": 0,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "鳳梨",
+    "aliases": [
+      "鳳梨"
+    ],
+    "calories": 50,
+    "protein": 0,
+    "carbs": 13,
+    "fat": 0,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "西瓜",
+    "aliases": [
+      "西瓜"
+    ],
+    "calories": 90,
+    "protein": 2,
+    "carbs": 22,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "葡萄",
+    "aliases": [
+      "葡萄"
+    ],
+    "calories": 70,
+    "protein": 1,
+    "carbs": 18,
+    "fat": 0,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "柳橙",
+    "aliases": [
+      "柳橙",
+      "橘子"
+    ],
+    "calories": 60,
+    "protein": 1,
+    "carbs": 15,
+    "fat": 0,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "奇異果",
+    "aliases": [
+      "奇異果"
+    ],
+    "calories": 60,
+    "protein": 1,
+    "carbs": 15,
+    "fat": 0,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "酪梨",
+    "aliases": [
+      "酪梨",
+      "牛油果"
+    ],
+    "calories": 160,
+    "protein": 2,
+    "carbs": 9,
+    "fat": 15,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "堅果",
+    "aliases": [
+      "堅果",
+      "綜合堅果"
+    ],
+    "calories": 180,
+    "protein": 5,
+    "carbs": 8,
+    "fat": 15,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "花生",
+    "aliases": [
+      "花生",
+      "鹽味花生"
+    ],
+    "calories": 170,
+    "protein": 7,
+    "carbs": 6,
+    "fat": 14,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "腰果",
+    "aliases": [
+      "腰果"
+    ],
+    "calories": 160,
+    "protein": 5,
+    "carbs": 9,
+    "fat": 13,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "杏仁",
+    "aliases": [
+      "杏仁"
+    ],
+    "calories": 165,
+    "protein": 6,
+    "carbs": 6,
+    "fat": 14,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "葵花子",
+    "aliases": [
+      "葵花子"
+    ],
+    "calories": 180,
+    "protein": 6,
+    "carbs": 6,
+    "fat": 16,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "南瓜子",
+    "aliases": [
+      "南瓜子"
+    ],
+    "calories": 160,
+    "protein": 8,
+    "carbs": 4,
+    "fat": 14,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "優格",
+    "aliases": [
+      "優格",
+      "原味優格"
+    ],
+    "calories": 100,
+    "protein": 6,
+    "carbs": 12,
+    "fat": 3,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "希臘優格",
+    "aliases": [
+      "希臘優格"
+    ],
+    "calories": 120,
+    "protein": 12,
+    "carbs": 8,
+    "fat": 4,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "起司",
+    "aliases": [
+      "起司",
+      "片狀起司"
+    ],
+    "calories": 80,
+    "protein": 5,
+    "carbs": 1,
+    "fat": 6,
+    "weight_g": 20,
+    "region": "TW"
+  },
+  {
+    "food_name": "牛奶",
+    "aliases": [
+      "牛奶",
+      "全脂鮮奶"
+    ],
+    "calories": 150,
+    "protein": 8,
+    "carbs": 12,
+    "fat": 8,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "豆奶",
+    "aliases": [
+      "豆奶",
+      "無糖豆奶"
+    ],
+    "calories": 100,
+    "protein": 7,
+    "carbs": 8,
+    "fat": 4,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "燕麥奶",
+    "aliases": [
+      "燕麥奶"
+    ],
+    "calories": 120,
+    "protein": 3,
+    "carbs": 20,
+    "fat": 4,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "杏仁奶",
+    "aliases": [
+      "杏仁奶"
+    ],
+    "calories": 60,
+    "protein": 1,
+    "carbs": 8,
+    "fat": 2,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "高蛋白飲",
+    "aliases": [
+      "高蛋白飲",
+      "乳清飲"
+    ],
+    "calories": 200,
+    "protein": 30,
+    "carbs": 8,
+    "fat": 4,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "運動蛋白棒",
+    "aliases": [
+      "蛋白棒"
+    ],
+    "calories": 220,
+    "protein": 20,
+    "carbs": 22,
+    "fat": 8,
+    "weight_g": 60,
+    "region": "TW"
+  },
+  {
+    "food_name": "能量棒",
+    "aliases": [
+      "能量棒"
+    ],
+    "calories": 200,
+    "protein": 4,
+    "carbs": 32,
+    "fat": 8,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "穀物棒",
+    "aliases": [
+      "穀物棒"
+    ],
+    "calories": 180,
+    "protein": 4,
+    "carbs": 28,
+    "fat": 6,
+    "weight_g": 40,
+    "region": "TW"
+  },
+  {
+    "food_name": "蘇打餅",
+    "aliases": [
+      "蘇打餅"
+    ],
+    "calories": 140,
+    "protein": 3,
+    "carbs": 22,
+    "fat": 4,
+    "weight_g": 40,
+    "region": "TW"
+  },
+  {
+    "food_name": "消化餅",
+    "aliases": [
+      "消化餅"
+    ],
+    "calories": 70,
+    "protein": 1,
+    "carbs": 10,
+    "fat": 3,
+    "weight_g": 15,
+    "region": "TW"
+  },
+  {
+    "food_name": "Oreo",
+    "aliases": [
+      "Oreo",
+      "奧利奧"
+    ],
+    "calories": 160,
+    "protein": 2,
+    "carbs": 24,
+    "fat": 7,
+    "weight_g": 34,
+    "region": "TW"
+  },
+  {
+    "food_name": "巧克力",
+    "aliases": [
+      "巧克力",
+      "黑巧克力"
+    ],
+    "calories": 170,
+    "protein": 2,
+    "carbs": 15,
+    "fat": 12,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "洋芋片",
+    "aliases": [
+      "洋芋片",
+      "樂事洋芋片"
+    ],
+    "calories": 160,
+    "protein": 2,
+    "carbs": 15,
+    "fat": 10,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "爆米花",
+    "aliases": [
+      "爆米花"
+    ],
+    "calories": 120,
+    "protein": 2,
+    "carbs": 18,
+    "fat": 5,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "米果",
+    "aliases": [
+      "米果",
+      "仙貝"
+    ],
+    "calories": 110,
+    "protein": 2,
+    "carbs": 22,
+    "fat": 1,
+    "weight_g": 30,
+    "region": "TW"
+  },
+  {
+    "food_name": "肉鬆",
+    "aliases": [
+      "肉鬆"
+    ],
+    "calories": 45,
+    "protein": 4,
+    "carbs": 2,
+    "fat": 3,
+    "weight_g": 10,
+    "region": "TW"
+  },
+  {
+    "food_name": "泡菜",
+    "aliases": [
+      "泡菜",
+      "韓式泡菜"
+    ],
+    "calories": 25,
+    "protein": 1,
+    "carbs": 4,
+    "fat": 0,
+    "weight_g": 50,
+    "region": "TW"
+  },
+  {
+    "food_name": "海苔",
+    "aliases": [
+      "海苔",
+      "韓國海苔"
+    ],
+    "calories": 30,
+    "protein": 2,
+    "carbs": 2,
+    "fat": 2,
+    "weight_g": 5,
+    "region": "TW"
+  },
+  {
+    "food_name": "壽司卷",
+    "aliases": [
+      "壽司卷",
+      "花壽司"
+    ],
+    "calories": 200,
+    "protein": 6,
+    "carbs": 38,
+    "fat": 2,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "飯卷",
+    "aliases": [
+      "飯卷",
+      "韓式飯卷"
+    ],
+    "calories": 320,
+    "protein": 10,
+    "carbs": 52,
+    "fat": 8,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "韓式炸雞",
+    "aliases": [
+      "韓式炸雞"
+    ],
+    "calories": 480,
+    "protein": 28,
+    "carbs": 32,
+    "fat": 28,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "部隊鍋",
+    "aliases": [
+      "部隊鍋"
+    ],
+    "calories": 520,
+    "protein": 22,
+    "carbs": 48,
+    "fat": 28,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "石鍋拌飯",
+    "aliases": [
+      "石鍋拌飯"
+    ],
+    "calories": 580,
+    "protein": 18,
+    "carbs": 78,
+    "fat": 20,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "韓式烤肉飯",
+    "aliases": [
+      "韓式烤肉飯"
+    ],
+    "calories": 620,
+    "protein": 26,
+    "carbs": 72,
+    "fat": 24,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "炒年糕",
+    "aliases": [
+      "炒年糕",
+      "韓式炒年糕"
+    ],
+    "calories": 320,
+    "protein": 6,
+    "carbs": 58,
+    "fat": 6,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "辣炒雞",
+    "aliases": [
+      "辣炒雞",
+      "辣炒雞丁"
+    ],
+    "calories": 420,
+    "protein": 28,
+    "carbs": 22,
+    "fat": 24,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "炸雞排飯",
+    "aliases": [
+      "炸雞排飯"
+    ],
+    "calories": 780,
+    "protein": 32,
+    "carbs": 85,
+    "fat": 36,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "鹽酥雞便當",
+    "aliases": [
+      "鹽酥雞便當"
+    ],
+    "calories": 720,
+    "protein": 28,
+    "carbs": 82,
+    "fat": 32,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷味便當",
+    "aliases": [
+      "滷味便當"
+    ],
+    "calories": 650,
+    "protein": 24,
+    "carbs": 78,
+    "fat": 28,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "素食麵",
+    "aliases": [
+      "素食麵",
+      "蔬食麵"
+    ],
+    "calories": 380,
+    "protein": 10,
+    "carbs": 62,
+    "fat": 10,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "蔬食便當",
+    "aliases": [
+      "蔬食便當"
+    ],
+    "calories": 420,
+    "protein": 14,
+    "carbs": 72,
+    "fat": 12,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "地瓜",
+    "aliases": [
+      "地瓜",
+      "烤地瓜"
+    ],
+    "calories": 180,
+    "protein": 2,
+    "carbs": 42,
+    "fat": 0,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "玉米",
+    "aliases": [
+      "玉米",
+      "烤玉米"
+    ],
+    "calories": 120,
+    "protein": 4,
+    "carbs": 26,
+    "fat": 2,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "茶葉蛋便當",
+    "aliases": [
+      "茶葉蛋便當"
+    ],
+    "calories": 480,
+    "protein": 18,
+    "carbs": 72,
+    "fat": 14,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "鮪魚三明治",
+    "aliases": [
+      "鮪魚三明治"
+    ],
+    "calories": 380,
+    "protein": 18,
+    "carbs": 38,
+    "fat": 16,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "火腿三明治",
+    "aliases": [
+      "火腿三明治"
+    ],
+    "calories": 320,
+    "protein": 14,
+    "carbs": 36,
+    "fat": 14,
+    "weight_g": 140,
+    "region": "TW"
+  },
+  {
+    "food_name": "起司三明治",
+    "aliases": [
+      "起司三明治"
+    ],
+    "calories": 340,
+    "protein": 12,
+    "carbs": 38,
+    "fat": 16,
+    "weight_g": 140,
+    "region": "TW"
+  },
+  {
+    "food_name": "雞肉沙拉",
+    "aliases": [
+      "雞肉沙拉"
+    ],
+    "calories": 280,
+    "protein": 28,
+    "carbs": 12,
+    "fat": 12,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "鮪魚沙拉",
+    "aliases": [
+      "鮪魚沙拉"
+    ],
+    "calories": 220,
+    "protein": 20,
+    "carbs": 8,
+    "fat": 12,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "凱薩沙拉",
+    "aliases": [
+      "凱薩沙拉"
+    ],
+    "calories": 180,
+    "protein": 6,
+    "carbs": 10,
+    "fat": 14,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "水果盒",
+    "aliases": [
+      "水果盒",
+      "切水果"
+    ],
+    "calories": 120,
+    "protein": 1,
+    "carbs": 30,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "蔬菜盒",
+    "aliases": [
+      "蔬菜盒",
+      "涼拌蔬菜"
+    ],
+    "calories": 80,
+    "protein": 3,
+    "carbs": 12,
+    "fat": 2,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "滷肉飯加蛋",
+    "aliases": [
+      "滷肉飯加蛋"
+    ],
+    "calories": 720,
+    "protein": 26,
+    "carbs": 86,
+    "fat": 32,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "雙蛋早餐",
+    "aliases": [
+      "雙蛋早餐"
+    ],
+    "calories": 180,
+    "protein": 14,
+    "carbs": 2,
+    "fat": 12,
+    "weight_g": 120,
+    "region": "TW"
+  },
+  {
+    "food_name": "燻鮭魚",
+    "aliases": [
+      "燻鮭魚"
+    ],
+    "calories": 120,
+    "protein": 14,
+    "carbs": 0,
+    "fat": 6,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "鮭魚飯",
+    "aliases": [
+      "鮭魚飯",
+      "鮭魚定食"
+    ],
+    "calories": 520,
+    "protein": 28,
+    "carbs": 58,
+    "fat": 20,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "鯖魚定食",
+    "aliases": [
+      "鯖魚定食"
+    ],
+    "calories": 480,
+    "protein": 26,
+    "carbs": 55,
+    "fat": 22,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "味噌鯖魚",
+    "aliases": [
+      "味噌鯖魚"
+    ],
+    "calories": 320,
+    "protein": 22,
+    "carbs": 8,
+    "fat": 22,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "煎豆腐",
+    "aliases": [
+      "煎豆腐"
+    ],
+    "calories": 180,
+    "protein": 12,
+    "carbs": 4,
+    "fat": 12,
+    "weight_g": 150,
+    "region": "TW"
+  },
+  {
+    "food_name": "麻婆豆腐",
+    "aliases": [
+      "麻婆豆腐"
+    ],
+    "calories": 280,
+    "protein": 14,
+    "carbs": 12,
+    "fat": 20,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "宮保雞丁",
+    "aliases": [
+      "宮保雞丁"
+    ],
+    "calories": 380,
+    "protein": 26,
+    "carbs": 18,
+    "fat": 24,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "三杯雞",
+    "aliases": [
+      "三杯雞"
+    ],
+    "calories": 420,
+    "protein": 28,
+    "carbs": 12,
+    "fat": 28,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "客家小炒",
+    "aliases": [
+      "客家小炒"
+    ],
+    "calories": 320,
+    "protein": 18,
+    "carbs": 10,
+    "fat": 22,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "薑絲大腸",
+    "aliases": [
+      "薑絲大腸"
+    ],
+    "calories": 380,
+    "protein": 14,
+    "carbs": 8,
+    "fat": 32,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "福菜滷肉",
+    "aliases": [
+      "福菜滷肉"
+    ],
+    "calories": 480,
+    "protein": 20,
+    "carbs": 18,
+    "fat": 36,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "冬瓜滷肉",
+    "aliases": [
+      "冬瓜滷肉"
+    ],
+    "calories": 420,
+    "protein": 18,
+    "carbs": 22,
+    "fat": 28,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "苦瓜鹹蛋",
+    "aliases": [
+      "苦瓜鹹蛋"
+    ],
+    "calories": 180,
+    "protein": 8,
+    "carbs": 8,
+    "fat": 12,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "空心菜",
+    "aliases": [
+      "空心菜",
+      "炒空心菜"
+    ],
+    "calories": 80,
+    "protein": 4,
+    "carbs": 8,
+    "fat": 4,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "高麗菜",
+    "aliases": [
+      "高麗菜",
+      "炒高麗菜"
+    ],
+    "calories": 90,
+    "protein": 3,
+    "carbs": 10,
+    "fat": 4,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "地瓜葉",
+    "aliases": [
+      "地瓜葉"
+    ],
+    "calories": 70,
+    "protein": 4,
+    "carbs": 8,
+    "fat": 2,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "皮蛋豆腐",
+    "aliases": [
+      "皮蛋豆腐"
+    ],
+    "calories": 160,
+    "protein": 12,
+    "carbs": 6,
+    "fat": 10,
+    "weight_g": 200,
+    "region": "TW"
+  },
+  {
+    "food_name": "涼麵",
+    "aliases": [
+      "涼麵",
+      "麻醬涼麵"
+    ],
+    "calories": 420,
+    "protein": 12,
+    "carbs": 62,
+    "fat": 14,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "冷麵",
+    "aliases": [
+      "冷麵",
+      "韓式冷麵"
+    ],
+    "calories": 380,
+    "protein": 12,
+    "carbs": 68,
+    "fat": 6,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "越南河粉",
+    "aliases": [
+      "越南河粉",
+      "Pho"
+    ],
+    "calories": 450,
+    "protein": 22,
+    "carbs": 58,
+    "fat": 12,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "泰式炒河粉",
+    "aliases": [
+      "泰式炒河粉",
+      "Pad Thai"
+    ],
+    "calories": 520,
+    "protein": 16,
+    "carbs": 72,
+    "fat": 18,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "綠咖哩",
+    "aliases": [
+      "綠咖哩",
+      "泰式綠咖哩"
+    ],
+    "calories": 480,
+    "protein": 18,
+    "carbs": 22,
+    "fat": 36,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "打拋豬",
+    "aliases": [
+      "打拋豬",
+      "泰式打拋"
+    ],
+    "calories": 420,
+    "protein": 22,
+    "carbs": 18,
+    "fat": 28,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "月亮蝦餅",
+    "aliases": [
+      "月亮蝦餅"
+    ],
+    "calories": 280,
+    "protein": 10,
+    "carbs": 28,
+    "fat": 14,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "春捲",
+    "aliases": [
+      "春捲",
+      "炸春捲"
+    ],
+    "calories": 200,
+    "protein": 6,
+    "carbs": 22,
+    "fat": 10,
+    "weight_g": 80,
+    "region": "TW"
+  },
+  {
+    "food_name": "越南春捲",
+    "aliases": [
+      "越南春捲"
+    ],
+    "calories": 120,
+    "protein": 8,
+    "carbs": 16,
+    "fat": 2,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "海南雞飯",
+    "aliases": [
+      "海南雞飯"
+    ],
+    "calories": 520,
+    "protein": 28,
+    "carbs": 62,
+    "fat": 18,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "燒臘飯",
+    "aliases": [
+      "燒臘飯"
+    ],
+    "calories": 720,
+    "protein": 28,
+    "carbs": 78,
+    "fat": 36,
+    "weight_g": 450,
+    "region": "TW"
+  },
+  {
+    "food_name": "鹹酥雞套餐",
+    "aliases": [
+      "鹹酥雞套餐"
+    ],
+    "calories": 820,
+    "protein": 32,
+    "carbs": 72,
+    "fat": 42,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "珍珠鮮奶",
+    "aliases": [
+      "珍珠鮮奶"
+    ],
+    "calories": 380,
+    "protein": 6,
+    "carbs": 48,
+    "fat": 14,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "黑糖珍珠鮮奶",
+    "aliases": [
+      "黑糖珍奶",
+      "黑糖珍珠鮮奶"
+    ],
+    "calories": 420,
+    "protein": 5,
+    "carbs": 58,
+    "fat": 14,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "芋頭鮮奶",
+    "aliases": [
+      "芋頭鮮奶"
+    ],
+    "calories": 360,
+    "protein": 5,
+    "carbs": 52,
+    "fat": 12,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "布丁鮮奶",
+    "aliases": [
+      "布丁鮮奶"
+    ],
+    "calories": 340,
+    "protein": 6,
+    "carbs": 50,
+    "fat": 12,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "咖啡拿鐵",
+    "aliases": [
+      "拿鐵",
+      "Latte"
+    ],
+    "calories": 140,
+    "protein": 7,
+    "carbs": 12,
+    "fat": 7,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "美式咖啡",
+    "aliases": [
+      "美式",
+      "Americano"
+    ],
+    "calories": 5,
+    "protein": 0,
+    "carbs": 1,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "卡布奇諾",
+    "aliases": [
+      "卡布奇諾"
+    ],
+    "calories": 120,
+    "protein": 6,
+    "carbs": 10,
+    "fat": 6,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "摩卡",
+    "aliases": [
+      "摩卡"
+    ],
+    "calories": 180,
+    "protein": 5,
+    "carbs": 28,
+    "fat": 6,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "焦糖瑪奇朵",
+    "aliases": [
+      "焦糖瑪奇朵"
+    ],
+    "calories": 200,
+    "protein": 5,
+    "carbs": 32,
+    "fat": 7,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "手搖飲",
+    "aliases": [
+      "手搖飲",
+      "手搖杯"
+    ],
+    "calories": 280,
+    "protein": 0,
+    "carbs": 68,
+    "fat": 0,
+    "weight_g": 700,
+    "region": "TW"
+  },
+  {
+    "food_name": "多多",
+    "aliases": [
+      "多多",
+      "養樂多"
+    ],
+    "calories": 80,
+    "protein": 2,
+    "carbs": 16,
+    "fat": 1,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "鮮奶茶",
+    "aliases": [
+      "鮮奶茶"
+    ],
+    "calories": 280,
+    "protein": 5,
+    "carbs": 42,
+    "fat": 10,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "燕麥拿鐵",
+    "aliases": [
+      "燕麥拿鐵"
+    ],
+    "calories": 160,
+    "protein": 4,
+    "carbs": 22,
+    "fat": 6,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "高蛋白奶昔",
+    "aliases": [
+      "高蛋白奶昔"
+    ],
+    "calories": 280,
+    "protein": 35,
+    "carbs": 18,
+    "fat": 6,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "香蕉奶昔",
+    "aliases": [
+      "香蕉奶昔"
+    ],
+    "calories": 320,
+    "protein": 8,
+    "carbs": 48,
+    "fat": 8,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "草莓奶昔",
+    "aliases": [
+      "草莓奶昔"
+    ],
+    "calories": 300,
+    "protein": 6,
+    "carbs": 52,
+    "fat": 6,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "巧克力奶昔",
+    "aliases": [
+      "巧克力奶昔"
+    ],
+    "calories": 380,
+    "protein": 8,
+    "carbs": 52,
+    "fat": 14,
+    "weight_g": 400,
+    "region": "TW"
+  },
+  {
+    "food_name": "統一布丁",
+    "aliases": [
+      "統一布丁"
+    ],
+    "calories": 120,
+    "protein": 3,
+    "carbs": 20,
+    "fat": 3,
+    "weight_g": 100,
+    "region": "TW"
+  },
+  {
+    "food_name": "光泉鮮奶",
+    "aliases": [
+      "光泉鮮奶"
+    ],
+    "calories": 150,
+    "protein": 8,
+    "carbs": 12,
+    "fat": 8,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "義美鮮奶",
+    "aliases": [
+      "義美鮮奶"
+    ],
+    "calories": 150,
+    "protein": 8,
+    "carbs": 12,
+    "fat": 8,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "味全果汁",
+    "aliases": [
+      "味全果汁"
+    ],
+    "calories": 140,
+    "protein": 1,
+    "carbs": 32,
+    "fat": 0,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "黑松汽水",
+    "aliases": [
+      "黑松汽水"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 36,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "沙士",
+    "aliases": [
+      "沙士"
+    ],
+    "calories": 150,
+    "protein": 0,
+    "carbs": 38,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "可樂",
+    "aliases": [
+      "可樂",
+      "可口可乐"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 39,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "雪碧",
+    "aliases": [
+      "雪碧"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 38,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "礦泉水",
+    "aliases": [
+      "礦泉水"
+    ],
+    "calories": 0,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "氣泡水",
+    "aliases": [
+      "氣泡水"
+    ],
+    "calories": 0,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "電解質水",
+    "aliases": [
+      "電解質水"
+    ],
+    "calories": 25,
+    "protein": 0,
+    "carbs": 6,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "椰子水",
+    "aliases": [
+      "椰子水"
+    ],
+    "calories": 45,
+    "protein": 0,
+    "carbs": 11,
+    "fat": 0,
+    "weight_g": 330,
+    "region": "TW"
+  },
+  {
+    "food_name": "酸梅湯",
+    "aliases": [
+      "酸梅湯"
+    ],
+    "calories": 120,
+    "protein": 0,
+    "carbs": 30,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "洛神花茶",
+    "aliases": [
+      "洛神花茶"
+    ],
+    "calories": 80,
+    "protein": 0,
+    "carbs": 20,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "蜂蜜檸檬",
+    "aliases": [
+      "蜂蜜檸檬"
+    ],
+    "calories": 180,
+    "protein": 0,
+    "carbs": 45,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "金桔檸檬",
+    "aliases": [
+      "金桔檸檬"
+    ],
+    "calories": 160,
+    "protein": 0,
+    "carbs": 40,
+    "fat": 0,
+    "weight_g": 350,
+    "region": "TW"
+  },
+  {
+    "food_name": "百香綠茶",
+    "aliases": [
+      "百香綠茶"
+    ],
+    "calories": 150,
+    "protein": 0,
+    "carbs": 38,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "葡萄柚綠",
+    "aliases": [
+      "葡萄柚綠"
+    ],
+    "calories": 140,
+    "protein": 0,
+    "carbs": 35,
+    "fat": 0,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "多多綠",
+    "aliases": [
+      "多多綠"
+    ],
+    "calories": 160,
+    "protein": 1,
+    "carbs": 38,
+    "fat": 1,
+    "weight_g": 500,
+    "region": "TW"
+  },
+  {
+    "food_name": "鮮榨柳橙汁",
+    "aliases": [
+      "柳橙汁",
+      "現榨柳橙汁"
+    ],
+    "calories": 110,
+    "protein": 2,
+    "carbs": 26,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "蘋果汁",
+    "aliases": [
+      "蘋果汁"
+    ],
+    "calories": 120,
+    "protein": 0,
+    "carbs": 30,
+    "fat": 0,
+    "weight_g": 250,
+    "region": "TW"
+  },
+  {
+    "food_name": "芭樂汁",
+    "aliases": [
+      "芭樂汁"
+    ],
+    "calories": 100,
+    "protein": 1,
+    "carbs": 24,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "鳳梨汁",
+    "aliases": [
+      "鳳梨汁"
+    ],
+    "calories": 130,
+    "protein": 0,
+    "carbs": 32,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "西瓜汁",
+    "aliases": [
+      "西瓜汁"
+    ],
+    "calories": 90,
+    "protein": 1,
+    "carbs": 22,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "胡蘿蔔汁",
+    "aliases": [
+      "胡蘿蔔汁"
+    ],
+    "calories": 80,
+    "protein": 1,
+    "carbs": 18,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  },
+  {
+    "food_name": "綜合果汁",
+    "aliases": [
+      "綜合果汁"
+    ],
+    "calories": 140,
+    "protein": 1,
+    "carbs": 34,
+    "fat": 0,
+    "weight_g": 300,
+    "region": "TW"
+  }
+]

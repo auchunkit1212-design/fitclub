@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { CheckCircle2, IconLabel, Search } from "@/components/icons";
+import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { hasAiAdvancedNutrients } from "@/lib/food-advanced-nutrients";
 import { getSessionRequestHeaders } from "@/lib/session";
@@ -226,6 +227,40 @@ export function FoodSearchEngine({
 
   return (
     <Wrapper className={wrapperClass}>
+      <NutritionLabelOcrButton
+        onSuccess={(v) => {
+          const desc = t("nutritionOcr.scannedLabel", "掃描營養標籤");
+          setQuery(desc);
+          setSelectedItem({
+            id: "ocr-nutrition-label",
+            name: desc,
+            brand: "",
+            calories: v.calories,
+            protein: v.protein,
+            carbs: v.carbs,
+            fats: v.fat,
+            servingLabel: t("nutritionOcr.perServing", "每份"),
+            source: "openrouter",
+            sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+            sugarG: v.sugar > 0 ? v.sugar : undefined,
+          });
+          setDropdownOpen(false);
+          onAddToMeal({
+            description: desc,
+            calories: v.calories,
+            protein: v.protein,
+            carbs: v.carbs,
+            fats: v.fat,
+            fromSearch: true,
+            advanced: {
+              sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+              sugarG: v.sugar > 0 ? v.sugar : undefined,
+            },
+            proNutrition: v.sodium > 0 || v.sugar > 0,
+          });
+        }}
+      />
+
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-gray-900">
           <IconLabel icon={Search} iconClassName="text-gray-600">
@@ -238,11 +273,21 @@ export function FoodSearchEngine({
             {t("foodSearch.sourceAi", "AI 聯想")}
           </span>
         )}
+        {results.some((r) => r.source === "hk_711") && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+            {t("foodSearch.source711", "7-11 資料庫")}
+          </span>
+        )}
+        {results.some((r) => r.source === "hk_tw") && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            {t("foodSearch.sourceLocal", "本地資料庫")}
+          </span>
+        )}
       </div>
       <p className="text-xs text-gray-500">
         {t(
           "foodSearch.hint",
-          "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養"
+          "優先搜尋本地 + 7-11 營養資料庫；搵唔到再 AI 聯想港台美食"
         )}
       </p>
 

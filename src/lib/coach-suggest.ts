@@ -27,6 +27,9 @@ export type CoachSuggestInput = {
   craving?: string;
   lang?: AppLanguage;
   mealsLoggedToday?: number;
+  /** When true, ask the model for different alternatives (not a repeat of avoidTitles). */
+  regenerate?: boolean;
+  avoidTitles?: string[];
 };
 
 export type CoachSuggestResult = {
@@ -321,11 +324,22 @@ export async function generateCoachMealSuggestion(
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     "https://fitclub.hk";
 
+  const avoidTitles = (input.avoidTitles ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  const regenerateNote =
+    input.regenerate && avoidTitles.length > 0
+      ? `\n【重要】用戶想睇「其他選擇」——請提供完全不同、有創意嘅新建議（換餐廳類型、菜式、點法）。絕對唔好重複以下菜式：${avoidTitles.join("、")}`
+      : input.regenerate
+        ? "\n【重要】用戶想睇「其他選擇」——請提供完全不同、有創意嘅新建議，唔好同上次一樣。"
+        : "";
+
   const userMessage = `模式：${hasCraving ? "A（有願望，先答 cravings 再規劃剩餘餐）" : "B（無願望，直接全日剩餘餐單）"}
 剩餘額度：${remaining.calories} kcal，蛋白 ${remaining.protein}g，碳水 ${remaining.carbs}g，脂肪 ${remaining.fats}g。
 今日已食：${input.consumed.calories} kcal / 目標 ${input.targets.calories} kcal；已打卡 ${mealsLoggedToday} 餐。
 今日仲可以規劃嘅時段：${remainingSlots.join("、")}
-願望關鍵字：${craving || "（留空）"}
+願望關鍵字：${craving || "（留空）"}${regenerateNote}
 ${getLanguageInstruction(lang)}`;
 
   try {
@@ -339,7 +353,7 @@ ${getLanguageInstruction(lang)}`;
       },
       body: JSON.stringify({
         model,
-        temperature: 0.75,
+        temperature: input.regenerate ? 0.95 : 0.75,
         max_tokens: 1000,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

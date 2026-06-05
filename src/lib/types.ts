@@ -168,6 +168,7 @@ export interface FoodSearchItem extends FoodAdvancedNutrients {
   source:
     | "openrouter"
     | "hk_tw"
+    | "hk_711"
     | "hk"
     | "local"
     | "gemini"

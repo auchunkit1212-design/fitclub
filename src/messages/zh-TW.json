@@ -159,8 +159,9 @@
   },
   "foodSearch": {
     "title": "食物搜尋引擎",
-    "hint": "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養",
+    "hint": "優先搜尋本地 + 7-11 營養資料庫；找不到再 AI 聯想港台美食",
     "sourceAi": "AI 聯想",
+    "source711": "7-11 資料庫",
     "sourceLocalDb": "港台本地庫",
     "placeholder": "搜尋食物名稱...",
     "searching": "分析中...",
@@ -172,7 +173,7 @@
     "minCharsHint": "繼續輸入以顯示建議…",
     "networkError": "網路錯誤，請稍後再試",
     "sourceHk": "茶餐廳資料庫",
-    "sourceLocal": "智能估算",
+    "sourceLocal": "本地資料庫",
     "addedHint": "已帶入表單，點「發布紀錄」即可儲存",
     "addFavorite": "⭐ 加入常用",
     "favorites": "⭐ 常用 / 歷史",
@@ -196,6 +197,13 @@
     "perPiece": "→ 每件約 {cal} kcal（已填入）",
     "engineOpenAi": "引擎：GPT-4o Vision",
     "engineMock": "引擎：示範模式"
+  },
+  "nutritionOcr": {
+    "scanButton": "🔍 自動掃描營養標籤 (AI OCR)",
+    "scanning": "大猩猩正在閱讀標籤...",
+    "blurError": "標籤有點模糊，大猩猩看不清楚！請重新拍攝或手動輸入。",
+    "scannedLabel": "掃描營養標籤",
+    "perServing": "每份"
   },
   "roles": {
     "admin": "總控制台",
@@ -550,6 +558,8 @@
     "cravingPlaceholder": "例如：日式、快餐、茶餐廳，或留空讓教練決定",
     "cta": "Coach! What to eat?",
     "loading": "大猩猩思考中…",
+    "regenerate": "🔄 再想其他選擇",
+    "regenerating": "大猩猩正在想其他選擇…",
     "error": "教練暫時忙碌，請稍後再試",
     "empty": "教練沒有回覆，請再試一次"
   },

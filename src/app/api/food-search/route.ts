@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { FoodSearchError } from "@/lib/food-search/shared";
 import {
+  getLocalFoodDatabaseStats,
+  searchLocalFoodDatabase,
+} from "@/lib/food-search/local-database";
+import {
   getOpenRouterModel,
   isOpenRouterConfigured,
   searchFoodWithOpenRouter,
@@ -12,23 +16,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** OpenRouter LLM — 港台食物聯想 + 營養估算（Autocomplete） */
+/** 本地港台 + 7-11 資料庫優先，OpenRouter AI 聯想作後備 */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
-  }
-
-  if (!isOpenRouterConfigured()) {
-    return NextResponse.json(
-      {
-        error: "AI 食物搜尋尚未設定，請設定 OPENROUTER_API_KEY",
-        items: [],
-        source: "openrouter" as const,
-        configured: false,
-      },
-      { status: 503 }
-    );
   }
 
   let query = "";
@@ -49,6 +41,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "請至少輸入 2 個字元", items: [] }, { status: 400 });
   }
 
+  const dbStats = getLocalFoodDatabaseStats();
+  const localItems = searchLocalFoodDatabase(query, 12);
+
+  if (localItems.length > 0) {
+    return NextResponse.json({
+      items: localItems,
+      source: localItems[0]?.source ?? "hk_tw",
+      lang,
+      databaseSize: dbStats.total,
+      localMatch: true,
+    });
+  }
+
+  if (!isOpenRouterConfigured()) {
+    return NextResponse.json(
+      {
+        error: "搵唔到相關食物。可試「魚蛋」「燒賣」「珍奶」等關鍵字，或設定 OPENROUTER_API_KEY 啟用 AI 聯想",
+        items: [],
+        source: "local" as const,
+        configured: false,
+        databaseSize: dbStats.total,
+      },
+      { status: 404 }
+    );
+  }
+
   try {
     const items = await searchFoodWithOpenRouter(query, lang);
 
@@ -60,6 +78,7 @@ export async function POST(request: Request) {
           source: "openrouter" as const,
           model: getOpenRouterModel(),
           lang,
+          databaseSize: dbStats.total,
         },
         { status: 404 }
       );
@@ -70,6 +89,8 @@ export async function POST(request: Request) {
       source: "openrouter" as const,
       model: getOpenRouterModel(),
       lang,
+      databaseSize: dbStats.total,
+      localMatch: false,
     });
   } catch (error) {
     if (error instanceof FoodSearchError) {

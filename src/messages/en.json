@@ -159,8 +159,9 @@
   },
   "foodSearch": {
     "title": "Food Search",
-    "hint": "Type partial keywords (typos, EN/ZH mix OK) — AI suggests HK & Taiwan foods with estimated macros",
+    "hint": "Local + 7-Eleven nutrition DB first; AI fallback for HK & Taiwan foods",
     "sourceAi": "AI suggest",
+    "source711": "7-Eleven DB",
     "sourceLocalDb": "HK/TW local DB",
     "placeholder": "Search food name...",
     "searching": "Searching...",
@@ -172,7 +173,7 @@
     "minCharsHint": "Keep typing to see suggestions…",
     "networkError": "Network error. Please try again.",
     "sourceHk": "HK café database",
-    "sourceLocal": "Smart estimate",
+    "sourceLocal": "Local DB",
     "addedHint": "Added to form — tap Publish Log to save",
     "addFavorite": "Add to favorites",
     "favorites": "Favorites / History",
@@ -196,6 +197,13 @@
     "perPiece": "→ About {cal} kcal per piece (applied)",
     "engineOpenAi": "Engine: GPT-4o Vision",
     "engineMock": "Engine: demo mode"
+  },
+  "nutritionOcr": {
+    "scanButton": "🔍 Scan nutrition label (AI OCR)",
+    "scanning": "Gorilla is reading the label...",
+    "blurError": "The label is a bit blurry—Gorilla can't read it! Please retake the photo or enter manually.",
+    "scannedLabel": "Scanned nutrition label",
+    "perServing": "Per serving"
   },
   "roles": {
     "admin": "Admin Console",
@@ -550,6 +558,8 @@
     "cravingPlaceholder": "e.g. Japanese, fast food, cha chaan teng — or leave blank",
     "cta": "Coach! What to eat?",
     "loading": "Coach is thinking…",
+    "regenerate": "🔄 Try other options",
+    "regenerating": "Coach is cooking up alternatives…",
     "error": "Coach is busy — try again shortly",
     "empty": "No reply from coach — please try again"
   },

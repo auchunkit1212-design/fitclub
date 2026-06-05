@@ -6,6 +6,7 @@ import {
   IconLabel,
   Loader2,
   MessageSquare,
+  RefreshCw,
   ScrollText,
   Sparkles,
 } from "@/components/icons";
@@ -92,7 +93,9 @@ export function CoachSuggestCard({
 }: MacroProps) {
   const { t, lang } = useI18n();
   const [craving, setCraving] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<"ask" | "regenerate" | null>(
+    null
+  );
   const [error, setError] = useState("");
   const [suggestion, setSuggestion] = useState<{
     text: string;
@@ -101,11 +104,17 @@ export function CoachSuggestCard({
     mode: "craving_plus_plan" | "full_day_plan";
   } | null>(null);
 
-  const handleAsk = async () => {
-    setLoading(true);
+  const handleAsk = async (regenerate = false) => {
+    setLoadingAction(regenerate ? "regenerate" : "ask");
     setError("");
-    setSuggestion(null);
+    if (!regenerate) {
+      setSuggestion(null);
+    }
     try {
+      const avoidTitles = regenerate
+        ? (suggestion?.restOfDayMeals.map((m) => m.title).filter(Boolean) ?? [])
+        : undefined;
+
       const res = await fetch("/api/coach-suggest", {
         method: "POST",
         credentials: "include",
@@ -125,6 +134,8 @@ export function CoachSuggestCard({
           mealsLoggedToday,
           craving: craving.trim() || undefined,
           lang,
+          regenerate: regenerate || undefined,
+          avoidTitles,
         }),
       });
       const data = (await res.json()) as {
@@ -151,7 +162,7 @@ export function CoachSuggestCard({
     } catch {
       setError(t("coachSuggest.error", "教練暫時忙緊，請稍後再試"));
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -190,11 +201,11 @@ export function CoachSuggestCard({
 
       <button
         type="button"
-        onClick={() => void handleAsk()}
-        disabled={loading}
+        onClick={() => void handleAsk(false)}
+        disabled={loadingAction !== null}
         className={`w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white font-bold py-4 rounded-3xl shadow-[0_8px_30px_rgb(5,150,105,0.3)] flex items-center justify-center gap-2 ${btnClass}`}
       >
-        {loading ? (
+        {loadingAction === "ask" ? (
           <>
             <Loader2 size={20} className="animate-spin" aria-hidden />
             {t("coachSuggest.loading", "大猩猩諗緊…")}
@@ -212,7 +223,11 @@ export function CoachSuggestCard({
       )}
 
       {suggestion && (
-        <div className="relative pt-2">
+        <div
+          className={`relative pt-2 transition-opacity ${
+            loadingAction === "regenerate" ? "opacity-60 pointer-events-none" : ""
+          }`}
+        >
           <div className="flex gap-3 items-start">
             <GorillaMascot size="sm" className="shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
@@ -239,6 +254,24 @@ export function CoachSuggestCard({
               />
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => void handleAsk(true)}
+            disabled={loadingAction !== null}
+            className={`mt-4 w-full bg-green-50 hover:bg-green-100 disabled:opacity-70 text-green-700 font-semibold py-3.5 rounded-xl border border-green-200/80 flex items-center justify-center gap-2 text-sm ${btnClass}`}
+          >
+            {loadingAction === "regenerate" ? (
+              <>
+                <Loader2 size={18} className="animate-spin shrink-0" aria-hidden />
+                {t("coachSuggest.regenerating", "大猩猩再諗緊其他選擇…")}
+              </>
+            ) : (
+              <>
+                <RefreshCw size={18} strokeWidth={2.25} className="shrink-0" aria-hidden />
+                {t("coachSuggest.regenerate", "🔄 再諗其他選擇")}
+              </>
+            )}
+          </button>
         </div>
       )}
     </section>

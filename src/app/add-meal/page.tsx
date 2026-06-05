@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { useI18n } from "@/components/I18nProvider";
+import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
@@ -764,6 +765,20 @@ export default function AddMealPage() {
               </span>
             )}
           </div>
+          <NutritionLabelOcrButton
+            onSuccess={(v) => {
+              setCalories(v.calories);
+              setProtein(v.protein);
+              setCarbs(v.carbs);
+              setFats(v.fat);
+              setMacrosFromSearch(true);
+              setSearchAdvanced({
+                sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+                sugarG: v.sugar > 0 ? v.sugar : undefined,
+              });
+              setProNutrition(v.sodium > 0 || v.sugar > 0);
+            }}
+          />
           <div className="grid grid-cols-2 gap-3">
             {(
               [
