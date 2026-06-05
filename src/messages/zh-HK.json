@@ -159,7 +159,6 @@
   },
   "foodSearch": {
     "title": "巨型食物搜尋引擎",
-    "hint": "優先搜尋本地 + 7-11 營養資料庫；搵唔到再 AI 聯想港台美食",
     "sourceAi": "AI 聯想",
     "source711": "7-11 資料庫",
     "sourceLocalDb": "港台本地庫",

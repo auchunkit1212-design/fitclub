@@ -159,7 +159,6 @@
   },
   "foodSearch": {
     "title": "Food Search",
-    "hint": "Local + 7-Eleven nutrition DB first; AI fallback for HK & Taiwan foods",
     "sourceAi": "AI suggest",
     "source711": "7-Eleven DB",
     "sourceLocalDb": "HK/TW local DB",

@@ -284,12 +284,6 @@ export function FoodSearchEngine({
           </span>
         )}
       </div>
-      <p className="text-xs text-gray-500">
-        {t(
-          "foodSearch.hint",
-          "優先搜尋本地 + 7-11 營養資料庫；搵唔到再 AI 聯想港台美食"
-        )}
-      </p>
 
       <div ref={containerRef} className="relative">
         <div className="relative">
