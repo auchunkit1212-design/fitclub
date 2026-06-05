@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
+import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useI18n } from "@/components/I18nProvider";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -39,6 +40,11 @@ import {
   fetchUsersForSession,
 } from "@/lib/db";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
+import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import {
+  scaleAdvancedNutrients,
+  scaleMacros,
+} from "@/lib/portion-scale";
 import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
@@ -92,6 +98,57 @@ export default function AddMealPage() {
   >();
   const [proNutrition, setProNutrition] = useState(false);
   const [shareToCommunity, setShareToCommunity] = useState(false);
+  const [ocrPortionBase, setOcrPortionBase] = useState<{
+    productName: string;
+    macros: { calories: number; protein: number; carbs: number; fats: number };
+    advanced?: FoodAdvancedNutrients;
+    baseWeightG?: number;
+    proNutrition?: boolean;
+  } | null>(null);
+
+  const applyOcrPortionedNutrition = useCallback(
+    (ratio: number, _portionLabel: string, description: string) => {
+      if (!ocrPortionBase) return;
+      const scaled = scaleMacros(ocrPortionBase.macros, ratio);
+      const scaledAdvanced = scaleAdvancedNutrients(
+        ocrPortionBase.advanced,
+        ratio
+      );
+      setDescription(description);
+      setCalories(scaled.calories);
+      setProtein(scaled.protein);
+      setCarbs(scaled.carbs);
+      setFats(scaled.fats);
+      setSearchAdvanced(scaledAdvanced);
+      setMacrosFromSearch(true);
+      setProNutrition(Boolean(ocrPortionBase.proNutrition));
+    },
+    [ocrPortionBase]
+  );
+
+  const handleOcrSuccess = (v: OcrNutritionResult) => {
+    const productName =
+      v.brand && v.productName
+        ? `${v.brand} ${v.productName}`.trim()
+        : v.productName;
+    setOcrPortionBase({
+      productName,
+      macros: {
+        calories: v.calories,
+        protein: v.protein,
+        carbs: v.carbs,
+        fats: v.fat,
+      },
+      advanced: {
+        sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+        sugarG: v.sugar > 0 ? v.sugar : undefined,
+      },
+      baseWeightG: v.servingWeightG > 0 ? v.servingWeightG : undefined,
+      proNutrition: v.sodium > 0 || v.sugar > 0,
+    });
+    setMacrosFromSearch(true);
+    setProNutrition(v.sodium > 0 || v.sugar > 0);
+  };
 
   useEffect(() => {
     const parsed = getSession();
@@ -544,6 +601,7 @@ export default function AddMealPage() {
             setMacrosFromSearch(item.fromSearch);
             setSearchAdvanced(item.advanced);
             setProNutrition(Boolean(item.proNutrition));
+            setOcrPortionBase(null);
           }}
         />
 
@@ -585,6 +643,7 @@ export default function AddMealPage() {
                 setMacrosFromSearch(false);
                 setSearchAdvanced(undefined);
                 setProNutrition(false);
+                setOcrPortionBase(null);
               }}
               placeholder={t(
                 "addMeal.descriptionPlaceholder",
@@ -765,20 +824,14 @@ export default function AddMealPage() {
               </span>
             )}
           </div>
-          <NutritionLabelOcrButton
-            onSuccess={(v) => {
-              setCalories(v.calories);
-              setProtein(v.protein);
-              setCarbs(v.carbs);
-              setFats(v.fat);
-              setMacrosFromSearch(true);
-              setSearchAdvanced({
-                sodiumMg: v.sodium > 0 ? v.sodium : undefined,
-                sugarG: v.sugar > 0 ? v.sugar : undefined,
-              });
-              setProNutrition(v.sodium > 0 || v.sugar > 0);
-            }}
-          />
+          <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
+          {ocrPortionBase && (
+            <ServingPortionPicker
+              baseWeightG={ocrPortionBase.baseWeightG}
+              productName={ocrPortionBase.productName}
+              onPortionChange={applyOcrPortionedNutrition}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             {(
               [

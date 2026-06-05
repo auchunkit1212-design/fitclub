@@ -198,11 +198,22 @@
     "engineMock": "Engine: demo mode"
   },
   "nutritionOcr": {
-    "scanButton": "🔍 Scan nutrition label (AI OCR)",
+    "scanButton": "Scan nutrition label (AI OCR)",
     "scanning": "Gorilla is reading the label...",
     "blurError": "The label is a bit blurry—Gorilla can't read it! Please retake the photo or enter manually.",
     "scannedLabel": "Scanned nutrition label",
     "perServing": "Per serving"
+  },
+  "portion": {
+    "title": "How much did you eat?",
+    "full": "Full serving",
+    "half": "Half",
+    "third": "⅓ serving",
+    "quarter": "¼ serving",
+    "customGrams": "Or enter grams eaten",
+    "perServing": "{g}g per serving",
+    "gramsEaten": "{grams}g of {base}g",
+    "noWeightHint": "If the label has no weight, use half or ⅓ serving to estimate."
   },
   "roles": {
     "admin": "Admin Console",

@@ -4,14 +4,14 @@ import { useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { IconLabel, Loader2, ScanLine } from "@/components/icons";
 import { compressFileImage } from "@/lib/image";
-import type { OcrNutritionValues } from "@/lib/ocr-nutrition";
+import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
 import { getSessionRequestHeaders } from "@/lib/session";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 interface NutritionLabelOcrButtonProps {
-  onSuccess: (values: OcrNutritionValues) => void;
+  onSuccess: (values: OcrNutritionResult) => void;
   className?: string;
 }
 
@@ -46,7 +46,7 @@ export function NutritionLabelOcrButton({
         credentials: "include",
         body: JSON.stringify({ imageBase64: dataUrl }),
       });
-      const data = (await res.json()) as OcrNutritionValues & {
+      const data = (await res.json()) as OcrNutritionResult & {
         error?: string;
         blur?: boolean;
       };
@@ -99,7 +99,7 @@ export function NutritionLabelOcrButton({
           </span>
         ) : (
           <IconLabel icon={ScanLine} size="md" className="justify-center" iconClassName="text-green-700">
-            {t("nutritionOcr.scanButton", "🔍 自動掃描營養標籤 (AI OCR)")}
+            {t("nutritionOcr.scanButton", "自動掃描營養標籤 (AI OCR)")}
           </IconLabel>
         )}
       </button>

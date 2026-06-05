@@ -5,8 +5,16 @@ import { useI18n } from "@/components/I18nProvider";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { CheckCircle2, IconLabel, Search } from "@/components/icons";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
+import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useDebounce } from "@/hooks/useDebounce";
 import { hasAiAdvancedNutrients } from "@/lib/food-advanced-nutrients";
+import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import {
+  parseGramsFromLabel,
+  scaleAdvancedNutrients,
+  scaleMacros,
+  type MacroValues,
+} from "@/lib/portion-scale";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { FavoriteFood, FoodAdvancedNutrients, FoodSearchItem } from "@/lib/types";
 
@@ -15,6 +23,14 @@ const btnClass =
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 500;
+
+export type PortionBasePayload = {
+  productName: string;
+  macros: MacroValues;
+  advanced?: FoodAdvancedNutrients;
+  baseWeightG?: number;
+  proNutrition?: boolean;
+};
 
 interface FoodSearchEngineProps {
   onAddToMeal: (item: {
@@ -26,6 +42,7 @@ interface FoodSearchEngineProps {
     fromSearch: boolean;
     advanced?: FoodAdvancedNutrients;
     proNutrition?: boolean;
+    portionBase?: PortionBasePayload;
   }) => void;
   /** Strip outer card chrome when used inside a bottom sheet */
   embedded?: boolean;
@@ -46,6 +63,9 @@ export function FoodSearchEngine({
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [portionBase, setPortionBase] = useState<
+    (PortionBasePayload & { itemMeta?: FoodSearchItem }) | null
+  >(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,18 +182,72 @@ export function FoodSearchEngine({
     loadFavorites();
   };
 
-  const selectResult = (item: FoodSearchItem) => {
-    const desc = item.brand ? `${item.brand} ${item.name}` : item.name;
-    setQuery(desc);
-    setSelectedItem(item);
-    setDropdownOpen(false);
-    onAddToMeal({
-      description: desc,
-      calories: item.calories,
-      protein: item.protein,
-      carbs: item.carbs,
-      fats: item.fats,
-      fromSearch: true,
+  const pushPortionedMeal = useCallback(
+    (
+      base: PortionBasePayload & { itemMeta?: FoodSearchItem },
+      ratio: number,
+      description: string
+    ) => {
+      const scaled = scaleMacros(base.macros, ratio);
+      const scaledAdvanced = scaleAdvancedNutrients(base.advanced, ratio);
+      onAddToMeal({
+        description,
+        calories: scaled.calories,
+        protein: scaled.protein,
+        carbs: scaled.carbs,
+        fats: scaled.fats,
+        fromSearch: true,
+        advanced: scaledAdvanced,
+        proNutrition: base.proNutrition,
+        portionBase: {
+          productName: base.productName,
+          macros: base.macros,
+          advanced: base.advanced,
+          baseWeightG: base.baseWeightG,
+          proNutrition: base.proNutrition,
+        },
+      });
+      setQuery(description);
+      if (base.itemMeta) {
+        setSelectedItem({
+          ...base.itemMeta,
+          name: base.productName,
+          calories: scaled.calories,
+          protein: scaled.protein,
+          carbs: scaled.carbs,
+          fats: scaled.fats,
+          fiberG: scaledAdvanced?.fiberG,
+          sugarG: scaledAdvanced?.sugarG,
+          saturatedFatG: scaledAdvanced?.saturatedFatG,
+          sodiumMg: scaledAdvanced?.sodiumMg,
+          cholesterolMg: scaledAdvanced?.cholesterolMg,
+        });
+      }
+    },
+    [onAddToMeal]
+  );
+
+  const handlePortionChange = useCallback(
+    (ratio: number, _portionLabel: string, description: string) => {
+      if (!portionBase) return;
+      pushPortionedMeal(portionBase, ratio, description);
+    },
+    [portionBase, pushPortionedMeal]
+  );
+
+  const beginPortionSelection = (
+    item: FoodSearchItem,
+    productName: string,
+    proNutrition?: boolean
+  ) => {
+    setPortionBase({
+      productName,
+      macros: {
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+      },
       advanced: {
         fiberG: item.fiberG,
         sugarG: item.sugarG,
@@ -181,14 +255,25 @@ export function FoodSearchEngine({
         sodiumMg: item.sodiumMg,
         cholesterolMg: item.cholesterolMg,
       },
-      proNutrition:
-        item.source === "openrouter" && hasAiAdvancedNutrients(item),
+      baseWeightG: parseGramsFromLabel(item.servingLabel),
+      proNutrition,
+      itemMeta: item,
     });
+    setSelectedItem(item);
+    setDropdownOpen(false);
+  };
+
+  const selectResult = (item: FoodSearchItem) => {
+    const productName = item.brand ? `${item.brand} ${item.name}` : item.name;
+    beginPortionSelection(
+      item,
+      productName,
+      item.source === "openrouter" && hasAiAdvancedNutrients(item)
+    );
   };
 
   const quickAddFavorite = (item: FavoriteFood) => {
-    setQuery(item.name);
-    setSelectedItem({
+    const foodItem: FoodSearchItem = {
       id: item.id,
       name: item.name,
       brand: item.brand,
@@ -198,16 +283,32 @@ export function FoodSearchEngine({
       fats: item.fats,
       servingLabel: item.servingLabel,
       source: "local",
-    });
-    setDropdownOpen(false);
-    onAddToMeal({
-      description: item.name,
-      calories: item.calories,
-      protein: item.protein,
-      carbs: item.carbs,
-      fats: item.fats,
-      fromSearch: true,
-    });
+    };
+    beginPortionSelection(foodItem, item.name);
+  };
+
+  const handleOcrSuccess = (v: OcrNutritionResult) => {
+    const productName =
+      v.brand && v.productName
+        ? `${v.brand} ${v.productName}`.trim()
+        : v.productName;
+    const item: FoodSearchItem = {
+      id: "ocr-nutrition-label",
+      name: productName,
+      brand: v.brand,
+      calories: v.calories,
+      protein: v.protein,
+      carbs: v.carbs,
+      fats: v.fat,
+      servingLabel:
+        v.servingWeightG > 0
+          ? `約 ${v.servingWeightG}g`
+          : t("nutritionOcr.perServing", "每份"),
+      source: "openrouter",
+      sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+      sugarG: v.sugar > 0 ? v.sugar : undefined,
+    };
+    beginPortionSelection(item, productName, v.sodium > 0 || v.sugar > 0);
   };
 
   const trimmedQuery = query.trim();
@@ -227,39 +328,7 @@ export function FoodSearchEngine({
 
   return (
     <Wrapper className={wrapperClass}>
-      <NutritionLabelOcrButton
-        onSuccess={(v) => {
-          const desc = t("nutritionOcr.scannedLabel", "掃描營養標籤");
-          setQuery(desc);
-          setSelectedItem({
-            id: "ocr-nutrition-label",
-            name: desc,
-            brand: "",
-            calories: v.calories,
-            protein: v.protein,
-            carbs: v.carbs,
-            fats: v.fat,
-            servingLabel: t("nutritionOcr.perServing", "每份"),
-            source: "openrouter",
-            sodiumMg: v.sodium > 0 ? v.sodium : undefined,
-            sugarG: v.sugar > 0 ? v.sugar : undefined,
-          });
-          setDropdownOpen(false);
-          onAddToMeal({
-            description: desc,
-            calories: v.calories,
-            protein: v.protein,
-            carbs: v.carbs,
-            fats: v.fat,
-            fromSearch: true,
-            advanced: {
-              sodiumMg: v.sodium > 0 ? v.sodium : undefined,
-              sugarG: v.sugar > 0 ? v.sugar : undefined,
-            },
-            proNutrition: v.sodium > 0 || v.sugar > 0,
-          });
-        }}
-      />
+      <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
 
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-gray-900">
@@ -293,6 +362,7 @@ export function FoodSearchEngine({
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedItem(null);
+              setPortionBase(null);
               setDropdownOpen(true);
             }}
             onFocus={() => setDropdownOpen(true)}
@@ -378,6 +448,13 @@ export function FoodSearchEngine({
 
       {selectedItem && (
         <div className="space-y-3">
+          {portionBase && (
+            <ServingPortionPicker
+              baseWeightG={portionBase.baseWeightG}
+              productName={portionBase.productName}
+              onPortionChange={handlePortionChange}
+            />
+          )}
           <AdvancedNutritionCard
             name={selectedItem.brand ? `${selectedItem.brand} ${selectedItem.name}` : selectedItem.name}
             macros={{

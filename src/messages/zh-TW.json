@@ -198,11 +198,22 @@
     "engineMock": "引擎：示範模式"
   },
   "nutritionOcr": {
-    "scanButton": "🔍 自動掃描營養標籤 (AI OCR)",
+    "scanButton": "自動掃描營養標籤 (AI OCR)",
     "scanning": "大猩猩正在閱讀標籤...",
     "blurError": "標籤有點模糊，大猩猩看不清楚！請重新拍攝或手動輸入。",
     "scannedLabel": "掃描營養標籤",
     "perServing": "每份"
+  },
+  "portion": {
+    "title": "你吃了多少？",
+    "full": "全份",
+    "half": "半份",
+    "third": "⅓ 份",
+    "quarter": "¼ 份",
+    "customGrams": "或輸入實際克數",
+    "perServing": "每份 {g}g",
+    "gramsEaten": "吃了 {grams}g / {base}g",
+    "noWeightHint": "標籤無份量克數時，請用半份／⅓ 份等比例估算。"
   },
   "roles": {
     "admin": "總控制台",
