@@ -85,6 +85,7 @@
       "today": "今日餐單",
       "macroLine": "{calories} kcal · 蛋白質 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g",
       "quickSaved": "已記錄：{name}",
+      "quickSavedAi": "AI 覆核後已記錄：{name}",
       "quickSaveFailed": "{message}"
     },
     "profileHint": "體重、飲食記錄與個人資料請到「我的」分頁查看"
@@ -118,6 +119,8 @@
     "saving": "正在儲存...",
     "aiAnalyzing": "AI 正在分析...",
     "aiVerifying": "AI 正在覆核營養...",
+    "aiAdjusted": "AI 已覆核並修正營養：{note}",
+    "aiAdjustedShort": "AI 已覆核並修正營養數值後儲存。",
     "advancedNutrition": "進階營養分析",
     "mealType": "餐別",
     "description": "食物描述",
@@ -156,7 +159,8 @@
     "errors": {
       "descriptionRequired": "請填寫食物描述！",
       "loginRequired": "請先登入再記錄飲食。",
-      "compressFailed": "照片壓縮失敗，請換一張較小的照片或再試一次。"
+      "compressFailed": "照片壓縮失敗，請換一張較小的照片或再試一次。",
+      "saveFailed": "儲存失敗，請稍後再試。"
     }
   },
   "foodSearch": {

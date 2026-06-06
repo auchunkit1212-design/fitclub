@@ -32,6 +32,7 @@ import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
+import { saveMealViaApi } from "@/lib/meal-save-client";
 import {
   consumePendingStreakMilestone,
   storePendingStreakMilestone,
@@ -450,46 +451,41 @@ export default function StudentDashboard() {
     carbs: number;
     fats: number;
     nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
+    advanced?: import("@/lib/types").FoodAdvancedNutrients;
   }) => {
     if (!session?.email || quickMealSaving) return;
     setQuickMealSaving(true);
     try {
-      const res = await fetch("/api/meals/log", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email: session.email,
-          mealType: mealTypeByTimeOfDay(),
-          description: item.description.trim(),
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fats: item.fats,
-          nutritionSource: item.nutritionSource,
-        }),
+      const result = await saveMealViaApi({
+        email: session.email,
+        mealType: mealTypeByTimeOfDay(),
+        description: item.description.trim(),
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+        nutritionSource: item.nutritionSource,
+        advanced: item.advanced,
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Save failed");
-      }
-      const data = (await res.json()) as {
-        streak?: {
-          currentStreak?: number;
-          longestStreak?: number;
-          milestoneTriggered?: boolean;
-          milestoneDays?: number;
-        };
-      };
-      applyStreakApiPayload(data.streak);
+      applyStreakApiPayload(result.streak);
       const registry = await fetchUsersForSession(session);
       const mealLogs = await getMealLogs(session, registry);
       setLogs(mealLogs);
       setMealSearchOpen(false);
-      showToast(t("home.meals.quickSaved", "已記錄：{name}", { name: item.description }));
+      const savedName = result.log.description.trim() || item.description.trim();
+      if (result.nutritionVerified?.adjusted) {
+        showToast(
+          t(
+            "home.meals.quickSavedAi",
+            "AI 覆核後已記錄：{name}",
+            { name: savedName }
+          )
+        );
+      } else {
+        showToast(
+          t("home.meals.quickSaved", "已記錄：{name}", { name: savedName })
+        );
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
       showToast(t("home.meals.quickSaveFailed", "{message}", { message }));

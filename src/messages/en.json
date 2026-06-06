@@ -85,6 +85,7 @@
       "today": "Today's meals",
       "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g",
       "quickSaved": "Logged: {name}",
+      "quickSavedAi": "Logged after AI review: {name}",
       "quickSaveFailed": "{message}"
     },
     "profileHint": "Weight, meal history, and personal info are in the Profile tab."
@@ -118,6 +119,8 @@
     "saving": "Saving...",
     "aiAnalyzing": "AI is analyzing...",
     "aiVerifying": "AI is verifying nutrition...",
+    "aiAdjusted": "AI verified and adjusted: {note}",
+    "aiAdjustedShort": "Saved after AI nutrition verification.",
     "advancedNutrition": "Advanced Nutrition",
     "mealType": "Meal type",
     "description": "Food description",
@@ -156,7 +159,8 @@
     "errors": {
       "descriptionRequired": "Please enter a food description.",
       "loginRequired": "Please log in before logging a meal.",
-      "compressFailed": "Photo compression failed. Try a smaller image."
+      "compressFailed": "Photo compression failed. Try a smaller image.",
+      "saveFailed": "Save failed. Please try again."
     }
   },
   "foodSearch": {

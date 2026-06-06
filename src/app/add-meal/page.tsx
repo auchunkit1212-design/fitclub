@@ -52,7 +52,8 @@ import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { storePendingStreakMilestone } from "@/lib/streak";
-import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
+import { getMealLogs, isToday } from "@/lib/storage";
+import { saveMealViaApi } from "@/lib/meal-save-client";
 import type {
   FoodAdvancedNutrients,
   MealLog,
@@ -352,41 +353,36 @@ export default function AddMealPage() {
 
     const mealTypeLabel = t(`addMeal.mealTypes.${mealTypeKey}`, mealTypeKey);
 
-    const basePayload = {
+    const mealPayload = {
       email,
       mealType: mealTypeLabel,
-      description: description.trim(),
+      description: descTrim,
       calories: finalCalories,
       protein: finalProtein,
       carbs: finalCarbs,
       fats: finalFats,
     };
 
-    const mealPayload = {
-      email,
-      mealType: basePayload.mealType,
-      description: basePayload.description,
-      calories: basePayload.calories,
-      protein: basePayload.protein,
-      carbs: basePayload.carbs,
-      fats: basePayload.fats,
-    };
-
-    const saveDirect = async (imageUrl?: string) => {
-      await saveMealLog({ ...mealPayload, imageUrl }, { notifyCoach: true });
-    };
-
-    const finishAfterSave = async (imageUrl?: string) => {
+    const finishAfterSave = (
+      saved: {
+        description: string;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+      },
+      imageUrl?: string
+    ) => {
       if (shareToCommunity && currentSession) {
         try {
           publishMealSharePost({
             session: currentSession,
             mealType: mealTypeLabel,
-            description: basePayload.description,
-            calories: finalCalories,
-            protein: finalProtein,
-            carbs: finalCarbs,
-            fats: finalFats,
+            description: saved.description,
+            calories: saved.calories,
+            protein: saved.protein,
+            carbs: saved.carbs,
+            fats: saved.fats,
             imageUrl: imageUrl ?? uploadedImageUrl,
           });
         } catch (shareErr) {
@@ -395,139 +391,43 @@ export default function AddMealPage() {
       }
     };
 
-    const trySave = async (imageUrl?: string) => {
-      let res: Response | null = null;
-      try {
-        res = await fetch("/api/meals/log", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...getSessionRequestHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            ...basePayload,
-            imageUrl,
-            imageBase64: imageToUpload,
-            nutritionSource: verifySource ?? "manual",
-          }),
-        });
-      } catch (networkErr) {
-        console.warn("[add-meal] API network error, fallback direct save", networkErr);
-        await saveDirect(imageUrl);
-        try {
-          const streakRes = await fetch("/api/student/streak", {
-            method: "POST",
-            credentials: "include",
-            headers: getSessionRequestHeaders(),
-          });
-          if (streakRes.ok) {
-            const streakData = (await streakRes.json()) as {
-              streak?: { milestoneTriggered?: boolean; milestoneDays?: number };
-            };
-            if (
-              streakData.streak?.milestoneTriggered &&
-              streakData.streak.milestoneDays &&
-              [3, 7, 14, 30].includes(streakData.streak.milestoneDays)
-            ) {
-              storePendingStreakMilestone(
-                streakData.streak.milestoneDays as 3 | 7 | 14 | 30
-              );
-            }
-          }
-        } catch {
-          // streak optional
-        }
-        await finishAfterSave(imageUrl);
-        router.push(shareToCommunity ? "/community" : "/");
-        return;
-      }
+    try {
+      const result = await saveMealViaApi({
+        ...mealPayload,
+        imageUrl: uploadedImageUrl,
+        imageBase64: imageToUpload,
+        nutritionSource: verifySource ?? "manual",
+        advanced: searchAdvanced,
+      });
 
-      if (res.ok) {
-        try {
-          const okData = (await res.json()) as {
-            streak?: {
-              milestoneTriggered?: boolean;
-              milestoneDays?: number;
-            };
-          };
-          if (
-            okData.streak?.milestoneTriggered &&
-            okData.streak.milestoneDays &&
-            [3, 7, 14, 30].includes(okData.streak.milestoneDays)
-          ) {
-            storePendingStreakMilestone(
-              okData.streak.milestoneDays as 3 | 7 | 14 | 30
-            );
-          }
-        } catch {
-          // ignore parse
-        }
-        await finishAfterSave(imageUrl);
-        router.push(shareToCommunity ? "/community" : "/");
-        return;
-      }
-
-      let errBody: {
-        error?: string;
-        code?: string;
-        detail?: string;
-        hint?: string;
-      } = {};
-      try {
-        errBody = (await res.json()) as typeof errBody;
-      } catch {
-        errBody = { error: `HTTP ${res.status}` };
-      }
-      console.error("[add-meal] API error", { status: res.status, ...errBody });
-
-      try {
-        console.warn("[add-meal] fallback direct Supabase save");
-        await saveDirect(imageUrl);
-        try {
-          const streakRes = await fetch("/api/student/streak", {
-            method: "POST",
-            credentials: "include",
-            headers: getSessionRequestHeaders(),
-          });
-          if (streakRes.ok) {
-            const streakData = (await streakRes.json()) as {
-              streak?: { milestoneTriggered?: boolean; milestoneDays?: number };
-            };
-            if (
-              streakData.streak?.milestoneTriggered &&
-              streakData.streak.milestoneDays &&
-              [3, 7, 14, 30].includes(streakData.streak.milestoneDays)
-            ) {
-              storePendingStreakMilestone(
-                streakData.streak.milestoneDays as 3 | 7 | 14 | 30
-              );
-            }
-          }
-        } catch {
-          // streak optional
-        }
-        await finishAfterSave(imageUrl);
-        router.push(shareToCommunity ? "/community" : "/");
-      } catch (directErr) {
-        console.error("[add-meal] direct save failed", directErr);
-        throw new Error(
-          errorMessage(
-            directErr,
-            errBody.error ??
-              (errBody.code === "DB_ERROR"
-                ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
-                : `儲存失敗 (HTTP ${res.status})`)
-          )
+      if (
+        result.streak?.milestoneTriggered &&
+        result.streak.milestoneDays &&
+        [3, 7, 14, 30].includes(result.streak.milestoneDays)
+      ) {
+        storePendingStreakMilestone(
+          result.streak.milestoneDays as 3 | 7 | 14 | 30
         );
       }
-    };
 
-    try {
-      await trySave(uploadedImageUrl);
+      finishAfterSave(result.log, uploadedImageUrl);
+
+      if (result.nutritionVerified?.adjusted) {
+        const note = result.nutritionVerified.note?.trim();
+        alert(
+          note
+            ? t("addMeal.aiAdjusted", "AI 已覆核並修正營養：{note}", { note })
+            : t(
+                "addMeal.aiAdjustedShort",
+                "AI 已覆核並修正營養數值後儲存。"
+              )
+        );
+      }
+
+      router.push(shareToCommunity ? "/community" : "/");
     } catch (err) {
       console.error("[add-meal] save failed", err);
-      alert(errorMessage(err, "上傳失敗，請檢查 Supabase 連線"));
+      alert(errorMessage(err, t("addMeal.errors.saveFailed", "儲存失敗，請稍後再試")));
     } finally {
       setSaveLoading(false);
     }

@@ -47,6 +47,13 @@ export async function POST(request: Request) {
     protein: number;
     carbs: number;
     fats: number;
+    advanced?: {
+      fiberG?: number;
+      sugarG?: number;
+      saturatedFatG?: number;
+      sodiumMg?: number;
+      cholesterolMg?: number;
+    };
   };
 
   const email = await resolveMealLogEmail(session, body.email);
@@ -69,6 +76,7 @@ export async function POST(request: Request) {
     const verified = await verifyMealNutrition({
       description: body.description.trim(),
       baseline,
+      advanced: body.advanced,
       imageBase64: body.imageBase64?.trim() || undefined,
       baselineSource: body.nutritionSource,
     });

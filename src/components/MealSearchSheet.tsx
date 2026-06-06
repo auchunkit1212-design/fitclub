@@ -20,6 +20,7 @@ interface MealSearchSheetProps {
     fats: number;
     fromSearch: boolean;
     nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
+    advanced?: import("@/lib/types").FoodAdvancedNutrients;
   }) => void;
 }
 
