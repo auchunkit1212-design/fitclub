@@ -88,7 +88,9 @@
       "quickSavedAi": "Logged after AI review: {name}",
       "quickSaveFailed": "{message}"
     },
-    "profileHint": "Weight, meal history, and personal info are in the Profile tab."
+    "profileHint": "Weight, meal history, and personal info are in the Profile tab.",
+    "coachStudentsCta": "Student management & meal logs",
+    "coachStudentsHint": "Register students, view roster and meal analysis — or use the Students tab below"
   },
   "common": {
     "loading": "Loading...",

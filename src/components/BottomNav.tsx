@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { getSession } from "@/lib/session";
 import {
   CircleUser,
   Globe,
@@ -59,8 +61,15 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useI18n();
-  const isStudent = role === "student";
-  const isCoachOrAdmin = role === "coach" || role === "admin";
+  const effectiveRole = useMemo(() => {
+    const sessionRole = getSession()?.role;
+    if (sessionRole === "coach" || sessionRole === "admin") return sessionRole;
+    if (role === "coach" || role === "admin") return role;
+    return role;
+  }, [role]);
+  const isStudent = effectiveRole === "student";
+  const isCoachOrAdmin =
+    effectiveRole === "coach" || effectiveRole === "admin";
 
   const communityActive = pathname === "/community";
   const homeActive = pathname === "/";

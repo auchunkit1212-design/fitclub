@@ -776,6 +776,22 @@ export default function StudentDashboard() {
         </section>
 
         {(session.role === "admin" || session.role === "coach") && (
+          <>
+            <button
+              type="button"
+              onClick={() => router.push("/coach/students")}
+              className={`w-full ${SOFT_CARD} px-4 py-4 text-left ring-1 ring-emerald-600/30 ${btnClass}`}
+            >
+              <p className="font-semibold text-emerald-800">
+                {t("home.coachStudentsCta", "學員管理同飲食紀錄")}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {t(
+                  "home.coachStudentsHint",
+                  "登記學員、查看名單同打卡分析 — 亦可撳底部「學員」分欄"
+                )}
+              </p>
+            </button>
             <FranchiseConsole
               session={session}
               registry={userRegistry}
@@ -783,7 +799,8 @@ export default function StudentDashboard() {
               onToast={showToast}
               onGoCoach={() => router.push("/coach")}
             />
-          )}
+          </>
+        )}
 
         {isStudent && coachTargets?.locked && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 ring-1 ring-emerald-600/30`}>
