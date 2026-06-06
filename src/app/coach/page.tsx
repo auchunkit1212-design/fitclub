@@ -4,15 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
-import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
-import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
-import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
   fetchUsersForSession,
-  filterStudentsForSession,
   resolveBranding,
   updateCoachLogo,
 } from "@/lib/db";
@@ -20,12 +16,11 @@ import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
+import { BottomNav } from "@/components/BottomNav";
 import { BarChart2, Bot, IconLabel, Loader2 } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
   CoachBranding,
-  MealLog,
-  RegistryUser,
   ThemeColor,
   UserSession,
 } from "@/lib/types";
@@ -49,8 +44,6 @@ export default function CoachPage() {
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
   const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
-  const [logs, setLogs] = useState<MealLog[]>([]);
-  const [students, setStudents] = useState<RegistryUser[]>([]);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,9 +69,6 @@ export default function CoachPage() {
 
       try {
         const registry = await fetchUsersForSession(current);
-        const mealLogs = await fetchMealLogsForSession(current, registry);
-        setLogs(mealLogs);
-        setStudents(filterStudentsForSession(current, registry));
 
         if (current.role === "coach") {
           const brandResolved = await resolveBrandForUser(current, registry);
@@ -195,7 +185,6 @@ export default function CoachPage() {
     try {
       const registry = await fetchUsersForSession(session);
       const freshLogs = await fetchMealLogsForSession(session, registry);
-      setLogs(freshLogs);
       setAiReport(generateCoachReport(freshLogs));
     } catch {
       alert("無法從 Supabase 拉取學員飲食記錄。");
@@ -213,7 +202,7 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
       <PageHeader
         title={`${appTitle.trim() || brand.gymName} · 教練後台`}
         subtitle={`${appTitle.trim() || brand.appTitle || brand.gymName} · 雲端同步`}
@@ -352,29 +341,9 @@ export default function CoachPage() {
           </section>
         )}
 
-        {students.length > 0 && (
-          <CoachStudentDailyPanel logs={logs} students={students} />
-        )}
-
-        {session?.role === "coach" && students.length > 0 && (
-          <CoachActivityWall
-            logs={logs}
-            students={students}
-            onToast={showToast}
-            onLogUpdated={(updated) =>
-              setLogs((prev) =>
-                prev.map((l) => (l.id === updated.id ? updated : l))
-              )
-            }
-          />
-        )}
-
-        <CoachMealHistoryPanel
-          logs={logs}
-          students={students}
-          gymName={brand.gymName}
-        />
       </main>
+
+      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
 
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">

@@ -6,6 +6,7 @@ import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { PageHeader } from "@/components/PageHeader";
+import { BottomNav } from "@/components/BottomNav";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
 import {
@@ -92,7 +93,7 @@ export default function CoachRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-safe max-w-lg mx-auto">
+    <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
       <PageHeader
         title="學員飲食記錄"
         subtitle={brand.gymName}
@@ -151,6 +152,8 @@ export default function CoachRecordsPage() {
           </>
         )}
       </main>
+
+      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
 
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">

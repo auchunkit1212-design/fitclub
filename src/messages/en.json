@@ -15,7 +15,8 @@
     "addMeal": "Meal",
     "explore": "Explore",
     "profile": "Profile",
-    "records": "Student records"
+    "records": "Student records",
+    "students": "Students"
   },
   "header": {
     "back": "← Back",

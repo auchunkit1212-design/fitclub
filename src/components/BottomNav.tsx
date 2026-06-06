@@ -9,6 +9,7 @@ import {
   Home,
   Plus,
   Settings,
+  Users,
 } from "@/components/icons";
 
 const btnClass =
@@ -63,6 +64,10 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
   const homeActive = pathname === "/";
   const profileActive = pathname === "/profile";
   const settingsActive = pathname === "/settings";
+  const studentsActive = pathname.startsWith("/coach/records");
+  const coachActive =
+    pathname === "/coach" ||
+    (pathname.startsWith("/coach/") && !studentsActive);
 
   const handleFab = () => {
     if (onFabClick) {
@@ -111,12 +116,20 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
                 />
               </>
             ) : (
-              <NavTabButton
-                active={pathname.startsWith("/coach")}
-                label={t("nav.coach", "教練")}
-                icon={GraduationCap}
-                onClick={() => router.push("/coach")}
-              />
+              <>
+                <NavTabButton
+                  active={studentsActive}
+                  label={t("nav.students", "學員")}
+                  icon={Users}
+                  onClick={() => router.push("/coach/records")}
+                />
+                <NavTabButton
+                  active={coachActive}
+                  label={t("nav.coach", "教練")}
+                  icon={GraduationCap}
+                  onClick={() => router.push("/coach")}
+                />
+              </>
             )}
           </div>
         </nav>
