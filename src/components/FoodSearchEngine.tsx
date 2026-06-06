@@ -9,6 +9,7 @@ import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useDebounce } from "@/hooks/useDebounce";
 import { hasAiAdvancedNutrients } from "@/lib/food-advanced-nutrients";
 import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import type { MealBaselineSource } from "@/lib/meal-ai-verify";
 import {
   parseGramsFromLabel,
   scaleAdvancedNutrients,
@@ -30,7 +31,21 @@ export type PortionBasePayload = {
   advanced?: FoodAdvancedNutrients;
   baseWeightG?: number;
   proNutrition?: boolean;
+  nutritionSource?: MealBaselineSource;
 };
+
+function nutritionSourceFromItem(item: FoodSearchItem): MealBaselineSource {
+  if (item.id === "ocr-nutrition-label") return "ocr";
+  if (item.source === "openrouter") return "openrouter";
+  if (
+    item.source === "hk_711" ||
+    item.source === "hk_tw" ||
+    item.source === "local"
+  ) {
+    return "local_db";
+  }
+  return "manual";
+}
 
 interface FoodSearchEngineProps {
   onAddToMeal: (item: {
@@ -43,6 +58,7 @@ interface FoodSearchEngineProps {
     advanced?: FoodAdvancedNutrients;
     proNutrition?: boolean;
     portionBase?: PortionBasePayload;
+    nutritionSource?: MealBaselineSource;
   }) => void;
   /** Strip outer card chrome when used inside a bottom sheet */
   embedded?: boolean;
@@ -205,7 +221,9 @@ export function FoodSearchEngine({
           advanced: base.advanced,
           baseWeightG: base.baseWeightG,
           proNutrition: base.proNutrition,
+          nutritionSource: base.nutritionSource,
         },
+        nutritionSource: base.nutritionSource,
       });
       setQuery(description);
       if (base.itemMeta) {
@@ -258,6 +276,7 @@ export function FoodSearchEngine({
       baseWeightG: parseGramsFromLabel(item.servingLabel),
       proNutrition,
       itemMeta: item,
+      nutritionSource: nutritionSourceFromItem(item),
     });
     setSelectedItem(item);
     setDropdownOpen(false);

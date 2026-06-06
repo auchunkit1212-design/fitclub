@@ -41,6 +41,7 @@ import {
 } from "@/lib/db";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import type { MealBaselineSource } from "@/lib/meal-ai-verify";
 import {
   scaleAdvancedNutrients,
   scaleMacros,
@@ -97,6 +98,9 @@ export default function AddMealPage() {
     FoodAdvancedNutrients | undefined
   >();
   const [proNutrition, setProNutrition] = useState(false);
+  const [nutritionSource, setNutritionSource] = useState<
+    MealBaselineSource | undefined
+  >();
   const [shareToCommunity, setShareToCommunity] = useState(false);
   const [ocrPortionBase, setOcrPortionBase] = useState<{
     productName: string;
@@ -148,6 +152,7 @@ export default function AddMealPage() {
     });
     setMacrosFromSearch(true);
     setProNutrition(v.sodium > 0 || v.sugar > 0);
+    setNutritionSource("ocr");
   };
 
   useEffect(() => {
@@ -267,6 +272,7 @@ export default function AddMealPage() {
     let finalProtein = protein;
     let finalCarbs = carbs;
     let finalFats = fats;
+    let verifySource = nutritionSource;
 
     const descTrim = description.trim();
     const volumeMl = parseVolumeMl(descTrim);
@@ -304,6 +310,7 @@ export default function AddMealPage() {
       setProtein(result.macros.protein);
       setCarbs(result.macros.carbs);
       setFats(result.macros.fats);
+      verifySource = "rules";
       if (result.isComposite && result.parts.length > 0) {
         alert(
           `已智能分拆 ${result.parts.length} 樣食物：\n${formatCompositeBreakdown(result.parts)}\n\n合計 ${result.macros.calories} kcal`
@@ -398,7 +405,12 @@ export default function AddMealPage() {
             ...getSessionRequestHeaders(),
           },
           credentials: "include",
-          body: JSON.stringify({ ...basePayload, imageUrl }),
+          body: JSON.stringify({
+            ...basePayload,
+            imageUrl,
+            imageBase64: imageToUpload,
+            nutritionSource: verifySource ?? "manual",
+          }),
         });
       } catch (networkErr) {
         console.warn("[add-meal] API network error, fallback direct save", networkErr);
@@ -601,6 +613,7 @@ export default function AddMealPage() {
             setMacrosFromSearch(item.fromSearch);
             setSearchAdvanced(item.advanced);
             setProNutrition(Boolean(item.proNutrition));
+            setNutritionSource(item.nutritionSource);
             setOcrPortionBase(null);
           }}
         />
@@ -643,6 +656,7 @@ export default function AddMealPage() {
                 setMacrosFromSearch(false);
                 setSearchAdvanced(undefined);
                 setProNutrition(false);
+                setNutritionSource(undefined);
                 setOcrPortionBase(null);
               }}
               placeholder={t(
@@ -884,9 +898,7 @@ export default function AddMealPage() {
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
           {saveLoading
-            ? macrosFromSearch
-              ? t("addMeal.saving", "正在儲存...")
-              : t("addMeal.aiAnalyzing", "AI 正在火速分析...")
+            ? t("addMeal.aiVerifying", "AI 正在覆核營養...")
             : imageCompressing
               ? t("addMeal.compressingPhoto", "壓縮相片中...")
               : t("addMeal.publish", "發布記錄")}

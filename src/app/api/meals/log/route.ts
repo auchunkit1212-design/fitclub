@@ -13,11 +13,13 @@ import {
 } from "@/lib/phase4-db";
 import { fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
+import { verifyMealNutrition, type MealBaselineSource } from "@/lib/meal-ai-verify";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const env = getSupabasePublicEnvStatus();
@@ -39,6 +41,8 @@ export async function POST(request: Request) {
     mealType: string;
     description: string;
     imageUrl?: string;
+    imageBase64?: string;
+    nutritionSource?: MealBaselineSource;
     calories: number;
     protein: number;
     carbs: number;
@@ -55,16 +59,30 @@ export async function POST(request: Request) {
   }
 
   try {
+    const baseline = {
+      calories: Number(body.calories) || 0,
+      protein: Number(body.protein) || 0,
+      carbs: Number(body.carbs) || 0,
+      fats: Number(body.fats) || 0,
+    };
+
+    const verified = await verifyMealNutrition({
+      description: body.description.trim(),
+      baseline,
+      imageBase64: body.imageBase64?.trim() || undefined,
+      baselineSource: body.nutritionSource,
+    });
+
     const log = await insertMealLog(
       {
         email,
         mealType: body.mealType,
-        description: body.description.trim(),
+        description: verified.description.trim(),
         imageUrl: body.imageUrl?.trim() || undefined,
-        calories: Number(body.calories) || 0,
-        protein: Number(body.protein) || 0,
-        carbs: Number(body.carbs) || 0,
-        fats: Number(body.fats) || 0,
+        calories: verified.macros.calories,
+        protein: verified.macros.protein,
+        carbs: verified.macros.carbs,
+        fats: verified.macros.fats,
       },
       { useServiceRole: true }
     );
@@ -126,6 +144,11 @@ export async function POST(request: Request) {
       log,
       streak,
       imageStorage: body.imageUrl ? MEAL_IMAGES_BUCKET : undefined,
+      nutritionVerified: {
+        source: verified.source,
+        adjusted: verified.adjusted,
+        note: verified.note,
+      },
     });
   } catch (error) {
     const readable = toReadableError(error, "儲存失敗");

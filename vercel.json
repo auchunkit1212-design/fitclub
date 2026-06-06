@@ -2,6 +2,12 @@
   "functions": {
     "src/app/api/food-search/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/meals/log/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/meals/verify-nutrition/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

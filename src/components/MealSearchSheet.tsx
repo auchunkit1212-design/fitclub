@@ -19,6 +19,7 @@ interface MealSearchSheetProps {
     carbs: number;
     fats: number;
     fromSearch: boolean;
+    nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
   }) => void;
 }
 

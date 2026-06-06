@@ -449,6 +449,7 @@ export default function StudentDashboard() {
     protein: number;
     carbs: number;
     fats: number;
+    nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
   }) => {
     if (!session?.email || quickMealSaving) return;
     setQuickMealSaving(true);
@@ -468,6 +469,7 @@ export default function StudentDashboard() {
           protein: item.protein,
           carbs: item.carbs,
           fats: item.fats,
+          nutritionSource: item.nutritionSource,
         }),
       });
       if (!res.ok) {
