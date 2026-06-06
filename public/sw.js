@@ -1,5 +1,5 @@
-const CACHE_VERSION = "nutrition-coach-pwa-v7";
-const STATIC_CACHE = "nutrition-coach-static-v7";
+const CACHE_VERSION = "nutrition-coach-pwa-v8";
+const STATIC_CACHE = "nutrition-coach-static-v8";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
 const PRECACHE_URLS = ["/gorilla-logo.png", "/manifest.json"];

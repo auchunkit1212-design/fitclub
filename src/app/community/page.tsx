@@ -91,7 +91,7 @@ export default function CommunityPage() {
         onFabClick={
           session.role === "student"
             ? () => router.push("/add-meal")
-            : () => router.push("/coach/records")
+            : () => router.push("/coach/students")
         }
       />
     </div>
