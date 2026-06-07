@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Globe, Image as ImageIcon, Loader2, Video } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { compressFileImage, fileToDataUrl } from "@/lib/image";
-import { publishThoughtPost, validateVideoFile } from "@/lib/community";
+import { validateVideoFile } from "@/lib/community";
+import { publishThoughtPostCloud } from "@/lib/community-client";
 import { syncProfilePhotoFromCloud } from "@/lib/profile-avatar-client";
 import {
   getProfilePhotoUrl,
@@ -97,7 +98,7 @@ export function CommunityComposer({ session, onPosted }: Props) {
     setPosting(true);
     setError(null);
     try {
-      publishThoughtPost({
+      await publishThoughtPostCloud({
         session,
         bodyText: text,
         mediaType: mediaType ?? undefined,
@@ -108,15 +109,21 @@ export function CommunityComposer({ session, onPosted }: Props) {
       onPosted();
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
-      if (code === "STORAGE_FULL") {
+      if (code === "STORAGE_FULL" || code.includes("STORAGE_BUCKET")) {
         setError(
           t(
             "community.composer.storageFull",
-            "儲存空間已滿，請刪除部分媒體或縮短影片"
+            "媒體上傳失敗，請確認已執行 storage-community-media.sql"
           )
         );
+      } else if (code === "EMPTY_POST") {
+        setError(t("community.post.emptyError", "文字同媒體不能同時為空"));
       } else {
-        setError(t("community.composer.postFail", "發布失敗，請稍後再試"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : t("community.composer.postFail", "發布失敗，請稍後再試")
+        );
       }
     } finally {
       setPosting(false);

@@ -13,7 +13,7 @@ import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, Sparkles } from "@/components/icons";
-import { publishMealSharePost } from "@/lib/community";
+import { publishMealSharePostCloud } from "@/lib/community-client";
 import { estimateMealNutritionClient } from "@/lib/meal-estimate-client";
 import {
   CARBS_PORTION_KEYS,
@@ -477,7 +477,7 @@ export default function AddMealPage() {
       fats: finalFats,
     };
 
-    const finishAfterSave = (
+    const finishAfterSave = async (
       saved: {
         description: string;
         calories: number;
@@ -489,7 +489,7 @@ export default function AddMealPage() {
     ) => {
       if (shareToCommunity && currentSession) {
         try {
-          publishMealSharePost({
+          await publishMealSharePostCloud({
             session: currentSession,
             mealType: mealTypeLabel,
             description: saved.description,
@@ -524,7 +524,7 @@ export default function AddMealPage() {
         );
       }
 
-      finishAfterSave(result.log, uploadedImageUrl);
+      await finishAfterSave(result.log, uploadedImageUrl);
 
       if (result.nutritionVerified?.adjusted) {
         const note = result.nutritionVerified.note?.trim();

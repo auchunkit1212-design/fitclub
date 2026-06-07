@@ -9,6 +9,11 @@ import {
   updateCommunityPost,
   type CommunityFeedPost,
 } from "@/lib/community";
+import {
+  deleteCommunityPostCloud,
+  toggleCommunityLikeCloud,
+  updateCommunityPostCloud,
+} from "@/lib/community-client";
 import { fetchPublicAvatarUrl } from "@/lib/profile-avatar-client";
 import { getProfilePhotoUrl } from "@/lib/profile-photo";
 
@@ -21,6 +26,7 @@ const btnClass =
 type Props = {
   post: CommunityFeedPost;
   currentUserEmail?: string;
+  feedSource?: "cloud" | "local";
   onPostChanged?: () => void;
 };
 
@@ -45,11 +51,13 @@ function MacroTag({
 export function CommunityFeedCard({
   post,
   currentUserEmail,
+  feedSource = "cloud",
   onPostChanged,
 }: Props) {
   const { t } = useI18n();
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(post.likedByMe ?? false);
   const [likeCount, setLikeCount] = useState(post.likes);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.bodyText ?? "");
@@ -74,23 +82,66 @@ export function CommunityFeedCard({
     if (!editing) setEditText(post.bodyText ?? "");
   }, [post.bodyText, editing]);
 
-  const toggleLike = () => {
-    setLiked((prev) => {
-      const next = !prev;
-      setLikeCount((c) => (next ? c + 1 : c - 1));
-      return next;
-    });
+  useEffect(() => {
+    setLiked(post.likedByMe ?? false);
+    setLikeCount(post.likes);
+  }, [post.id, post.likedByMe, post.likes]);
+
+  const toggleLike = async () => {
+    if (post.isDemo || likeLoading) {
+      if (post.isDemo) {
+        setLiked((prev) => {
+          const next = !prev;
+          setLikeCount((c) => (next ? c + 1 : c - 1));
+          return next;
+        });
+      }
+      return;
+    }
+
+    setLikeLoading(true);
+    const prevLiked = liked;
+    const prevCount = likeCount;
+    setLiked(!prevLiked);
+    setLikeCount(prevCount + (prevLiked ? -1 : 1));
+
+    try {
+      if (feedSource === "cloud") {
+        const result = await toggleCommunityLikeCloud(post.id);
+        setLiked(result.liked);
+        setLikeCount(result.likeCount);
+      } else {
+        setLiked(prevLiked);
+        setLikeCount(prevCount);
+      }
+    } catch {
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentUserEmail) return;
     setMenuOpen(false);
     const ok = window.confirm(
       t("community.post.deleteConfirm", "確定要刪除呢篇貼文？")
     );
     if (!ok) return;
-    if (deleteCommunityPost(post.id, currentUserEmail)) {
+
+    try {
+      if (feedSource === "cloud" && !post.isDemo) {
+        await deleteCommunityPostCloud(post.id);
+      } else if (deleteCommunityPost(post.id, currentUserEmail)) {
+        onPostChanged?.();
+        return;
+      } else {
+        return;
+      }
       onPostChanged?.();
+    } catch {
+      alert(t("community.post.deleteFailed", "刪除失敗"));
     }
   };
 
@@ -100,11 +151,15 @@ export function CommunityFeedCard({
     setEditing(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!currentUserEmail) return;
     setSaving(true);
     try {
-      updateCommunityPost(post.id, currentUserEmail, { bodyText: editText });
+      if (feedSource === "cloud" && !post.isDemo) {
+        await updateCommunityPostCloud(post.id, editText);
+      } else {
+        updateCommunityPost(post.id, currentUserEmail, { bodyText: editText });
+      }
       setEditing(false);
       onPostChanged?.();
     } catch (err) {
@@ -306,8 +361,9 @@ export function CommunityFeedCard({
 
         <button
           type="button"
-          onClick={toggleLike}
-          className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${
+          onClick={() => void toggleLike()}
+          disabled={likeLoading}
+          className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold disabled:opacity-60 ${
             liked
               ? "bg-rose-50 text-rose-600"
               : "bg-gray-50 text-gray-600 hover:bg-gray-100"

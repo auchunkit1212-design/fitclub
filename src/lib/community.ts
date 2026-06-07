@@ -29,6 +29,7 @@ export type CommunityFeedPost = {
   carbs?: number;
   fats?: number;
   likes: number;
+  likedByMe?: boolean;
   isDemo?: boolean;
 };
 
@@ -304,7 +305,11 @@ export function loadCommunityFeed(now = Date.now()): CommunityFeedPost[] {
     ...p,
     postedAt: formatRelativeTime(p.createdAt, now),
   }));
-  return [...stored, ...COMMUNITY_DEMO_POSTS];
+  if (stored.length > 0) return stored;
+  return COMMUNITY_DEMO_POSTS.map((p) => ({
+    ...p,
+    postedAt: formatRelativeTime(p.createdAt, now),
+  }));
 }
 
 export function validateVideoFile(file: File): string | null {
