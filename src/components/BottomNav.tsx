@@ -86,6 +86,7 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
       return;
     }
     if (isStudent) router.push("/add-meal");
+    if (coachActive) router.push("/add-meal?from=coach");
     else router.push("/coach/students");
   };
 
@@ -156,7 +157,9 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
           aria-label={
             isStudent
               ? t("nav.addMeal", "記錄飲食")
-              : t("nav.students", "學員")
+              : coachActive
+                ? t("nav.coachLogMeal", "記錄飲食")
+                : t("nav.students", "學員")
           }
           className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-lg ${btnClass}`}
         >

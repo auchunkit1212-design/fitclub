@@ -16,7 +16,16 @@
     "explore": "Explore",
     "profile": "Profile",
     "records": "Student records",
-    "students": "Students"
+    "students": "Students",
+    "coachLogMeal": "Log meal"
+  },
+  "coach": {
+    "myMeals": "My meal logs",
+    "logMeal": "Log meal",
+    "fromDate": "From",
+    "toDate": "To",
+    "noMealsInRange": "No logs in this date range.",
+    "proteinG": "Protein"
   },
   "header": {
     "back": "← Back",
@@ -604,6 +613,59 @@
       "macros": "P / C / F progress",
       "meals": "Meals",
       "aiReviews": "Gorilla AI reviews"
+    }
+  },
+  "appGuide": {
+    "badge": "Getting started · Feature tour",
+    "title": "App usage guide",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Get started",
+    "progress": "Step {current} of {total}",
+    "replayButton": "App usage guide",
+    "replayHint": "Replay the feature tour, including nutrition label scanning and meal logging.",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Gorilla Diet Coach",
+        "body": "This quick tour shows you how to log meals, scan nutrition labels, and use the main features.\n\nYou can replay it anytime from Settings."
+      },
+      "nav": {
+        "title": "Bottom navigation",
+        "body": "Five tabs at the bottom:\n· Explore — community meal shares\n· Home — daily calories and progress\n· + Log meal — tap the center button to add food\n· Profile — meal history, coach replies, body stats\n· Settings — language, reminders, and push notifications"
+      },
+      "recordMeal": {
+        "title": "Log a meal",
+        "body": "Tap the + button or open the log-meal page to:\n· Pick a meal type (breakfast, lunch, dinner, etc.)\n· Take or upload a food photo\n· Search the food database\n· Adjust portions with the serving picker"
+      },
+      "scanLabel": {
+        "title": "Scan nutrition labels",
+        "body": "While logging, tap \"Scan nutrition label\" and point your camera at the facts panel on packaging.\n\nOCR reads calories, protein, carbs, and fat automatically — no manual typing."
+      },
+      "aiVerify": {
+        "title": "AI nutrition check",
+        "body": "When you save a meal, Gorilla AI reviews your numbers against typical foods and portions.\n\nIt adjusts unrealistic entries so your daily progress stays accurate."
+      },
+      "home": {
+        "title": "Home dashboard",
+        "body": "Your home screen shows:\n· Calorie and macro ring progress\n· Detailed nutrition analysis and AI roast\n· Coach broadcast messages\n· Logging streak\n\nTap \"Advanced nutrition\" for deeper stats."
+      },
+      "community": {
+        "title": "Explore community",
+        "body": "On Explore you can share your meals and browse what other students are eating.\n\nStay motivated and pick up ideas from the community."
+      },
+      "profile": {
+        "title": "Your profile",
+        "body": "Profile includes:\n· Full meal history and calendar\n· Coach sticker reactions on your meals\n· Body stats (height, weight, goals)\n· Avatar and nickname"
+      },
+      "settings": {
+        "title": "Settings & reminders",
+        "body": "In Settings you can:\n· Switch language (Cantonese / Traditional Chinese / English)\n· Set water and morning reminder times\n· Enable push notifications so you never miss a log"
+      },
+      "coachInvite": {
+        "title": "Link your coach (invite code)",
+        "body": "If you have a coach invite code, enter it at registration to link your coach and gym.\n\nYour coach can then set nutrition targets, review your logs, and send broadcasts."
+      }
     }
   }
 }

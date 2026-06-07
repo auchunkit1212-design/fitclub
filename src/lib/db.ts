@@ -549,6 +549,14 @@ export async function fetchMealLogsForSession(
   return fetchMealLogs({ ...filters, emails: [session.email] });
 }
 
+/** Meal logs for the logged-in user only (coach/admin self, or student self). */
+export async function fetchOwnMealLogsForSession(
+  session: UserSession,
+  filters?: { from?: string; to?: string }
+): Promise<MealLog[]> {
+  return fetchMealLogs({ ...filters, emails: [session.email] });
+}
+
 export async function resolveBranding(
   session: UserSession,
   registry: RegistryUser[]

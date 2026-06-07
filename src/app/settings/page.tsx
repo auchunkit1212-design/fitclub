@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
+import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { resetAppGuide } from "@/lib/app-guide";
 import {
   DEFAULT_PERSONAL_SETTINGS,
   normalizePersonalSettings,
@@ -22,6 +24,7 @@ export default function SettingsPage() {
   );
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState("");
+  const [showAppGuide, setShowAppGuide] = useState(false);
 
   useEffect(() => {
     const parsed = getSession();
@@ -74,8 +77,19 @@ export default function SettingsPage() {
             setToast(msg);
             setTimeout(() => setToast(""), 3000);
           }}
+          onOpenAppGuide={() => {
+            resetAppGuide();
+            setShowAppGuide(true);
+          }}
         />
       </main>
+
+      {showAppGuide && (
+        <StudentAppGuide
+          open={showAppGuide}
+          onClose={() => setShowAppGuide(false)}
+        />
+      )}
 
       <BottomNav role="student" onFabClick={() => router.push("/add-meal")} />
 

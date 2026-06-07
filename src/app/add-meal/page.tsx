@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { ServingPortionPicker } from "@/components/ServingPortionPicker";
@@ -9,6 +9,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
+import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { BarChart2, Camera, Cookie, Globe, IconLabel } from "@/components/icons";
@@ -52,7 +53,7 @@ import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { storePendingStreakMilestone } from "@/lib/streak";
-import { getMealLogs, isToday } from "@/lib/storage";
+import { getMealLogs, getOwnMealLogs, isToday } from "@/lib/storage";
 import { saveMealViaApi } from "@/lib/meal-save-client";
 import type {
   FoodAdvancedNutrients,
@@ -64,10 +65,12 @@ import type {
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-export default function AddMealPage() {
+function AddMealPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fromCoach = searchParams.get("from") === "coach";
 
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
   const [description, setDescription] = useState("");
@@ -176,7 +179,12 @@ export default function AddMealPage() {
       try {
         await initUserRegistry();
         const registry = await fetchUsersForSession(active);
-        const logs = await getMealLogs(active, registry);
+        const isCoachSelf =
+          fromCoach &&
+          (active.role === "coach" || active.role === "admin");
+        const logs = isCoachSelf
+          ? await getOwnMealLogs(active)
+          : await getMealLogs(active, registry);
         setTodayLogs(logs.filter((l) => isToday(l.date)));
 
         if (active.role === "student") {
@@ -208,7 +216,7 @@ export default function AddMealPage() {
         setProfileChecked(true);
       }
     })();
-  }, [router]);
+  }, [router, fromCoach]);
 
   const needsOnboarding =
     session?.role === "student" &&
@@ -424,7 +432,8 @@ export default function AddMealPage() {
         );
       }
 
-      router.push(shareToCommunity ? "/community" : "/");
+      const homePath = fromCoach ? "/coach" : "/";
+      router.push(shareToCommunity ? "/community" : homePath);
     } catch (err) {
       console.error("[add-meal] save failed", err);
       alert(errorMessage(err, t("addMeal.errors.saveFailed", "儲存失敗，請稍後再試")));
@@ -456,7 +465,13 @@ export default function AddMealPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
+    <div
+      className={`min-h-screen bg-white max-w-lg mx-auto ${
+        fromCoach && (session?.role === "coach" || session?.role === "admin")
+          ? "pb-32"
+          : "pb-safe"
+      }`}
+    >
       {showNutritionDash && (
         <NutritionDashboard
           logs={todayLogs}
@@ -488,7 +503,7 @@ export default function AddMealPage() {
 
       <PageHeader
         title={t("addMeal.title", "記錄飲食")}
-        onBack={() => router.push("/")}
+        onBack={() => router.push(fromCoach ? "/coach" : "/")}
         backLabel={t("header.back", "← 返回")}
       />
 
@@ -804,6 +819,27 @@ export default function AddMealPage() {
               : t("addMeal.publish", "發布記錄")}
         </button>
       </main>
+
+      {(session?.role === "coach" || session?.role === "admin") && fromCoach && (
+        <BottomNav
+          role={session.role === "admin" ? "admin" : "coach"}
+          onFabClick={() => router.push("/add-meal?from=coach")}
+        />
+      )}
     </div>
+  );
+}
+
+export default function AddMealPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-zinc-500">
+          載入中...
+        </div>
+      }
+    >
+      <AddMealPageContent />
+    </Suspense>
   );
 }

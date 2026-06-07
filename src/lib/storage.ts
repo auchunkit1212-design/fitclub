@@ -1,6 +1,7 @@
 import {
   fetchMealLogs,
   fetchMealLogsForSession,
+  fetchOwnMealLogsForSession,
   insertMealLog,
   resolveBranding,
   updateCoachBranding,
@@ -51,6 +52,13 @@ export async function getMealLogs(
   registry: RegistryUser[]
 ): Promise<MealLog[]> {
   return fetchMealLogsForSession(session, registry);
+}
+
+export async function getOwnMealLogs(
+  session: UserSession,
+  filters?: { from?: string; to?: string }
+): Promise<MealLog[]> {
+  return fetchOwnMealLogsForSession(session, filters);
 }
 
 export async function notifyCoachAfterMealLog(log: MealLog): Promise<void> {

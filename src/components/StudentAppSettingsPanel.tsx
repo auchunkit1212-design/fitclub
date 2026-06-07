@@ -2,7 +2,7 @@
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
-import { Settings, IconLabel } from "@/components/icons";
+import { GraduationCap, Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
   MORNING_REMINDER_TIME_OPTIONS,
@@ -34,12 +34,14 @@ type Props = {
   settings: PersonalSettings;
   onSettingsChange: (next: PersonalSettings) => void;
   onSaved: (message: string) => void;
+  onOpenAppGuide?: () => void;
 };
 
 export function StudentAppSettingsPanel({
   settings,
   onSettingsChange,
   onSaved,
+  onOpenAppGuide,
 }: Props) {
   const { t } = useI18n();
 
@@ -121,6 +123,30 @@ export function StudentAppSettingsPanel({
         reminderSettings={settings}
         onSettingsSync={syncReminderSettingsToServer}
       />
+
+      {onOpenAppGuide && (
+        <div className="pt-1 border-t border-gray-100 space-y-2">
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            {t(
+              "appGuide.replayHint",
+              "重新睇一次功能教學，包括掃描營養標籤同記錄飲食。"
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={onOpenAppGuide}
+            className={`w-full border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold py-3.5 rounded-2xl ${btnClass}`}
+          >
+            <IconLabel
+              icon={GraduationCap}
+              className="justify-center"
+              iconClassName="text-emerald-700"
+            >
+              {t("appGuide.replayButton", "App 使用指引")}
+            </IconLabel>
+          </button>
+        </div>
+      )}
 
       <button
         type="button"

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { generateCoachReport } from "@/lib/ai-mock";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
+import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
+  fetchOwnMealLogsForSession,
   fetchUsersForSession,
   resolveBranding,
   updateCoachLogo,
@@ -21,6 +23,7 @@ import { BarChart2, Bot, IconLabel, Loader2 } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
   CoachBranding,
+  MealLog,
   ThemeColor,
   UserSession,
 } from "@/lib/types";
@@ -49,6 +52,7 @@ export default function CoachPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
+  const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
   const [toast, setToast] = useState("");
 
   const showToast = (message: string) => {
@@ -87,6 +91,9 @@ export default function CoachPage() {
           setAppTitle(DEFAULT_BRANDING.appTitle);
           setThemeColor(DEFAULT_BRANDING.themeColor);
         }
+
+        const ownLogs = await fetchOwnMealLogsForSession(current);
+        setOwnMealLogs(ownLogs);
       } catch {
         alert("無法從 Supabase 載入教練數據。");
       } finally {
@@ -225,6 +232,10 @@ export default function CoachPage() {
           <CoachPushSubscribe />
         )}
 
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <CoachSelfMealPanel logs={ownMealLogs} />
+        )}
+
         <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
           <h2 className="text-sm font-bold text-emerald-700">
             <IconLabel icon={Bot} iconClassName="text-emerald-600">
@@ -343,7 +354,10 @@ export default function CoachPage() {
 
       </main>
 
-      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
+      <BottomNav
+        role={session?.role === "admin" ? "admin" : "coach"}
+        onFabClick={() => router.push("/add-meal?from=coach")}
+      />
 
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">
