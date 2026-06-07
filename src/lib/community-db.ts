@@ -3,6 +3,7 @@ import {
   avatarHueForEmail,
   formatRelativeTime,
   initialsFromName,
+  type CommunityComment,
   type CommunityFeedPost,
   type CommunityMediaType,
   type CommunityPostKind,
@@ -52,6 +53,7 @@ function rowToFeedPost(
   likeCount: number,
   likedByMe: boolean,
   authorAvatarUrl?: string | null,
+  commentCount = 0,
   now = Date.now()
 ): CommunityFeedPost {
   const authorEmail = row.author_email.trim().toLowerCase();
@@ -77,7 +79,34 @@ function rowToFeedPost(
     fats: readMacro(row.fats),
     likes: likeCount,
     likedByMe,
+    commentCount,
     isDemo: false,
+  };
+}
+
+function rowToComment(
+  row: {
+    id: string;
+    post_id: string;
+    author_email: string;
+    author_name: string;
+    body_text: string;
+    created_at: string;
+  },
+  now = Date.now()
+): CommunityComment {
+  const authorEmail = row.author_email.trim().toLowerCase();
+  const authorName = row.author_name.trim() || authorEmail.split("@")[0];
+  return {
+    id: row.id,
+    postId: row.post_id,
+    authorEmail,
+    authorName,
+    authorInitials: initialsFromName(authorName),
+    avatarHue: avatarHueForEmail(authorEmail),
+    bodyText: row.body_text.trim(),
+    createdAt: row.created_at,
+    postedAt: formatRelativeTime(row.created_at, now),
   };
 }
 
@@ -149,6 +178,19 @@ export async function fetchCommunityFeed(input: {
     if (userEmail === viewer) likedSet.add(postId);
   }
 
+  const commentCountMap = new Map<string, number>();
+  const { data: commentRows, error: commentError } = await client
+    .from("community_post_comments")
+    .select("post_id")
+    .in("post_id", postIds);
+
+  if (!commentError) {
+    for (const row of commentRows ?? []) {
+      const postId = String((row as { post_id: string }).post_id);
+      commentCountMap.set(postId, (commentCountMap.get(postId) ?? 0) + 1);
+    }
+  }
+
   const avatarMap = await fetchAvatarMap(posts.map((p) => p.author_email));
   const now = Date.now();
 
@@ -158,9 +200,127 @@ export async function fetchCommunityFeed(input: {
       likeCountMap.get(row.id) ?? 0,
       likedSet.has(row.id),
       avatarMap.get(row.author_email.trim().toLowerCase()),
+      commentCountMap.get(row.id) ?? 0,
       now
     )
   );
+}
+
+export async function fetchCommunityPostById(
+  postId: string
+): Promise<CommunityPostRow | null> {
+  const client = getSupabaseAdmin();
+  const { data, error } = await client
+    .from("community_posts")
+    .select("*")
+    .eq("id", postId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return (data as CommunityPostRow | null) ?? null;
+}
+
+export async function fetchCommunityCommentsForPost(
+  postId: string
+): Promise<CommunityComment[]> {
+  const client = getSupabaseAdmin();
+  const { data, error } = await client
+    .from("community_post_comments")
+    .select("*")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `community_post_comments 讀取失敗：${error.message}（請執行 supabase/community-post-comments.sql）`
+    );
+  }
+
+  const now = Date.now();
+  return (data ?? []).map((row) =>
+    rowToComment(
+      row as {
+        id: string;
+        post_id: string;
+        author_email: string;
+        author_name: string;
+        body_text: string;
+        created_at: string;
+      },
+      now
+    )
+  );
+}
+
+export async function insertCommunityComment(input: {
+  postId: string;
+  authorEmail: string;
+  authorName: string;
+  bodyText: string;
+}): Promise<CommunityComment> {
+  const client = getSupabaseAdmin();
+  const email = input.authorEmail.trim().toLowerCase();
+  const authorName = input.authorName.trim() || email.split("@")[0];
+  const text = input.bodyText.trim();
+  if (!text) throw new Error("EMPTY_COMMENT");
+
+  const post = await fetchCommunityPostById(input.postId);
+  if (!post) throw new Error("POST_NOT_FOUND");
+
+  const { data, error } = await client
+    .from("community_post_comments")
+    .insert({
+      post_id: input.postId,
+      author_email: email,
+      author_name: authorName,
+      body_text: text,
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(
+      error?.message ?? "留言失敗（請執行 supabase/community-post-comments.sql）"
+    );
+  }
+
+  return rowToComment(
+    data as {
+      id: string;
+      post_id: string;
+      author_email: string;
+      author_name: string;
+      body_text: string;
+      created_at: string;
+    }
+  );
+}
+
+export async function deleteCommunityCommentById(
+  commentId: string,
+  authorEmail: string
+): Promise<boolean> {
+  const client = getSupabaseAdmin();
+  const email = authorEmail.trim().toLowerCase();
+
+  const { data: existing, error: fetchError } = await client
+    .from("community_post_comments")
+    .select("id")
+    .eq("id", commentId)
+    .eq("author_email", email)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) return false;
+
+  const { error } = await client
+    .from("community_post_comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("author_email", email);
+
+  if (error) throw new Error(error.message);
+  return true;
 }
 
 export async function insertCommunityPost(

@@ -30,7 +30,20 @@ export type CommunityFeedPost = {
   fats?: number;
   likes: number;
   likedByMe?: boolean;
+  commentCount?: number;
   isDemo?: boolean;
+};
+
+export type CommunityComment = {
+  id: string;
+  postId: string;
+  authorEmail: string;
+  authorName: string;
+  authorInitials: string;
+  avatarHue: string;
+  bodyText: string;
+  createdAt: string;
+  postedAt: string;
 };
 
 const AVATAR_HUES = [

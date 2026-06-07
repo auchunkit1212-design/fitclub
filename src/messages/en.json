@@ -107,6 +107,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "saving": "Saving…",
+    "sending": "Sending…",
     "remove": "Remove",
     "protein": "Protein",
     "carbs": "Carbs",
@@ -383,6 +384,7 @@
     "feed": {
       "title": "Community feed",
       "like": "Like",
+      "comment": "Comment",
       "photoAlt": "Post photo",
       "hint": "Your posts appear here; demo posts are marked Demo.",
       "mockHint": "Sample posts above; a live feed will connect later."
@@ -405,6 +407,16 @@
       "deleteConfirm": "Delete this post?",
       "emptyError": "Text and media cannot both be empty",
       "saveFailed": "Save failed"
+    },
+    "comment": {
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "loading": "Loading comments…",
+      "empty": "No comments yet — be the first!",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?",
+      "deleteFailed": "Failed to delete comment",
+      "postFailed": "Failed to post comment. Try again."
     }
   },
   "microGuide": {

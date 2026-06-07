@@ -6,6 +6,7 @@ import {
 import {
   COMMUNITY_DEMO_POSTS,
   loadCommunityFeed as loadLocalCommunityFeed,
+  type CommunityComment,
   type CommunityFeedPost,
   type CommunityMediaType,
 } from "@/lib/community";
@@ -201,6 +202,65 @@ export async function toggleCommunityLikeCloud(
     liked: Boolean(data?.liked),
     likeCount: Number(data?.likeCount) || 0,
   };
+}
+
+export async function fetchCommunityCommentsCloud(
+  postId: string
+): Promise<CommunityComment[]> {
+  const res = await fetch(`/api/community/posts/${postId}/comments`, {
+    credentials: "include",
+    headers: getSessionRequestHeaders(),
+  });
+  const { data, parseError } = await readApiJson<{
+    comments?: CommunityComment[];
+    error?: string;
+  }>(res);
+
+  if (!res.ok || parseError) {
+    throw new Error(data?.error ?? `讀取留言失敗 (HTTP ${res.status})`);
+  }
+
+  return data?.comments ?? [];
+}
+
+export async function postCommunityCommentCloud(
+  postId: string,
+  bodyText: string
+): Promise<CommunityComment> {
+  const res = await fetch(`/api/community/posts/${postId}/comments`, {
+    method: "POST",
+    credentials: "include",
+    headers: authHeaders(),
+    body: JSON.stringify({ bodyText }),
+  });
+  const { data, parseError } = await readApiJson<{
+    comment?: CommunityComment;
+    error?: string;
+  }>(res);
+
+  if (!res.ok || parseError || !data?.comment) {
+    throw new Error(data?.error ?? `留言失敗 (HTTP ${res.status})`);
+  }
+
+  return data.comment;
+}
+
+export async function deleteCommunityCommentCloud(
+  postId: string,
+  commentId: string
+): Promise<void> {
+  const res = await fetch(
+    `/api/community/posts/${postId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: getSessionRequestHeaders(),
+    }
+  );
+  const { data, parseError } = await readApiJson<{ error?: string }>(res);
+  if (!res.ok || parseError) {
+    throw new Error(data?.error ?? `刪除留言失敗 (HTTP ${res.status})`);
+  }
 }
 
 export function getCommunityDemoPostsForEmptyState(): CommunityFeedPost[] {

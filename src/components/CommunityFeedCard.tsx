@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Heart, MoreVertical, Pencil, Trash2 } from "@/components/icons";
+import { Heart, MessageCircle, MoreVertical, Pencil, Trash2 } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
   deleteCommunityPost,
   isCommunityPostOwner,
   updateCommunityPost,
+  type CommunityComment,
   type CommunityFeedPost,
 } from "@/lib/community";
 import {
+  deleteCommunityCommentCloud,
   deleteCommunityPostCloud,
+  fetchCommunityCommentsCloud,
+  postCommunityCommentCloud,
   toggleCommunityLikeCloud,
   updateCommunityPostCloud,
 } from "@/lib/community-client";
@@ -58,6 +62,12 @@ export function CommunityFeedCard({
   const [liked, setLiked] = useState(post.likedByMe ?? false);
   const [likeCount, setLikeCount] = useState(post.likes);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<CommunityComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.bodyText ?? "");
@@ -85,7 +95,71 @@ export function CommunityFeedCard({
   useEffect(() => {
     setLiked(post.likedByMe ?? false);
     setLikeCount(post.likes);
-  }, [post.id, post.likedByMe, post.likes]);
+    setCommentCount(post.commentCount ?? 0);
+    setCommentsOpen(false);
+    setComments([]);
+    setCommentText("");
+  }, [post.id, post.likedByMe, post.likes, post.commentCount]);
+
+  const loadComments = async () => {
+    if (post.isDemo || feedSource !== "cloud") return;
+    setCommentsLoading(true);
+    try {
+      const rows = await fetchCommunityCommentsCloud(post.id);
+      setComments(rows);
+      setCommentCount(rows.length);
+    } catch {
+      // keep existing count
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const toggleComments = async () => {
+    const next = !commentsOpen;
+    setCommentsOpen(next);
+    if (next && comments.length === 0) {
+      await loadComments();
+    }
+  };
+
+  const submitComment = async () => {
+    const text = commentText.trim();
+    if (!text || commentSubmitting || post.isDemo || feedSource !== "cloud") {
+      return;
+    }
+
+    setCommentSubmitting(true);
+    try {
+      const comment = await postCommunityCommentCloud(post.id, text);
+      setComments((prev) => [...prev, comment]);
+      setCommentCount((c) => c + 1);
+      setCommentText("");
+      if (!commentsOpen) setCommentsOpen(true);
+    } catch {
+      alert(t("community.comment.postFailed", "留言失敗，請稍後再試"));
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (comment: CommunityComment) => {
+    if (!currentUserEmail || comment.authorEmail !== currentUserEmail.trim().toLowerCase()) {
+      return;
+    }
+    const ok = window.confirm(
+      t("community.comment.deleteConfirm", "確定刪除呢則留言？")
+    );
+    if (!ok) return;
+
+    try {
+      await deleteCommunityCommentCloud(post.id, comment.id);
+      setComments((prev) => prev.filter((c) => c.id !== comment.id));
+      setCommentCount((c) => Math.max(0, c - 1));
+    } catch {
+      alert(t("community.comment.deleteFailed", "刪除留言失敗"));
+    }
+  };
 
   const toggleLike = async () => {
     if (post.isDemo || likeLoading) {
@@ -359,25 +433,121 @@ export function CommunityFeedCard({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => void toggleLike()}
-          disabled={likeLoading}
-          className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold disabled:opacity-60 ${
-            liked
-              ? "bg-rose-50 text-rose-600"
-              : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-          } ${btnClass}`}
-          aria-pressed={liked}
-        >
-          <Heart
-            size={18}
-            strokeWidth={2}
-            className={liked ? "fill-rose-500 text-rose-500" : ""}
-            aria-hidden
-          />
-          {t("community.feed.like", "讚好")} · {likeCount}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void toggleLike()}
+            disabled={likeLoading}
+            className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold disabled:opacity-60 ${
+              liked
+                ? "bg-rose-50 text-rose-600"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+            } ${btnClass}`}
+            aria-pressed={liked}
+          >
+            <Heart
+              size={18}
+              strokeWidth={2}
+              className={liked ? "fill-rose-500 text-rose-500" : ""}
+              aria-hidden
+            />
+            {t("community.feed.like", "讚好")} · {likeCount}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void toggleComments()}
+            className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${
+              commentsOpen
+                ? "bg-sky-50 text-sky-700"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+            } ${btnClass}`}
+            aria-expanded={commentsOpen}
+          >
+            <MessageCircle size={18} strokeWidth={2} aria-hidden />
+            {t("community.feed.comment", "留言")} · {commentCount}
+          </button>
+        </div>
+
+        {commentsOpen && (
+          <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 space-y-3">
+            {commentsLoading ? (
+              <p className="text-xs text-gray-500">
+                {t("community.comment.loading", "載入留言中…")}
+              </p>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-gray-500">
+                {t("community.comment.empty", "暫時未有留言，做第一個留言嘅人！")}
+              </p>
+            ) : (
+              <ul className="space-y-2.5">
+                {comments.map((comment) => {
+                  const isCommentOwner =
+                    currentUserEmail != null &&
+                    comment.authorEmail === currentUserEmail.trim().toLowerCase();
+                  return (
+                    <li key={comment.id} className="flex gap-2 min-w-0">
+                      <div
+                        className={`w-7 h-7 shrink-0 rounded-full ${comment.avatarHue} text-white text-[10px] font-bold flex items-center justify-center`}
+                        aria-hidden
+                      >
+                        {comment.authorInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-gray-900 truncate">
+                            {comment.authorName}
+                          </p>
+                          <span className="text-[10px] text-gray-400 shrink-0">
+                            {comment.postedAt}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+                          {comment.bodyText}
+                        </p>
+                        {isCommentOwner && (
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteComment(comment)}
+                            className={`mt-1 text-[10px] text-rose-600 font-medium ${btnClass}`}
+                          >
+                            {t("community.comment.delete", "刪除")}
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {!post.isDemo && feedSource === "cloud" && currentUserEmail && (
+              <div className="flex gap-2 items-end">
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder={t(
+                    "community.comment.placeholder",
+                    "寫低你嘅留言…"
+                  )}
+                  className="flex-1 resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                />
+                <button
+                  type="button"
+                  disabled={commentSubmitting || !commentText.trim()}
+                  onClick={() => void submitComment()}
+                  className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold text-white bg-sky-600 disabled:opacity-50 ${btnClass}`}
+                >
+                  {commentSubmitting
+                    ? t("common.sending", "送出中…")
+                    : t("community.comment.send", "送出")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

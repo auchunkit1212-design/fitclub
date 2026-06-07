@@ -107,6 +107,7 @@
     "save": "儲存",
     "cancel": "取消",
     "saving": "儲存中…",
+    "sending": "送出中…",
     "remove": "移除",
     "protein": "蛋白質",
     "carbs": "碳水",
@@ -383,6 +384,7 @@
     "feed": {
       "title": "大家都在吃什麼",
       "like": "讚",
+      "comment": "留言",
       "photoAlt": "貼文相片",
       "hint": "你的分享會顯示在這裡；示範帖文標有 Demo。",
       "mockHint": "以上為示範動態，正式版將連接真實社群"
@@ -405,6 +407,16 @@
       "deleteConfirm": "確定要刪除這篇貼文？",
       "emptyError": "文字與媒體不能同時為空",
       "saveFailed": "儲存失敗"
+    },
+    "comment": {
+      "placeholder": "寫下你的留言…",
+      "send": "送出",
+      "loading": "載入留言中…",
+      "empty": "暫時沒有留言，當第一個留言的人吧！",
+      "delete": "刪除",
+      "deleteConfirm": "確定刪除這則留言？",
+      "deleteFailed": "刪除留言失敗",
+      "postFailed": "留言失敗，請稍後再試"
     }
   },
   "microGuide": {
