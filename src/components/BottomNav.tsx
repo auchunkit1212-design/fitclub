@@ -37,17 +37,17 @@ function NavTabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-1 flex-col items-center justify-center gap-0.5 min-w-0 max-w-[4.5rem] py-1 ${btnClass}`}
+      className={`flex flex-1 flex-col items-center justify-center gap-1 min-w-0 max-w-[5rem] py-1.5 ${btnClass}`}
       aria-current={active ? "page" : undefined}
       aria-label={label}
     >
       <Icon
-        size={18}
+        size={24}
         strokeWidth={active ? 2.25 : 2}
         className={`shrink-0 ${active ? "text-emerald-600" : "text-zinc-400"}`}
       />
       <span
-        className={`text-[7px] leading-none font-semibold text-center ${
+        className={`text-[10px] leading-tight font-semibold text-center ${
           active ? "text-emerald-600" : "text-zinc-400"
         }`}
       >
@@ -130,10 +130,10 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
     <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(100%,24rem)] px-2 pointer-events-none">
       <div className="relative pointer-events-auto">
         <nav
-          className="flex items-end h-14 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-1"
+          className="flex items-center h-16 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-1.5"
           aria-label={t("nav.main", "主導覽")}
         >
-          <div className="flex flex-1 items-end justify-around min-w-0 pr-1">
+          <div className="flex flex-1 items-center justify-around min-w-0 pr-1">
             <NavTabButton
               active={communityActive}
               label={t("nav.explore", "探索")}
@@ -148,9 +148,9 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
             />
           </div>
 
-          <div className="w-14 shrink-0" aria-hidden />
+          <div className="w-16 shrink-0" aria-hidden />
 
-          <div className="flex flex-1 items-end justify-around min-w-0 pl-1">
+          <div className="flex flex-1 items-center justify-around min-w-0 pl-1">
             {rightTabs}
           </div>
         </nav>
@@ -163,9 +163,9 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
               ? t("nav.addMeal", "記錄飲食")
               : t("nav.students", "學員")
           }
-          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-lg ${btnClass}`}
+          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1.5 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg ${btnClass}`}
         >
-          <Plus size={22} strokeWidth={2.5} aria-hidden />
+          <Plus size={26} strokeWidth={2.5} aria-hidden />
         </button>
       </div>
     </div>
