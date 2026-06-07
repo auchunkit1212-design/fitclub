@@ -85,9 +85,13 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
       onFabClick();
       return;
     }
-    if (isStudent) router.push("/add-meal");
-    if (coachActive) router.push("/add-meal?from=coach");
-    else router.push("/coach/students");
+    if (isStudent) {
+      router.push("/add-meal");
+      return;
+    }
+    if (isCoachOrAdmin) {
+      router.push("/add-meal?from=coach");
+    }
   };
 
   const rightTabs = isStudent ? (
@@ -155,11 +159,9 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
           type="button"
           onClick={handleFab}
           aria-label={
-            isStudent
+            isStudent || isCoachOrAdmin
               ? t("nav.addMeal", "記錄飲食")
-              : coachActive
-                ? t("nav.coachLogMeal", "記錄飲食")
-                : t("nav.students", "學員")
+              : t("nav.students", "學員")
           }
           className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-lg ${btnClass}`}
         >

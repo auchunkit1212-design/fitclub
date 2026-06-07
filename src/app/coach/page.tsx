@@ -354,10 +354,7 @@ export default function CoachPage() {
 
       </main>
 
-      <BottomNav
-        role={session?.role === "admin" ? "admin" : "coach"}
-        onFabClick={() => router.push("/add-meal?from=coach")}
-      />
+      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
 
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">
