@@ -14,20 +14,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, Sparkles } from "@/components/icons";
 import { publishMealSharePost } from "@/lib/community";
-import { estimateMacrosWithBreakdown } from "@/lib/ai-mock";
-import { formatCompositeBreakdown } from "@/lib/composite-meal";
-import {
-  estimateMilkMacros,
-  isMilkLikeDescription,
-  parseVolumeMl,
-} from "@/lib/macro-scale";
+import { estimateMealNutritionClient } from "@/lib/meal-estimate-client";
 import {
   CARBS_PORTION_KEYS,
   MEAL_TYPE_KEYS,
   PROTEIN_PORTION_KEYS,
-  carbsPortionKeyToLegacy,
-  proteinPortionKeyToLegacy,
-  veggiesKeyToLegacy,
   type CarbsPortionKey,
   type MealTypeKey,
   type ProteinPortionKey,
@@ -66,6 +57,32 @@ import type {
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
+
+function buildMealDescriptionWithPortions(
+  description: string,
+  carbsPortionKey: CarbsPortionKey,
+  proteinPortionKey: ProteinPortionKey,
+  hasVeggies: boolean,
+  t: (key: string, fallback?: string) => string
+): string {
+  const base = description.trim();
+  if (!base) return base;
+
+  const hints: string[] = [];
+  if (carbsPortionKey !== "none") {
+    hints.push(
+      `澱粉${t(`addMeal.portions.${carbsPortionKey}`, carbsPortionKey)}`
+    );
+  }
+  if (proteinPortionKey !== "none") {
+    hints.push(
+      `蛋白${t(`addMeal.portions.${proteinPortionKey}`, proteinPortionKey)}`
+    );
+  }
+  hints.push(hasVeggies ? "有蔬菜" : "無蔬菜");
+
+  return `${base}（${hints.join("；")}）`;
+}
 
 export default function AddMealPage() {
   const router = useRouter();
@@ -117,6 +134,8 @@ export default function AddMealPage() {
   const [foodDetecting, setFoodDetecting] = useState(false);
   const [multiFoodMode, setMultiFoodMode] = useState(false);
   const [foodDetectError, setFoodDetectError] = useState("");
+  const [aiEstimating, setAiEstimating] = useState(false);
+  const [aiEstimateError, setAiEstimateError] = useState("");
 
   const applyOcrPortionedNutrition = useCallback(
     (ratio: number, _portionLabel: string, description: string) => {
@@ -262,6 +281,81 @@ export default function AddMealPage() {
     })();
   }, [router]);
 
+  useEffect(() => {
+    if (
+      multiFoodMode ||
+      macrosFromSearch ||
+      ocrPortionBase ||
+      !description.trim() ||
+      description.trim().length < 2
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        setAiEstimating(true);
+        setAiEstimateError("");
+        try {
+          const descForAi = buildMealDescriptionWithPortions(
+            description,
+            carbsPortionKey,
+            proteinPortionKey,
+            hasVeggies,
+            t
+          );
+          const result = await estimateMealNutritionClient({
+            description: descForAi,
+            imageBase64,
+            baseline:
+              calories > 0
+                ? { calories, protein, carbs, fats }
+                : undefined,
+            baselineSource: nutritionSource,
+            advanced: searchAdvanced,
+          });
+          if (cancelled) return;
+          setCalories(result.macros.calories);
+          setProtein(result.macros.protein);
+          setCarbs(result.macros.carbs);
+          setFats(result.macros.fats);
+          setNutritionSource("openrouter");
+          setMacrosFromSearch(true);
+        } catch (err) {
+          if (!cancelled) {
+            setAiEstimateError(
+              err instanceof Error ? err.message : t("addMeal.errors.aiEstimateFailed", "AI 估算失敗")
+            );
+          }
+        } finally {
+          if (!cancelled) setAiEstimating(false);
+        }
+      })();
+    }, 900);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    description,
+    carbsPortionKey,
+    proteinPortionKey,
+    hasVeggies,
+    imageBase64,
+    multiFoodMode,
+    macrosFromSearch,
+    ocrPortionBase,
+    calories,
+    protein,
+    carbs,
+    fats,
+    nutritionSource,
+    searchAdvanced,
+    t,
+  ]);
+
   const needsOnboarding =
     session?.role === "student" &&
     profileChecked &&
@@ -322,55 +416,22 @@ export default function AddMealPage() {
     const currentSession = getSession();
     if (currentSession) saveSession(currentSession);
 
-    let finalCalories = calories;
-    let finalProtein = protein;
-    let finalCarbs = carbs;
-    let finalFats = fats;
-    let verifySource = nutritionSource;
-
     const descTrim = description.trim();
-    const volumeMl = parseVolumeMl(descTrim);
-    const milkOnly =
-      isMilkLikeDescription(descTrim) &&
-      (volumeMl != null || !macrosFromSearch) &&
-      !descTrim.includes("+") &&
-      !descTrim.includes("、");
-
-    if (milkOnly) {
-      const milkEst = estimateMilkMacros(volumeMl ?? 250);
-      finalCalories = milkEst.calories;
-      finalProtein = milkEst.protein;
-      finalCarbs = milkEst.carbs;
-      finalFats = milkEst.fats;
-      setCalories(milkEst.calories);
-      setProtein(milkEst.protein);
-      setCarbs(milkEst.carbs);
-      setFats(milkEst.fats);
-    } else if (macrosFromSearch && calories > 0) {
-      // 食物搜尋已帶入營養
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const result = estimateMacrosWithBreakdown(
-        descTrim,
-        carbsPortionKeyToLegacy(carbsPortionKey),
-        proteinPortionKeyToLegacy(proteinPortionKey),
-        veggiesKeyToLegacy(hasVeggies)
-      );
-      finalCalories = result.macros.calories;
-      finalProtein = result.macros.protein;
-      finalCarbs = result.macros.carbs;
-      finalFats = result.macros.fats;
-      setCalories(result.macros.calories);
-      setProtein(result.macros.protein);
-      setCarbs(result.macros.carbs);
-      setFats(result.macros.fats);
-      verifySource = "rules";
-      if (result.isComposite && result.parts.length > 0) {
-        alert(
-          `已智能分拆 ${result.parts.length} 樣食物：\n${formatCompositeBreakdown(result.parts)}\n\n合計 ${result.macros.calories} kcal`
+    const descForAi = multiFoodMode
+      ? descTrim
+      : buildMealDescriptionWithPortions(
+          descTrim,
+          carbsPortionKey,
+          proteinPortionKey,
+          hasVeggies,
+          t
         );
-      }
-    }
+
+    const finalCalories = calories;
+    const finalProtein = protein;
+    const finalCarbs = carbs;
+    const finalFats = fats;
+    const verifySource = nutritionSource ?? "openrouter";
 
     let imageToUpload = imageBase64;
     if (imageBase64) {
@@ -409,7 +470,7 @@ export default function AddMealPage() {
     const mealPayload = {
       email,
       mealType: mealTypeLabel,
-      description: descTrim,
+      description: descForAi,
       calories: finalCalories,
       protein: finalProtein,
       carbs: finalCarbs,
@@ -449,7 +510,7 @@ export default function AddMealPage() {
         ...mealPayload,
         imageUrl: uploadedImageUrl,
         imageBase64: imageToUpload,
-        nutritionSource: verifySource ?? "manual",
+        nutritionSource: verifySource,
         advanced: searchAdvanced,
       });
 
@@ -705,8 +766,19 @@ export default function AddMealPage() {
             {t("addMeal.quickPortion", "快速份量估算")}
           </h2>
           <p className="text-xs text-zinc-500">
-            {t("addMeal.quickPortionHint", "AI 已啟用外食隱形熱量修正（湯底、紅油、用油）")}
+            {t(
+              "addMeal.quickPortionHint",
+              "選好份量後會由 AI 估算熱量（含外食隱形熱量：湯底、紅油、用油）"
+            )}
           </p>
+          {aiEstimating ? (
+            <p className="text-xs text-violet-600 font-medium">
+              {t("addMeal.aiEstimating", "AI 估算緊...")}
+            </p>
+          ) : null}
+          {aiEstimateError ? (
+            <p className="text-xs text-amber-700">{aiEstimateError}</p>
+          ) : null}
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-xs text-zinc-500">
@@ -758,7 +830,10 @@ export default function AddMealPage() {
           </div>
 
           <p className="text-xs text-zinc-500">
-            {t("addMeal.autoEstimateHint", "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）")}
+            {t(
+              "addMeal.autoEstimateHint",
+              "儲存前會由 AI 覆核所有營養數值（有相片會一併分析）"
+            )}
           </p>
         </section>
         ) : null}

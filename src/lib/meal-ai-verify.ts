@@ -1,12 +1,7 @@
 import { AI_CALORIE_SYSTEM_PROMPT } from "@/lib/ai-mock";
 import { parseAdvancedFromAiRow } from "@/lib/food-advanced-nutrients";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
-import {
-  estimateMilkMacros,
-  isMilkLikeDescription,
-  parseVolumeMl,
-  type MacroEstimate,
-} from "@/lib/macro-scale";
+import type { MacroEstimate } from "@/lib/macro-scale";
 import {
   getOpenRouterVisionModel,
   normalizeImageBase64,
@@ -38,6 +33,16 @@ export type MealVerifyResult = {
   note?: string;
   adjusted: boolean;
 };
+
+export class MealAiEstimateError extends Error {
+  status: number;
+
+  constructor(message: string, status = 503) {
+    super(message);
+    this.name = "MealAiEstimateError";
+    this.status = status;
+  }
+}
 
 function getOpenRouterHeaders(apiKey: string): Record<string, string> {
   const referer =
@@ -119,17 +124,18 @@ function buildVerifyPrompt(input: MealVerifyInput): string {
   const baseline = input.baseline;
   const sourceLabel = baselineSourceLabel(input.baselineSource);
 
-  let baselineBlock = "目前尚無參考數值，請依描述";
+  let baselineBlock =
+    "目前尚無參考數值，請【完全依描述同相片】用 AI 專業估算，不可憑空假設未提及的食物";
   if (baseline && baseline.calories > 0) {
-    baselineBlock = `${sourceLabel}參考：${baseline.calories} kcal，蛋白 ${baseline.protein}g，碳水 ${baseline.carbs}g，脂肪 ${baseline.fats}g`;
+    baselineBlock = `${sourceLabel}參考：${baseline.calories} kcal，蛋白 ${baseline.protein}g，碳水 ${baseline.carbs}g，脂肪 ${baseline.fats}g（僅作輔助，你必須獨立判斷是否正確）`;
     if (input.baselineSource === "local_db") {
       baselineBlock +=
         "（本地資料庫可能與實際品牌、份量或烹調方式不符，請務必核实）";
     }
   }
   baselineBlock += input.imageBase64
-    ? "；請結合相片確認食物種類、份量、是否與描述一致"
-    : "；請依常見一人份或描述中的份量估算";
+    ? "；請結合相片確認食物種類、每樣份量、是否與描述一致"
+    : "；描述中若含拳頭／手掌份量或（半份）等標記，必須納入估算";
 
   const advanced = input.advanced;
   const advancedBlock =
@@ -150,14 +156,6 @@ function macrosAdjusted(before: MacroEstimate | undefined, after: MacroEstimate)
   if (!before || before.calories <= 0) return true;
   const calDiff = Math.abs(before.calories - after.calories);
   return calDiff >= Math.max(20, before.calories * 0.08);
-}
-
-function shouldSkipVerify(description: string): MacroEstimate | null {
-  const volumeMl = parseVolumeMl(description);
-  if (isMilkLikeDescription(description) && volumeMl !== null) {
-    return estimateMilkMacros(volumeMl);
-  }
-  return null;
 }
 
 async function requestOpenRouterVerify(
@@ -223,40 +221,20 @@ async function requestOpenRouterVerify(
   };
 }
 
-/** 儲存前 AI 覆核：結合描述、參考數值，有相片時用 Vision 一併分析 */
-export async function verifyMealNutrition(
+/** AI 優先估算：結合描述、參考數值，有相片時用 Vision 一併分析 */
+export async function estimateMealNutritionWithAi(
   input: MealVerifyInput
 ): Promise<MealVerifyResult> {
   const description = input.description.trim();
   if (!description) {
-    throw new Error("請填寫食物描述");
+    throw new MealAiEstimateError("請填寫食物描述", 400);
   }
-
-  const milkMacros = shouldSkipVerify(description);
-  if (milkMacros) {
-    return {
-      macros: milkMacros,
-      description,
-      source: "baseline",
-      adjusted: false,
-    };
-  }
-
-  const baseline: MacroEstimate = input.baseline ?? {
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fats: 0,
-  };
 
   if (!isOpenRouterConfigured()) {
-    return {
-      macros: baseline,
-      advanced: input.advanced,
-      description,
-      source: "baseline",
-      adjusted: false,
-    };
+    throw new MealAiEstimateError(
+      "AI 營養估算尚未設定，請在環境變數加入 OPENROUTER_API_KEY",
+      503
+    );
   }
 
   const image = input.imageBase64?.trim();
@@ -276,15 +254,31 @@ export async function verifyMealNutrition(
         console.warn("[meal-ai-verify] text-only failed:", textErr);
       }
     } else {
-      console.warn("[meal-ai-verify] verify failed:", visionErr);
+      console.warn("[meal-ai-verify] estimate failed:", visionErr);
     }
   }
 
-  return {
-    macros: baseline,
-    advanced: input.advanced,
-    description,
-    source: "baseline",
-    adjusted: false,
-  };
+  const baseline = input.baseline;
+  if (baseline && baseline.calories > 0 && input.baselineSource !== "rules") {
+    return {
+      macros: baseline,
+      advanced: input.advanced,
+      description,
+      source: "baseline",
+      note: "AI 暫時不可用，已使用表單參考數值",
+      adjusted: false,
+    };
+  }
+
+  throw new MealAiEstimateError(
+    "AI 營養估算暫時失敗，請稍後再試或檢查網絡",
+    502
+  );
+}
+
+/** 儲存前 AI 覆核（一律先走 AI 估算） */
+export async function verifyMealNutrition(
+  input: MealVerifyInput
+): Promise<MealVerifyResult> {
+  return estimateMealNutritionWithAi(input);
 }

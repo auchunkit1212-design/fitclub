@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  MealAiEstimateError,
   verifyMealNutrition,
   type MealBaselineSource,
 } from "@/lib/meal-ai-verify";
@@ -61,7 +62,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    const readable = toReadableError(error, "AI 覆核失敗");
+    if (error instanceof MealAiEstimateError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    const readable = toReadableError(error, "AI 估算失敗");
     return NextResponse.json({ error: readable.message }, { status: 500 });
   }
 }

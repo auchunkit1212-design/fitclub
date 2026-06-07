@@ -13,7 +13,11 @@ import {
 } from "@/lib/phase4-db";
 import { fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
-import { verifyMealNutrition, type MealBaselineSource } from "@/lib/meal-ai-verify";
+import {
+  MealAiEstimateError,
+  verifyMealNutrition,
+  type MealBaselineSource,
+} from "@/lib/meal-ai-verify";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
@@ -159,6 +163,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof MealAiEstimateError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const readable = toReadableError(error, "儲存失敗");
     const code =
       error && typeof error === "object" && "code" in error
