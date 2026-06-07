@@ -3,6 +3,11 @@ import { parseAdvancedFromAiRow } from "@/lib/food-advanced-nutrients";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
 import type { MacroEstimate } from "@/lib/macro-scale";
 import {
+  buildPortionGuidanceBlock,
+  constrainMacrosToPortionHints,
+  parsePortionHintsFromDescription,
+} from "@/lib/portion-hints";
+import {
   getOpenRouterVisionModel,
   normalizeImageBase64,
 } from "@/lib/ocr-nutrition";
@@ -121,6 +126,8 @@ function baselineSourceLabel(source?: MealBaselineSource): string {
 
 function buildVerifyPrompt(input: MealVerifyInput): string {
   const description = input.description.trim();
+  const portionHints = parsePortionHintsFromDescription(description);
+  const portionBlock = buildPortionGuidanceBlock(portionHints);
   const baseline = input.baseline;
   const sourceLabel = baselineSourceLabel(input.baselineSource);
 
@@ -135,7 +142,7 @@ function buildVerifyPrompt(input: MealVerifyInput): string {
   }
   baselineBlock += input.imageBase64
     ? "；請結合相片確認食物種類、每樣份量、是否與描述一致"
-    : "；描述中若含拳頭／手掌份量或（半份）等標記，必須納入估算";
+    : "；描述括號內的拳頭／手掌份量為學員實際進食量，優先於菜式名稱的默認整碗份量";
 
   const advanced = input.advanced;
   const advancedBlock =
@@ -145,9 +152,10 @@ function buildVerifyPrompt(input: MealVerifyInput): string {
       : "";
 
   return `學員飲食描述：「${description}」
-${baselineBlock}${advancedBlock}
+${baselineBlock}${portionBlock}${advancedBlock}
 
 請輸出整餐最合理的總營養（整數）。若參考值與描述/相片明顯不符，必須修正。
+${portionBlock ? "有學員份量標記時：蛋白質只計對應手掌大小的肉量，碳水只計對應拳頭大小的澱粉，不可按整碗拉麵／整碟餸默認值。" : ""}
 只回傳 JSON：
 {"food_name":"食物名稱","calories":數字,"protein":數字,"carbs":數字,"fat":數字,"fiber_g":數字,"sugar_g":數字,"saturated_fat_g":數字,"sodium_mg":數字,"cholesterol_mg":數字,"note":"一句話說明修正原因（可選）"}`;
 }
@@ -204,20 +212,28 @@ async function requestOpenRouterVerify(
   const content = data.choices?.[0]?.message?.content ?? "";
   const parsed = parseVerifyJson(content, input.description.trim());
 
-  const macros: MacroEstimate = {
+  let macros: MacroEstimate = {
     calories: parsed.calories,
     protein: parsed.protein,
     carbs: parsed.carbs,
     fats: parsed.fat,
   };
 
+  const portionHints = parsePortionHintsFromDescription(input.description);
+  const portionConstrained = constrainMacrosToPortionHints(macros, portionHints);
+  macros = portionConstrained.macros;
+
+  const notes = [parsed.note, portionConstrained.note].filter(Boolean);
+  const combinedNote = notes.length > 0 ? notes.join("；") : undefined;
+
   return {
     macros,
     advanced: parsed.advanced,
     description: mergeVerifiedDescription(input.description, parsed.food_name),
     source: useVision ? "openrouter_vision" : "openrouter",
-    note: parsed.note,
-    adjusted: macrosAdjusted(input.baseline, macros),
+    note: combinedNote,
+    adjusted:
+      macrosAdjusted(input.baseline, macros) || portionConstrained.adjusted,
   };
 }
 
