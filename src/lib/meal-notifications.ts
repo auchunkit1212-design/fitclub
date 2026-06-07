@@ -24,6 +24,10 @@ async function shouldNotifyCoachForStudent(
     return { notify: false, reason: "student_not_found" };
   }
 
+  if (student.role === "coach") {
+    return { notify: false, reason: "coach_self_log" };
+  }
+
   if (student.tenantId) {
     const tenant = await fetchTenantById(student.tenantId);
     if (tenant && isAiSoloTenantSlug(tenant.slug)) {

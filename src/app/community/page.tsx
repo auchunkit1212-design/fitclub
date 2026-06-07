@@ -154,14 +154,7 @@ export default function CommunityPage() {
         </section>
       </main>
 
-      <BottomNav
-        role={session.role ?? "student"}
-        onFabClick={
-          session.role === "student"
-            ? () => router.push("/add-meal")
-            : () => router.push("/coach/students")
-        }
-      />
+      <BottomNav role={session.role ?? "student"} />
     </div>
   );
 }

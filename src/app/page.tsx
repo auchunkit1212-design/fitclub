@@ -26,6 +26,7 @@ import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
@@ -39,6 +40,10 @@ import {
   storePendingStreakMilestone,
   type StreakMilestoneDay,
 } from "@/lib/streak";
+import {
+  hasCompletedAppGuide,
+  resetAppGuide,
+} from "@/lib/app-guide";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
@@ -226,6 +231,7 @@ export default function StudentDashboard() {
     useState<StreakMilestoneDay | null>(null);
   const [roast, setRoast] = useState("");
   const [roastLoading, setRoastLoading] = useState(false);
+  const [showAppGuide, setShowAppGuide] = useState(false);
 
   const applyStreakApiPayload = (payload?: {
     currentStreak?: number;
@@ -493,6 +499,21 @@ export default function StudentDashboard() {
     isStudent && profileChecked && !isBodyProfileComplete(bodyProfile);
   const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
 
+  useEffect(() => {
+    if (!isStudent || !profileChecked || needsOnboarding) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("guide") === "1") {
+      resetAppGuide();
+      setShowAppGuide(true);
+      router.replace("/", { scroll: false });
+      return;
+    }
+    if (!hasCompletedAppGuide()) {
+      setShowAppGuide(true);
+    }
+  }, [isStudent, profileChecked, needsOnboarding, router]);
+
   const handleQuickAddMeal = async (item: {
     description: string;
     calories: number;
@@ -597,6 +618,9 @@ export default function StudentDashboard() {
               weeklyFrequency: settings.weeklyFrequency,
             })
           );
+          if (!hasCompletedAppGuide()) {
+            setShowAppGuide(true);
+          }
           if (session.isSoloStudent) {
             fetch("/api/coach/student-targets", { credentials: "include" })
               .then((r) => r.json())
@@ -1028,6 +1052,14 @@ export default function StudentDashboard() {
         <StreakMilestoneModal
           days={milestoneModalDays}
           onClose={() => setMilestoneModalDays(null)}
+        />
+      )}
+
+      {isStudent && (
+        <StudentAppGuide
+          open={showAppGuide}
+          onClose={() => setShowAppGuide(false)}
+          themeBtn={theme.btn}
         />
       )}
 

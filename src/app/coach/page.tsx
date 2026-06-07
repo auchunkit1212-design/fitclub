@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { fetchAiCoachReport } from "@/lib/ai-feedback-client";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
+import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchMealLogsForSession,
+  fetchOwnMealLogsForSession,
   fetchUsersForSession,
   resolveBranding,
   updateCoachLogo,
@@ -21,6 +23,7 @@ import { BarChart2, Bot, IconLabel, Loader2 } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
   CoachBranding,
+  MealLog,
   ThemeColor,
   UserSession,
 } from "@/lib/types";
@@ -49,6 +52,7 @@ export default function CoachPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
+  const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
   const [toast, setToast] = useState("");
 
   const showToast = (message: string) => {
@@ -87,6 +91,9 @@ export default function CoachPage() {
           setAppTitle(DEFAULT_BRANDING.appTitle);
           setThemeColor(DEFAULT_BRANDING.themeColor);
         }
+
+        const ownLogs = await fetchOwnMealLogsForSession(current);
+        setOwnMealLogs(ownLogs);
       } catch {
         alert("無法從 Supabase 載入教練數據。");
       } finally {
@@ -227,6 +234,10 @@ export default function CoachPage() {
 
         {(session?.role === "coach" || session?.role === "admin") && (
           <CoachPushSubscribe />
+        )}
+
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <CoachSelfMealPanel logs={ownMealLogs} />
         )}
 
         <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
