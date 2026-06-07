@@ -14,6 +14,9 @@
     },
     "src/app/api/ai/coach-report/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/ai/detect-meal-foods/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

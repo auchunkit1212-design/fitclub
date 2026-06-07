@@ -6,12 +6,13 @@ import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useI18n } from "@/components/I18nProvider";
+import { MultiFoodPortionPanel, type MultiFoodTotals } from "@/components/MultiFoodPortionPanel";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { BarChart2, Camera, Cookie, Globe, IconLabel } from "@/components/icons";
+import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, Sparkles } from "@/components/icons";
 import { publishMealSharePost } from "@/lib/community";
 import { estimateMacrosWithBreakdown } from "@/lib/ai-mock";
 import { formatCompositeBreakdown } from "@/lib/composite-meal";
@@ -53,6 +54,8 @@ import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { storePendingStreakMilestone } from "@/lib/streak";
 import { getMealLogs, isToday } from "@/lib/storage";
+import { detectMealFoodsFromPhoto } from "@/lib/meal-photo-detect-client";
+import type { DetectedMealFood } from "@/lib/meal-photo-detect";
 import { saveMealViaApi } from "@/lib/meal-save-client";
 import type {
   FoodAdvancedNutrients,
@@ -66,7 +69,7 @@ const btnClass =
 
 export default function AddMealPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
@@ -110,6 +113,10 @@ export default function AddMealPage() {
     baseWeightG?: number;
     proNutrition?: boolean;
   } | null>(null);
+  const [detectedFoods, setDetectedFoods] = useState<DetectedMealFood[]>([]);
+  const [foodDetecting, setFoodDetecting] = useState(false);
+  const [multiFoodMode, setMultiFoodMode] = useState(false);
+  const [foodDetectError, setFoodDetectError] = useState("");
 
   const applyOcrPortionedNutrition = useCallback(
     (ratio: number, _portionLabel: string, description: string) => {
@@ -131,7 +138,52 @@ export default function AddMealPage() {
     [ocrPortionBase]
   );
 
+  const clearMultiFoodDetection = useCallback(() => {
+    setDetectedFoods([]);
+    setMultiFoodMode(false);
+    setFoodDetectError("");
+  }, []);
+
+  const applyMultiFoodTotals = useCallback((totals: MultiFoodTotals) => {
+    setDescription(totals.description);
+    setCalories(totals.calories);
+    setProtein(totals.protein);
+    setCarbs(totals.carbs);
+    setFats(totals.fats);
+    setMacrosFromSearch(true);
+    setNutritionSource("openrouter");
+    setOcrPortionBase(null);
+    setSearchAdvanced(undefined);
+    setProNutrition(false);
+  }, []);
+
+  const runFoodDetection = useCallback(
+    async (imageData: string) => {
+      setFoodDetecting(true);
+      setFoodDetectError("");
+      clearMultiFoodDetection();
+
+      const result = await detectMealFoodsFromPhoto(imageData, lang);
+      if (!result?.foods?.length) {
+        setFoodDetectError(
+          t(
+            "addMeal.errors.foodDetectFailed",
+            "AI 未能分拆食物，請手動輸入描述同份量。"
+          )
+        );
+        setFoodDetecting(false);
+        return;
+      }
+
+      setDetectedFoods(result.foods);
+      setMultiFoodMode(true);
+      setFoodDetecting(false);
+    },
+    [clearMultiFoodDetection, lang, t]
+  );
+
   const handleOcrSuccess = (v: OcrNutritionResult) => {
+    clearMultiFoodDetection();
     const productName =
       v.brand && v.productName
         ? `${v.brand} ${v.productName}`.trim()
@@ -228,6 +280,7 @@ export default function AddMealPage() {
     try {
       const compressed = await compressFileImage(file);
       setImageBase64(compressed);
+      void runFoodDetection(compressed);
     } catch (err) {
       console.error("[add-meal] image compress failed", err);
       alert(t("addMeal.errors.compressFailed", "相片壓縮失敗，請換一張較細的相片或再試一次。"));
@@ -515,6 +568,7 @@ export default function AddMealPage() {
             setProNutrition(Boolean(item.proNutrition));
             setNutritionSource(item.nutritionSource);
             setOcrPortionBase(null);
+            clearMultiFoodDetection();
           }}
         />
 
@@ -558,6 +612,7 @@ export default function AddMealPage() {
                 setProNutrition(false);
                 setNutritionSource(undefined);
                 setOcrPortionBase(null);
+                clearMultiFoodDetection();
               }}
               placeholder={t(
                 "addMeal.descriptionPlaceholder",
@@ -607,9 +662,44 @@ export default function AddMealPage() {
                 </p>
               )}
             </div>
+            {imageBase64 ? (
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  disabled={foodDetecting}
+                  onClick={() => void runFoodDetection(imageBase64)}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-800 ${btnClass} disabled:opacity-60`}
+                >
+                  {foodDetecting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" aria-hidden />
+                      {t("addMeal.detectingFoods", "AI 分拆食物緊...")}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} aria-hidden />
+                      {t("addMeal.detectFoods", "AI 分拆相片入面嘅食物")}
+                    </>
+                  )}
+                </button>
+                {foodDetectError ? (
+                  <p className="text-xs text-amber-700">{foodDetectError}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
 
+        {multiFoodMode && detectedFoods.length > 0 ? (
+          <section className="bg-white rounded-2xl border border-violet-100 p-4 shadow-sm">
+            <MultiFoodPortionPanel
+              foods={detectedFoods}
+              onTotalsChange={applyMultiFoodTotals}
+            />
+          </section>
+        ) : null}
+
+        {!multiFoodMode ? (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-800">
             {t("addMeal.quickPortion", "快速份量估算")}
@@ -671,6 +761,7 @@ export default function AddMealPage() {
             {t("addMeal.autoEstimateHint", "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）")}
           </p>
         </section>
+        ) : null}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
           <button
