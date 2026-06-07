@@ -3,11 +3,15 @@ import {
   isBodyProfileComplete,
 } from "@/lib/body-profile";
 import { fetchMealLogs, fetchStudentBodyProfile } from "@/lib/db";
-import { fetchReactionsForMealIds, fetchStudentNutritionTargets } from "@/lib/phase4-db";
+import {
+  fetchFeedbackForMealIds,
+  fetchReactionsForMealIds,
+  fetchStudentNutritionTargets,
+} from "@/lib/phase4-db";
 import { sumLogsForDay } from "@/lib/nutrition-compliance";
 import { AI_GORILLA_COACH_EMAIL } from "@/lib/registry-constants";
 import { isValidSticker } from "@/lib/meal-stickers";
-import type { MealLog, MealLogReaction } from "@/lib/types";
+import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
 export type DayStatus = "under" | "over" | "none";
 
@@ -127,6 +131,7 @@ export type HistoryDayDetail = {
   };
   meals: MealLog[];
   reactions: MealLogReaction[];
+  feedback: MealLogFeedback[];
   aiReviews: Array<{
     mealLogId: string;
     text: string;
@@ -156,7 +161,11 @@ export async function fetchHistoryDayDetail(
     );
 
   const totals = sumLogsForDay(logs, normalized, date);
-  const reactions = await fetchReactionsForMealIds(meals.map((m) => m.id));
+  const mealIds = meals.map((m) => m.id);
+  const [reactions, feedback] = await Promise.all([
+    fetchReactionsForMealIds(mealIds),
+    fetchFeedbackForMealIds(mealIds),
+  ]);
 
   const aiReviews = reactions
     .filter(
@@ -176,6 +185,7 @@ export async function fetchHistoryDayDetail(
     totals,
     meals,
     reactions,
+    feedback,
     aiReviews,
   };
 }

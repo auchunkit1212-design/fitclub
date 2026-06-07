@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { IconLabel, Sparkles } from "@/components/icons";
 import { errorMessage } from "@/lib/errors";
 import { getMealImageSrc } from "@/lib/meal-display";
@@ -13,8 +14,10 @@ interface MealDetailModalProps {
   log: MealLog;
   studentName?: string;
   canEdit?: boolean;
+  coachReviewMode?: boolean;
   onClose: () => void;
   onUpdated?: (log: MealLog) => void;
+  onCoachFeedbackSent?: () => void;
 }
 
 const btnClass =
@@ -24,8 +27,10 @@ export function MealDetailModal({
   log,
   studentName,
   canEdit = true,
+  coachReviewMode = false,
   onClose,
   onUpdated,
+  onCoachFeedbackSent,
 }: MealDetailModalProps) {
   const imageSrc = getMealImageSrc(log);
   const status = getMealStatus(log);
@@ -348,6 +353,21 @@ export function MealDetailModal({
             </>
           ) : (
             <p className="text-sm text-zinc-800">{log.description}</p>
+          )}
+
+          {coachReviewMode && (
+            <div className="pt-2 border-t border-zinc-100">
+              <p className="text-sm font-semibold text-zinc-800 mb-2">
+                批閱學員 · 貼紙同評語
+              </p>
+              <CoachMealReviewActions
+                log={log}
+                onSent={(kind) => {
+                  if (kind === "feedback") onCoachFeedbackSent?.();
+                }}
+                onError={(msg) => setError(msg)}
+              />
+            </div>
           )}
         </div>
       </div>

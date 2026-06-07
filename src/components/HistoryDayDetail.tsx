@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { Bot, MealStickerIcon } from "@/components/icons";
+import { Bot } from "@/components/icons";
 import { APP_LOGO_PATH } from "@/lib/brand";
 import { useI18n } from "@/components/I18nProvider";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { isValidSticker } from "@/lib/meal-stickers";
 import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
-import type { MealLogReaction } from "@/lib/types";
+import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import type { MealLogFeedback, MealLogReaction } from "@/lib/types";
 
 const SOFT_CARD =
   "rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -44,15 +45,6 @@ function MacroBar({
       </div>
       <p className="text-[10px] text-gray-400 text-right">{pct}%</p>
     </div>
-  );
-}
-
-function CoachStickerReaction({ reaction }: { reaction: MealLogReaction }) {
-  if (!isValidSticker(reaction.sticker)) return null;
-  return (
-    <span className="inline-flex items-center gap-1 text-xs text-violet-700 bg-violet-50 px-2 py-1 rounded-full">
-      <MealStickerIcon sticker={reaction.sticker} size="sm" />
-    </span>
   );
 }
 
@@ -155,6 +147,9 @@ export function HistoryDayDetailPanel({
               const mealReaction = detail.reactions.find(
                 (r) => r.mealLogId === meal.id
               );
+              const mealFeedback = detail.feedback.find(
+                (f) => f.mealLogId === meal.id
+              );
               return (
                 <li
                   key={meal.id}
@@ -182,10 +177,12 @@ export function HistoryDayDetailPanel({
                       {meal.calories} kcal · P{meal.protein} C{meal.carbs} F
                       {meal.fats}
                     </p>
-                    {mealReaction && isValidSticker(mealReaction.sticker) && (
-                      <div className="mt-1">
-                        <CoachStickerReaction reaction={mealReaction} />
-                      </div>
+                    {(mealReaction || mealFeedback) && (
+                      <CoachFeedbackDisplay
+                        reaction={mealReaction}
+                        feedback={mealFeedback}
+                        className="mt-1"
+                      />
                     )}
                   </div>
                 </li>

@@ -6,12 +6,12 @@ import {
   ClipboardList,
   Copy,
   IconLabel,
-  MEAL_STICKERS,
   Megaphone,
   MessageCircle,
   ScrollText,
   Smartphone,
 } from "@/components/icons";
+import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
@@ -134,42 +134,6 @@ export function CoachActivityWall({
     );
     const data = (await res.json()) as { targets?: StudentNutritionTargets | null };
     if (data.targets) setTargets(targetsFromApi(data.targets));
-  };
-
-  const sendReaction = async (log: MealLog, sticker: string) => {
-    try {
-      const res = await fetch("/api/coach/reactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          mealLogId: log.id,
-          sticker,
-          studentEmail: log.email,
-        }),
-      });
-
-      const data = (await res.json()) as { error?: string; hint?: string };
-
-      if (res.ok) {
-        onToast("已送出評價給學員");
-        return;
-      }
-
-      console.error("發送 reaction 失敗:", {
-        status: res.status,
-        error: data.error,
-        hint: data.hint,
-        mealLogId: log.id,
-      });
-      onToast(data.error ?? `發送失敗 (HTTP ${res.status})`);
-    } catch (err) {
-      console.error("發送 reaction 失敗:", err);
-      onToast(errorMessage(err, "發送失敗"));
-    }
   };
 
   const saveTargets = async () => {
@@ -405,20 +369,21 @@ export function CoachActivityWall({
                   </span>
                 </div>
                 <div
-                  className="flex flex-wrap gap-1.5 mt-2"
+                  className="mt-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {MEAL_STICKERS.map(({ id, Icon }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => sendReaction(log, id)}
-                      className={`px-2 py-1 rounded-lg bg-white border border-zinc-200 hover:bg-amber-50 text-amber-800 ${btnClass}`}
-                      aria-label={id}
-                    >
-                      <Icon size={20} strokeWidth={2} aria-hidden />
-                    </button>
-                  ))}
+                  <CoachMealReviewActions
+                    log={log}
+                    compact
+                    onSent={(kind) =>
+                      onToast(
+                        kind === "feedback"
+                          ? "已送出評語，學員會收到 App 通知"
+                          : "已送出貼紙"
+                      )
+                    }
+                    onError={(msg) => onToast(msg)}
+                  />
                 </div>
               </li>
             );
@@ -432,12 +397,16 @@ export function CoachActivityWall({
           studentName={
             students.find((s) => s.email === selectedLog.email)?.name
           }
+          coachReviewMode
           onClose={() => setSelectedLog(null)}
           onUpdated={(updated) => {
             setSelectedLog(updated);
             onLogUpdated?.(updated);
             onToast("飲食記錄已更新");
           }}
+          onCoachFeedbackSent={() =>
+            onToast("已送出評語，學員會收到 App 通知")
+          }
         />
       )}
 

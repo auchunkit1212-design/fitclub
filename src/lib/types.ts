@@ -132,6 +132,16 @@ export interface MealLogReaction {
   createdAt: string;
 }
 
+export interface MealLogFeedback {
+  id: string;
+  mealLogId: string;
+  coachEmail: string;
+  presetKey: string;
+  messageText: string;
+  sticker?: string;
+  createdAt: string;
+}
+
 export interface FavoriteFood {
   id: string;
   studentEmail: string;

@@ -15,7 +15,6 @@ import {
   IconLabel,
   MapPin,
   Megaphone,
-  MealStickerIcon,
   ScrollText,
   Sparkles,
 } from "@/components/icons";
@@ -29,6 +28,7 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
+import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
@@ -64,6 +64,7 @@ import {
 import type {
   CoachBranding,
   MealLog,
+  MealLogFeedback,
   MealLogReaction,
   RegistryUser,
   StudentBodyProfile,
@@ -223,6 +224,7 @@ export default function StudentDashboard() {
     null
   );
   const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
+  const [coachFeedback, setCoachFeedback] = useState<MealLogFeedback[]>([]);
   const [mealSearchOpen, setMealSearchOpen] = useState(false);
   const [quickMealSaving, setQuickMealSaving] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -430,12 +432,25 @@ export default function StudentDashboard() {
     if (!isStudent || todayLogs.length === 0) return;
     const poll = async () => {
       const ids = todayLogs.map((l) => l.id).join(",");
-      const res = await fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
-        credentials: "include",
-        headers: getSessionRequestHeaders(),
-      });
-      const data = (await res.json()) as { reactions?: MealLogReaction[] };
-      setCoachReactions(data.reactions ?? []);
+      const headers = getSessionRequestHeaders();
+      const [reactionRes, feedbackRes] = await Promise.all([
+        fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+        fetch(`/api/coach/meal-feedback?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+      ]);
+      const reactionData = (await reactionRes.json()) as {
+        reactions?: MealLogReaction[];
+      };
+      const feedbackData = (await feedbackRes.json()) as {
+        feedback?: MealLogFeedback[];
+      };
+      setCoachReactions(reactionData.reactions ?? []);
+      setCoachFeedback(feedbackData.feedback ?? []);
     };
     poll();
     const timer = setInterval(poll, 30_000);
@@ -891,14 +906,21 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {isStudent && coachReactions.length > 0 && (
-          <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800`}>
-            {coachReactions.slice(0, 3).map((r) => (
-              <p key={r.id} className="font-medium flex items-center gap-2">
-                {t("home.coachReplied", "教練回覆咗你")}
-                <MealStickerIcon sticker={r.sticker} size="sm" className="text-violet-700" />
-              </p>
-            ))}
+        {isStudent &&
+          (coachReactions.length > 0 || coachFeedback.length > 0) && (
+          <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800 space-y-2`}>
+            {todayLogs.slice(0, 3).map((log) => {
+              const reaction = coachReactions.find((r) => r.mealLogId === log.id);
+              const feedback = coachFeedback.find((f) => f.mealLogId === log.id);
+              if (!reaction && !feedback) return null;
+              return (
+                <CoachFeedbackDisplay
+                  key={log.id}
+                  reaction={reaction}
+                  feedback={feedback}
+                />
+              );
+            })}
           </div>
         )}
 

@@ -110,3 +110,22 @@ export async function notifyStudentOfReaction(
     tag: `reaction-${Date.now()}`,
   });
 }
+
+export async function notifyStudentOfMealFeedback(
+  studentEmail: string,
+  coachName: string,
+  messageText: string,
+  mealLogId: string,
+  sticker?: string
+): Promise<void> {
+  const preview =
+    messageText.length > 72 ? `${messageText.slice(0, 72)}…` : messageText;
+  const stickerHint = sticker ? " 👍" : "";
+
+  await sendPushToEmails([studentEmail], {
+    title: "教練評語",
+    body: `${coachName}：${preview}${stickerHint}`,
+    url: "/",
+    tag: `meal-feedback-${mealLogId}`,
+  });
+}

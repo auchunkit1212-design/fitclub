@@ -32,6 +32,7 @@ import {
 } from "@/lib/weight-logs";
 import type {
   MealLog,
+  MealLogFeedback,
   MealLogReaction,
   StudentBodyProfile,
   StudentNutritionTargets,
@@ -55,6 +56,7 @@ export default function ProfilePage() {
     null
   );
   const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
+  const [coachFeedback, setCoachFeedback] = useState<MealLogFeedback[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [weightLogsLoading, setWeightLogsLoading] = useState(true);
   const [weightInput, setWeightInput] = useState("");
@@ -174,12 +176,26 @@ export default function ProfilePage() {
       .map((l) => l.id);
     if (myIds.length === 0) return;
     const poll = async () => {
-      const res = await fetch(
-        `/api/coach/reactions?mealLogIds=${myIds.join(",")}`,
-        { credentials: "include", headers: getSessionRequestHeaders() }
-      );
-      const data = (await res.json()) as { reactions?: MealLogReaction[] };
-      setCoachReactions(data.reactions ?? []);
+      const headers = getSessionRequestHeaders();
+      const ids = myIds.join(",");
+      const [reactionRes, feedbackRes] = await Promise.all([
+        fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+        fetch(`/api/coach/meal-feedback?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+      ]);
+      const reactionData = (await reactionRes.json()) as {
+        reactions?: MealLogReaction[];
+      };
+      const feedbackData = (await feedbackRes.json()) as {
+        feedback?: MealLogFeedback[];
+      };
+      setCoachReactions(reactionData.reactions ?? []);
+      setCoachFeedback(feedbackData.feedback ?? []);
     };
     void poll();
   }, [session?.email, logs]);
@@ -266,6 +282,7 @@ export default function ProfilePage() {
           coachTargets={coachTargets}
           logs={logs}
           coachReactions={coachReactions}
+          coachFeedback={coachFeedback}
           weightLogs={weightLogs}
           weightLogsLoading={weightLogsLoading}
           weightInput={weightInput}

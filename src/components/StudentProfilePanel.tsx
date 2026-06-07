@@ -5,10 +5,10 @@ import {
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
+import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import {
   Flame,
   IconLabel,
-  MealStickerIcon,
   CircleUser,
   ScrollText,
 } from "@/components/icons";
@@ -41,6 +41,7 @@ const TRAINING_LABEL_KEY = {
 import { getSessionRequestHeaders } from "@/lib/session";
 import type {
   MealLog,
+  MealLogFeedback,
   MealLogReaction,
   StudentBodyProfile,
   StudentNutritionTargets,
@@ -69,6 +70,7 @@ type Props = {
   coachTargets: StudentNutritionTargets | null;
   logs: MealLog[];
   coachReactions: MealLogReaction[];
+  coachFeedback: MealLogFeedback[];
   weightLogs: WeightLog[];
   weightLogsLoading: boolean;
   weightInput: string;
@@ -94,6 +96,7 @@ export function StudentProfilePanel({
   coachTargets,
   logs,
   coachReactions,
+  coachFeedback,
   weightLogs,
   weightLogsLoading,
   weightInput,
@@ -379,6 +382,7 @@ export function StudentProfilePanel({
           <ul className="space-y-2 max-h-[28rem] overflow-y-auto scrollbar-hide">
             {myLogs.map((log) => {
               const reaction = coachReactions.find((r) => r.mealLogId === log.id);
+              const feedback = coachFeedback.find((f) => f.mealLogId === log.id);
               return (
                 <li
                   key={log.id}
@@ -414,14 +418,12 @@ export function StudentProfilePanel({
                       </p>
                     </div>
                   </div>
-                  {reaction && (
-                    <p className="text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-2 mt-2 flex items-center gap-1.5">
-                      <MealStickerIcon
-                        sticker={reaction.sticker}
-                        size="sm"
-                        className="text-violet-700"
-                      />
-                    </p>
+                  {(reaction || feedback) && (
+                    <CoachFeedbackDisplay
+                      reaction={reaction}
+                      feedback={feedback}
+                      className="mt-2"
+                    />
                   )}
                 </li>
               );
