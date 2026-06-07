@@ -17,6 +17,9 @@
     },
     "src/app/api/ai/detect-meal-foods/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/ocr-barcode/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

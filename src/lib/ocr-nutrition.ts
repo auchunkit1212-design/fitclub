@@ -41,6 +41,8 @@ export interface OcrNutritionResult extends OcrNutritionValues {
   productName: string;
   brand: string;
   servingWeightG: number;
+  barcode?: string;
+  offMatched?: boolean;
 }
 
 export class OcrNutritionError extends Error {
