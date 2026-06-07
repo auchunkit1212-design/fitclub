@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { generateCoachReport } from "@/lib/ai-mock";
+import { fetchAiCoachReport } from "@/lib/ai-feedback-client";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { useBranding } from "@/components/BrandingProvider";
@@ -185,7 +185,11 @@ export default function CoachPage() {
     try {
       const registry = await fetchUsersForSession(session);
       const freshLogs = await fetchMealLogsForSession(session, registry);
-      setAiReport(generateCoachReport(freshLogs));
+      const report = await fetchAiCoachReport({
+        logs: freshLogs,
+        gymName: appTitle.trim() || brand.gymName,
+      });
+      setAiReport(report);
     } catch {
       alert("無法從 Supabase 拉取學員飲食記錄。");
     } finally {

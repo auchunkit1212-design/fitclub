@@ -456,54 +456,143 @@ export function estimateFoodSearchMacros(description: string): MacroEstimate {
 }
 
 import { t, type AppLanguage } from "./i18n";
+import type { MealLog } from "./types";
+
+type RoastMealInput = Pick<
+  MealLog,
+  "mealType" | "description" | "calories" | "protein"
+>;
+
+function topMealByCalories(meals: RoastMealInput[]): RoastMealInput | null {
+  if (meals.length === 0) return null;
+  return meals.reduce((best, meal) =>
+    meal.calories > best.calories ? meal : best
+  );
+}
+
+function topMealByProtein(meals: RoastMealInput[]): RoastMealInput | null {
+  if (meals.length === 0) return null;
+  return meals.reduce((best, meal) =>
+    meal.protein > best.protein ? meal : best
+  );
+}
+
+function mealLabel(meal: RoastMealInput): string {
+  const name = meal.description.trim() || meal.mealType;
+  return `${name}（${meal.calories} kcal）`;
+}
 
 export function generateRoast(
   todayCalories: number,
   targetCalories: number,
   todayProtein: number,
   targetProtein: number,
-  lang: AppLanguage = "zh-HK"
+  lang: AppLanguage = "zh-HK",
+  todayMeals: RoastMealInput[] = []
 ): string {
-  const calRatio = todayCalories / targetCalories;
-  const proRatio = todayProtein / targetProtein;
+  const calRatio = targetCalories > 0 ? todayCalories / targetCalories : 0;
+  const proRatio = targetProtein > 0 ? todayProtein / targetProtein : 0;
+  const heaviest = topMealByCalories(todayMeals);
+  const bestProtein = topMealByProtein(todayMeals);
 
-  if (todayCalories === 0) {
+  if (todayCalories === 0 || todayMeals.length === 0) {
     return t(lang, "ai.roast.empty", "仲未食嘢？唔好餓壞個胃呀，記得記低你食咗咩！");
   }
+
   if (calRatio > 1.25) {
-    return t(lang, "ai.roast.overCalHigh", "食咁多乾炒牛河唔怪之得減唔到肥啦！");
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.overCalHighNamed",
+        "今日熱量超標啦！最大鑊係 {meal}，聽日要收一收。",
+        { meal: mealLabel(heaviest) }
+      );
+    }
+    return t(
+      lang,
+      "ai.roast.overCalHighGeneric",
+      "今日熱量超標啦，聽日要收一收份量。"
+    );
   }
+
   if (calRatio > 1.05) {
-    return t(lang, "ai.roast.overCalMild", "今日有啲放縱喎，茶餐廳陷阱要小心！");
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.overCalMildNamed",
+        "今日有啲放縱喎，{meal} 係主要熱量來源，留意下。",
+        { meal: mealLabel(heaviest) }
+      );
+    }
+    return t(
+      lang,
+      "ai.roast.overCalMildGeneric",
+      "今日熱量有啲超前，留意下份量同醬料。"
+    );
   }
+
   if (calRatio < 0.6) {
-    return t(lang, "ai.roast.underCal", "食咁少？記得食夠蛋白質呀！");
+    const logged = todayMeals.map((m) => m.description.trim()).filter(Boolean).join("、");
+    return t(
+      lang,
+      "ai.roast.underCalNamed",
+      "今日食得偏少（{logged}），記得食夠蛋白質支撐訓練。",
+      { logged: logged || t(lang, "ai.roast.loggedMealsFallback", "已記錄餐食") }
+    );
   }
+
   if (proRatio < 0.7) {
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.lowProteinNamed",
+        "蛋白質唔夠喎，{meal} 蛋白偏低，加啲雞胸或者蛋啦！",
+        { meal: mealLabel(heaviest) }
+      );
+    }
     return t(lang, "ai.roast.lowProtein", "蛋白質唔夠喎，加啲雞胸或者蛋啦！");
   }
+
   if (calRatio >= 0.85 && calRatio <= 1.05 && proRatio >= 0.9) {
+    if (bestProtein) {
+      return t(
+        lang,
+        "ai.roast.excellentNamed",
+        "今日食得好靚仔！{meal} 係亮點，繼續保持！",
+        { meal: mealLabel(bestProtein) }
+      );
+    }
     return t(lang, "ai.roast.excellent", "今日食得好靚仔！繼續保持！");
   }
+
+  if (heaviest) {
+    return t(
+      lang,
+      "ai.roast.goodNamed",
+      "表現唔錯，{meal} 要留意脂肪同鈉，其餘維持住。",
+      { meal: mealLabel(heaviest) }
+    );
+  }
+
   return t(lang, "ai.roast.good", "表現唔錯，再留意下脂肪同鈉就完美啦！");
 }
 
-import type { MealLog } from "./types";
-
 export function getMealAiComment(log: MealLog): string {
+  const name = log.description.trim() || log.mealType;
+
   if (log.calories >= 700) {
-    return "熱量偏高（已含湯底/用油估算），建議減少油炸同澱粉，下一餐增加蔬菜比例。";
+    return `「${name}」熱量偏高（${log.calories} kcal），建議減少油炸同澱粉，下一餐增加蔬菜比例。`;
   }
   if (log.calories <= 500 && log.protein >= 20) {
-    return "表現優良，蛋白質充足，可維持而家嘅飲食節奏。";
+    return `「${name}」表現優良（蛋白 ${log.protein}g），可維持而家嘅飲食節奏。`;
   }
   if (log.protein < 15) {
-    return "蛋白質偏低，建議加雞胸、魚或蛋補充。";
+    return `「${name}」蛋白質偏低（${log.protein}g），建議加雞胸、魚或蛋補充。`;
   }
   if (log.calories < 250) {
-    return "熱量偏低，注意唔好過度節食影響訓練恢復。";
+    return `「${name}」熱量偏低（${log.calories} kcal），注意唔好過度節食影響訓練恢復。`;
   }
-  return "整體尚可，建議控制醬料同飲品糖分。";
+  return `「${name}」整體尚可，建議控制醬料同飲品糖分。`;
 }
 
 export function generateCoachReport(logs: MealLog[]): string {

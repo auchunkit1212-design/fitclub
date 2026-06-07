@@ -8,6 +8,12 @@
     },
     "src/app/api/meals/verify-nutrition/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/ai/roast/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/ai/coach-report/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

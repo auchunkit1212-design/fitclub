@@ -10,7 +10,7 @@ import {
   Rocket,
   Wrench,
 } from "@/components/icons";
-import { generateCoachReport } from "@/lib/ai-mock";
+import { fetchAiCoachReport } from "@/lib/ai-feedback-client";
 import {
   emailExists,
   fetchAllUsers,
@@ -110,7 +110,11 @@ export function FranchiseConsole({
     setAiReport(null);
     try {
       const logs: MealLog[] = await fetchMealLogsForSession(session, registry);
-      setAiReport(generateCoachReport(logs));
+      const report = await fetchAiCoachReport({
+        logs,
+        gymName: session.gym,
+      });
+      setAiReport(report);
       onToast("已從 Supabase 拉取最新數據並生成報告！");
     } catch {
       onToast("無法從雲端讀取飲食記錄。");

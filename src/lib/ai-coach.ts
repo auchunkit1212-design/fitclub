@@ -1,4 +1,4 @@
-import { generateRoast } from "@/lib/ai-mock";
+import { generateAiRoast } from "@/lib/ai-feedback";
 import type { MealLog } from "@/lib/types";
 
 export interface MealRecommendation {
@@ -10,18 +10,24 @@ export interface MealRecommendation {
   fats: number;
 }
 
-export function buildNightlyAiCoachReview(
+export async function buildNightlyAiCoachReview(
   logs: MealLog[],
   targetCalories: number,
   targetProtein: number
-): string {
-  const cal = logs.reduce((s, l) => s + l.calories, 0);
-  const pro = logs.reduce((s, l) => s + l.protein, 0);
-  const roast = generateRoast(cal, targetCalories, pro, targetProtein);
+): Promise<string> {
   if (logs.length === 0) {
     return "AI 代理教練：今日未見打卡，聽日記得記低第一餐，我會再幫你分析！";
   }
-  return `AI 代理教練晚間點評：${roast}`;
+
+  const result = await generateAiRoast({
+    meals: logs,
+    targets: {
+      calories: targetCalories,
+      protein: targetProtein,
+    },
+  });
+
+  return `AI 代理教練晚間點評：${result.text}`;
 }
 
 export function buildQuotaMealRecommendations(

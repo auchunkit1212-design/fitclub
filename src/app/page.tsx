@@ -32,6 +32,7 @@ import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
+import { fetchAiRoast } from "@/lib/ai-feedback-client";
 import { saveMealViaApi } from "@/lib/meal-save-client";
 import {
   consumePendingStreakMilestone,
@@ -223,6 +224,8 @@ export default function StudentDashboard() {
   const [longestStreak, setLongestStreak] = useState(0);
   const [milestoneModalDays, setMilestoneModalDays] =
     useState<StreakMilestoneDay | null>(null);
+  const [roast, setRoast] = useState("");
+  const [roastLoading, setRoastLoading] = useState(false);
 
   const applyStreakApiPayload = (payload?: {
     currentStreak?: number;
@@ -438,6 +441,52 @@ export default function StudentDashboard() {
 
   const targetCalories = profile?.targetCalories ?? 2000;
   const targetProtein = profile?.targetProtein ?? 120;
+
+  useEffect(() => {
+    if (!isStudent || !session) return;
+
+    let cancelled = false;
+    const fallback = generateRoast(
+      todayCalories,
+      targetCalories,
+      todayProtein,
+      targetProtein,
+      lang,
+      todayLogs
+    );
+    setRoast(fallback);
+
+    const loadRoast = async () => {
+      setRoastLoading(true);
+      try {
+        const text = await fetchAiRoast({
+          meals: todayLogs,
+          targetCalories,
+          targetProtein,
+          lang,
+          studentName: session.name,
+        });
+        if (!cancelled) setRoast(text);
+      } finally {
+        if (!cancelled) setRoastLoading(false);
+      }
+    };
+
+    void loadRoast();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isStudent,
+    session,
+    todayLogs,
+    todayCalories,
+    todayProtein,
+    targetCalories,
+    targetProtein,
+    lang,
+  ]);
+
   const targetCarbs = coachTargets?.targetCarbs ?? 200;
   const targetFats = coachTargets?.targetFats ?? 65;
   const needsOnboarding =
@@ -493,14 +542,6 @@ export default function StudentDashboard() {
       setQuickMealSaving(false);
     }
   };
-
-  const roast = generateRoast(
-    todayCalories,
-    targetCalories,
-    todayProtein,
-    targetProtein,
-    lang
-  );
 
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? BRAND_NAME;
@@ -893,7 +934,15 @@ export default function StudentDashboard() {
                   {t("home.roastTitle", "AI 教練吐槽")}
                 </IconLabel>
               </h2>
-              <p className="text-gray-900 leading-relaxed">{roast}</p>
+              <p className="text-gray-900 leading-relaxed">
+                {roast ||
+                  t("home.roastLoading", "AI 教練分析緊你今日食咗咩...")}
+              </p>
+              {roastLoading && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {t("home.roastRefreshing", "根據實際飲食記錄更新中...")}
+                </p>
+              )}
               <p className="text-xs text-gray-500 mt-3">
                 {t("home.settingsSummary", "你而家設定：{trainingType} · 每星期 {weeklyFrequency}", {
                   trainingType: t(TRAINING_LABEL_KEY[settings.trainingType], settings.trainingType),
