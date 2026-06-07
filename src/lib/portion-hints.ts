@@ -206,7 +206,11 @@ export function constrainMacrosToPortionHints(
       carbs = clamp(carbs, 0, 15);
       adjustments.push("澱粉標記無，已下調碳水");
     }
-  } else if (hints.carbsPortion && hints.carbsPortion !== "none") {
+  } else if (
+    hints.carbsPortion === "small" ||
+    hints.carbsPortion === "medium" ||
+    hints.carbsPortion === "large"
+  ) {
     const range = CARBS_GRAMS[hints.carbsPortion];
     if (carbs < range.min || carbs > range.max) {
       const before = carbs;
@@ -222,7 +226,11 @@ export function constrainMacrosToPortionHints(
       protein = clamp(protein, 0, maxProtein);
       adjustments.push(`蛋白標記無，由 ${before}g 調至 ${protein}g`);
     }
-  } else if (hints.proteinPortion && hints.proteinPortion !== "none") {
+  } else if (
+    hints.proteinPortion === "small" ||
+    hints.proteinPortion === "medium" ||
+    hints.proteinPortion === "large"
+  ) {
     const range = PROTEIN_GRAMS[hints.proteinPortion];
     const maxProtein = range.max + soupBonus;
     const minProtein = range.min;
