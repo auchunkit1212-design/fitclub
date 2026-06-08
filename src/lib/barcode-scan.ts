@@ -1,16 +1,10 @@
 import {
-  getOpenRouterVisionModel,
+  getOpenRouterVisionModelCandidates,
   normalizeImageBase64,
   OcrNutritionError,
 } from "@/lib/ocr-nutrition";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-const OPENROUTER_VISION_FALLBACKS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.0-flash-001",
-  "openai/gpt-4o-mini",
-] as const;
 
 const BARCODE_SYSTEM_PROMPT = `你是商品條碼辨識專家。從相片讀取條碼數字（EAN-13、EAN-8、UPC-A 等）。
 
@@ -38,15 +32,6 @@ function getOpenRouterHeaders(apiKey: string): Record<string, string> {
     "HTTP-Referer": referer,
     "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
   };
-}
-
-function getVisionModelCandidates(): string[] {
-  const preferred = [
-    process.env.OPENROUTER_VISION_MODEL?.trim(),
-    getOpenRouterVisionModel(),
-    ...OPENROUTER_VISION_FALLBACKS,
-  ].filter((m): m is string => Boolean(m));
-  return Array.from(new Set(preferred));
 }
 
 function normalizeBarcodeDigits(raw: string): string {
@@ -198,7 +183,7 @@ export async function scanBarcodeFromImage(
   }
 
   if (apiKey) {
-    for (const model of getVisionModelCandidates()) {
+    for (const model of getOpenRouterVisionModelCandidates()) {
       try {
         return await requestOpenRouterBarcodeVision(model, dataUrl, apiKey);
       } catch (err) {

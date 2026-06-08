@@ -8,7 +8,7 @@ import {
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const DEFAULT_MODEL = "deepseek/deepseek-chat";
 
 const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺服器（Pro 級微量營養分析）。用戶會輸入未完成的拼音、錯別字或中英夾雜的食物名稱，請你自動推斷他們想找的食物，並聯想出 5 個最可能的選項（必須包含香港與台灣的地道飲食，亦可包含合理的國際常見食物）。
 每個選項請估算【標準一人份】的完整營養素（整數），包含宏量與進階微量營養素。
@@ -101,7 +101,7 @@ export function mapOpenRouterHttpError(status: number, detail = ""): {
     case 404:
       return {
         message: `OpenRouter 找不到模型${detailSuffix}`,
-        hint: "請檢查 OPENROUTER_MODEL 是否有效（例如 google/gemini-2.5-flash）",
+        hint: "請檢查 OPENROUTER_MODEL 是否有效（例如 deepseek/deepseek-chat）",
         statusCode: 404,
       };
     case 400:

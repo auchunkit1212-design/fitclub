@@ -10,7 +10,7 @@ import {
   type PortionSize,
 } from "@/lib/portion-hints";
 import {
-  getOpenRouterVisionModel,
+  getOpenRouterVisionModelCandidates,
   normalizeImageBase64,
 } from "@/lib/ocr-nutrition";
 import type { FoodAdvancedNutrients } from "@/lib/types";
@@ -169,10 +169,9 @@ function macrosAdjusted(before: MacroEstimate | undefined, after: MacroEstimate)
 }
 
 const TEXT_MODEL_FALLBACKS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.0-flash-001",
+  "deepseek/deepseek-chat",
   "openai/gpt-4o-mini",
-  "google/gemini-flash-1.5-8b",
+  "google/gemini-2.0-flash-001",
 ] as const;
 
 function getTextModelCandidates(): string[] {
@@ -184,13 +183,7 @@ function getTextModelCandidates(): string[] {
 }
 
 function getVisionModelCandidates(): string[] {
-  const preferred = [
-    process.env.OPENROUTER_VISION_MODEL?.trim(),
-    process.env.OPENROUTER_MODEL?.trim(),
-    getOpenRouterVisionModel(),
-    ...TEXT_MODEL_FALLBACKS,
-  ].filter((m): m is string => Boolean(m));
-  return Array.from(new Set(preferred));
+  return getOpenRouterVisionModelCandidates();
 }
 
 function portionSizeToCarbsLegacy(size: PortionSize | null): string {
@@ -319,7 +312,7 @@ async function requestOpenRouterVerifyWithFallbacks(
     } catch (err) {
       lastErr = err;
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("401") || msg.includes("403")) throw err;
+      if (msg.includes("401")) throw err;
       console.warn(`[meal-ai-verify] ${model} skipped:`, err);
     }
   }

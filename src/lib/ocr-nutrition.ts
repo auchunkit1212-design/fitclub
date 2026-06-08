@@ -1,12 +1,13 @@
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEFAULT_VISION_MODEL = "google/gemini-2.5-flash";
+const DEFAULT_VISION_MODEL = "meta-llama/llama-4-maverick";
 
-const OPENROUTER_VISION_FALLBACKS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.0-flash-001",
+/** Gemini 2.5 喺部分帳戶會 403 ToS；Llama 4 支援相片且較穩定 */
+export const OPENROUTER_VISION_MODEL_FALLBACKS = [
+  "meta-llama/llama-4-maverick",
+  "meta-llama/llama-4-scout",
   "openai/gpt-4o-mini",
-  "google/gemini-flash-1.5-8b",
+  "anthropic/claude-3.5-haiku",
 ] as const;
 
 const SYSTEM_PROMPT = `你是一位專業的營養標籤 OCR 專家。請從相片中的營養標籤（或包裝）讀取：
@@ -56,19 +57,14 @@ export class OcrNutritionError extends Error {
 }
 
 export function getOpenRouterVisionModel(): string {
-  return (
-    process.env.OPENROUTER_VISION_MODEL?.trim() ||
-    process.env.OPENROUTER_MODEL?.trim() ||
-    DEFAULT_VISION_MODEL
-  );
+  return process.env.OPENROUTER_VISION_MODEL?.trim() || DEFAULT_VISION_MODEL;
 }
 
-function getVisionModelCandidates(): string[] {
+export function getOpenRouterVisionModelCandidates(): string[] {
   const preferred = [
     process.env.OPENROUTER_VISION_MODEL?.trim(),
-    process.env.OPENROUTER_MODEL?.trim(),
     DEFAULT_VISION_MODEL,
-    ...OPENROUTER_VISION_FALLBACKS,
+    ...OPENROUTER_VISION_MODEL_FALLBACKS,
   ].filter((m): m is string => Boolean(m));
   return Array.from(new Set(preferred));
 }
@@ -133,10 +129,10 @@ async function requestOpenRouterVision(
       detail.slice(0, 300)
     );
     throw new OcrNutritionError(
-      res.status === 401 || res.status === 403
+      res.status === 401
         ? "OpenRouter API 金鑰無效或未授權"
         : `OpenRouter ${model} 失敗 (${res.status})`,
-      res.status === 429 ? 429 : 502
+      res.status === 401 ? 401 : res.status === 429 ? 429 : 502
     );
   }
 
@@ -275,11 +271,11 @@ export async function scanNutritionLabel(
   }
 
   if (apiKey) {
-    for (const model of getVisionModelCandidates()) {
+    for (const model of getOpenRouterVisionModelCandidates()) {
       try {
         return await requestOpenRouterVision(model, dataUrl, apiKey);
       } catch (err) {
-        if (err instanceof OcrNutritionError && (err.status === 401 || err.status === 403)) {
+        if (err instanceof OcrNutritionError && err.status === 401) {
           throw err;
         }
         console.warn(`[ocr-nutrition] ${model} skipped:`, err);

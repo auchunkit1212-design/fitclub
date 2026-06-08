@@ -2,20 +2,12 @@ import { estimateFoodSearchMacros } from "@/lib/ai-mock";
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
 import { estimateMealNutritionWithAi } from "@/lib/meal-ai-verify";
 import {
-  getOpenRouterVisionModel,
+  getOpenRouterVisionModelCandidates,
   normalizeImageBase64,
 } from "@/lib/ocr-nutrition";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-const OPENROUTER_VISION_FALLBACKS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.0-flash-001",
-  "openai/gpt-4o-mini",
-  "google/gemini-flash-1.5-8b",
-  "anthropic/claude-3.5-haiku",
-] as const;
 
 const SYSTEM_PROMPT = `你是香港飲食視覺辨識專家。從食物相片中辨識【所有可見的獨立食物項目】。
 
@@ -69,15 +61,6 @@ function getOpenRouterHeaders(apiKey: string): Record<string, string> {
     "HTTP-Referer": referer,
     "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
   };
-}
-
-function getVisionModelCandidates(): string[] {
-  const preferred = [
-    process.env.OPENROUTER_VISION_MODEL?.trim(),
-    getOpenRouterVisionModel(),
-    ...OPENROUTER_VISION_FALLBACKS,
-  ].filter((m): m is string => Boolean(m));
-  return Array.from(new Set(preferred));
 }
 
 function extractDetectedRows(text: string): Record<string, unknown>[] {
@@ -325,7 +308,7 @@ export async function detectFoodsFromMealPhoto(
   let lastError: unknown;
 
   if (apiKey) {
-    const models = getVisionModelCandidates();
+    const models = getOpenRouterVisionModelCandidates();
     for (const model of models) {
       try {
         const foods = await requestOpenRouterVisionDetect(
@@ -338,7 +321,7 @@ export async function detectFoodsFromMealPhoto(
       } catch (err) {
         lastError = err;
         const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("401") || msg.includes("403")) throw err;
+        if (msg.includes("401")) throw err;
         console.warn("[meal-photo-detect] model failed", model, err);
       }
     }
