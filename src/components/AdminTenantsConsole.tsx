@@ -120,6 +120,8 @@ export function AdminTenantsConsole({ onToast, onChanged }: Props) {
         return;
       }
       onToastRef.current(`已刪除健身室「${tenant.gymName}」`);
+      setTenants((prev) => prev.filter((t) => t.id !== tenant.id));
+      window.dispatchEvent(new CustomEvent("fitclub:admin-tenants-changed"));
       await loadTenants({ silent: true });
       onChangedRef.current?.();
     } catch {

@@ -177,6 +177,13 @@ export function AdminAccountsConsole({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const handler = () => void loadAccounts({ silent: true });
+    window.addEventListener("fitclub:admin-tenants-changed", handler);
+    return () =>
+      window.removeEventListener("fitclub:admin-tenants-changed", handler);
+  }, [loadAccounts]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return registry.filter((u) => {
@@ -405,7 +412,12 @@ export function AdminAccountsConsole({
 
   const handleTenantChange = (tenantId: string) => {
     if (!editForm) return;
-    const nextForm = { ...editForm, tenantId };
+    const matched = tenantId ? tenants.find((t) => t.id === tenantId) : null;
+    const nextForm = {
+      ...editForm,
+      tenantId,
+      gym: matched?.gymName ?? (tenantId ? editForm.gym : "未綁定分店"),
+    };
     setEditForm(nextForm);
     void handleSaveAccount({ auto: true, formOverride: nextForm });
   };

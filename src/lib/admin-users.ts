@@ -16,6 +16,16 @@ import type {
 } from "@/lib/types";
 import { fetchMealLogs, fetchStudentBodyProfile } from "@/lib/db";
 
+function requireServiceRoleAdmin(): SupabaseClient {
+  try {
+    return getSupabaseServiceRole();
+  } catch {
+    throw new Error(
+      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法執行總裁後台寫入。請在 Vercel 設定 Service Role 後重試。"
+    );
+  }
+}
+
 type RegistryRow = {
   email: string;
   name: string;
@@ -66,7 +76,7 @@ async function attachTenantNamesAdmin(
     .filter((id): id is string => Boolean(id));
   if (tenantIds.length === 0) return users;
 
-  const admin = getRegistryWriteClient();
+  const admin = requireServiceRoleAdmin();
   const unique = Array.from(new Set(tenantIds));
   const { data, error } = await admin
     .from("tenants")
@@ -88,7 +98,7 @@ async function attachTenantNamesAdmin(
 }
 
 export async function fetchAllUsersAdmin(): Promise<RegistryUser[]> {
-  const admin = getRegistryWriteClient();
+  const admin = requireServiceRoleAdmin();
   const { data, error } = await admin
     .from("users_registry")
     .select("*")
@@ -100,7 +110,7 @@ export async function fetchAllUsersAdmin(): Promise<RegistryUser[]> {
 }
 
 export async function fetchAllTenantsAdmin(): Promise<Tenant[]> {
-  const admin = getRegistryWriteClient();
+  const admin = requireServiceRoleAdmin();
   const { data, error } = await admin
     .from("tenants")
     .select("*")
@@ -359,17 +369,40 @@ async function resolveStudentCoachFieldsForTenant(
     return { addedBy: null, coachName: null };
   }
 
-  const admin = getRegistryWriteClient();
+  const admin = requireServiceRoleAdmin();
+  const ownerEmail = tenant.ownerEmail.trim().toLowerCase();
   const { data: coachRow } = await admin
     .from("users_registry")
-    .select("name")
-    .eq("email", tenant.ownerEmail)
+    .select("name, email")
+    .eq("email", ownerEmail)
     .eq("role", "coach")
     .maybeSingle();
 
+  if (coachRow?.name) {
+    return {
+      addedBy: ownerEmail,
+      coachName: String(coachRow.name),
+    };
+  }
+
+  const { data: tenantCoachRows } = await admin
+    .from("users_registry")
+    .select("name, email")
+    .eq("role", "coach")
+    .eq("tenant_id", tenant.id)
+    .limit(1);
+
+  const tenantCoach = tenantCoachRows?.[0];
+  if (tenantCoach?.email) {
+    return {
+      addedBy: String(tenantCoach.email).trim().toLowerCase(),
+      coachName: tenantCoach.name ? String(tenantCoach.name) : null,
+    };
+  }
+
   return {
-    addedBy: tenant.ownerEmail,
-    coachName: coachRow?.name ? String(coachRow.name) : null,
+    addedBy: ownerEmail,
+    coachName: null,
   };
 }
 
@@ -382,14 +415,8 @@ export async function adminUpdateUser(
     throw new Error("無法修改總裁帳戶。");
   }
 
-  let admin: ReturnType<typeof getSupabaseServiceRole>;
-  try {
-    admin = getSupabaseServiceRole();
-  } catch {
-    throw new Error(
-      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法更新帳戶。請在 Vercel 設定 Service Role 後重試。"
-    );
-  }
+  const admin = requireServiceRoleAdmin();
+  const tenantAssignment = input.tenantId !== undefined;
 
   const { data: existing, error: fetchErr } = await admin
     .from("users_registry")
@@ -414,7 +441,7 @@ export async function adminUpdateUser(
     patch.plan = input.plan === "pro" ? "pro" : "free";
   }
 
-  if (input.gym !== undefined) {
+  if (!tenantAssignment && input.gym !== undefined) {
     patch.gym = input.gym.trim();
   }
 
@@ -456,22 +483,20 @@ export async function adminUpdateUser(
     }
   }
 
-  if (input.tenantId !== undefined) {
+  if (tenantAssignment) {
     const tenantId = input.tenantId?.trim() || null;
     if (tenantId) {
       const tenant = await fetchTenantById(tenantId);
       if (!tenant) throw new Error("找不到該健身室／品牌空間。");
 
       patch.tenant_id = tenant.id;
-      if (input.gym === undefined) {
-        patch.gym = tenant.gymName;
-      }
+      patch.gym = tenant.gymName;
 
       if (nextRole === "student") {
         const { addedBy, coachName } =
           await resolveStudentCoachFieldsForTenant(tenant);
-        if (input.addedBy === undefined) patch.added_by = addedBy;
-        if (input.coach === undefined) patch.coach = coachName;
+        patch.added_by = addedBy;
+        patch.coach = coachName;
       }
 
       if (nextRole === "coach" && input.syncTenantOwner !== false) {
@@ -488,7 +513,7 @@ export async function adminUpdateUser(
     }
   }
 
-  if (nextRole === "student") {
+  if (nextRole === "student" && !tenantAssignment) {
     if (input.coach !== undefined) {
       patch.coach = input.coach?.trim() || null;
     }
@@ -527,6 +552,16 @@ export async function adminUpdateUser(
   if (updateErr) throw updateErr;
   if (!updatedRow) throw new Error("資料庫更新失敗，請稍後再試。");
 
+  if (tenantAssignment && input.tenantId?.trim() && nextRole === "student") {
+    const { error: targetsErr } = await admin
+      .from("student_nutrition_targets")
+      .update({ tenant_id: input.tenantId.trim() })
+      .eq("student_email", normalized);
+    if (targetsErr) {
+      console.warn("[admin-update] student_nutrition_targets:", targetsErr.message);
+    }
+  }
+
   const [user] = await attachTenantNamesAdmin([
     mapRegistryRow(updatedRow as RegistryRow),
   ]);
@@ -544,7 +579,7 @@ export async function adminReassignStudentToTenant(
     throw new Error("找不到該健身室／品牌空間。");
   }
 
-  const admin = getRegistryWriteClient();
+  const admin = requireServiceRoleAdmin();
   const { data: userRow, error: userErr } = await admin
     .from("users_registry")
     .select("email, role, tenant_id")
@@ -617,14 +652,7 @@ export async function adminDeleteTenant(tenantId: string): Promise<void> {
     throw new Error("無法刪除系統 AI 散客健身室。");
   }
 
-  let admin: SupabaseClient;
-  try {
-    admin = getSupabaseServiceRole();
-  } catch {
-    throw new Error(
-      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法刪除健身室。請在 Vercel 設定 Service Role 後重試。"
-    );
-  }
+  const admin = requireServiceRoleAdmin();
 
   const { data: affiliated, error: affErr } = await admin
     .from("users_registry")
@@ -633,25 +661,35 @@ export async function adminDeleteTenant(tenantId: string): Promise<void> {
 
   if (affErr) throw affErr;
 
-  const coachEmails = (affiliated ?? [])
-    .filter((row) => row.role === "coach")
-    .map((row) => String(row.email).trim().toLowerCase());
+  const coachEmails = Array.from(
+    new Set(
+      (affiliated ?? [])
+        .filter((row) => row.role === "coach")
+        .map((row) => String(row.email).trim().toLowerCase())
+        .concat(tenant.ownerEmail.trim().toLowerCase())
+    )
+  );
 
-  const { error: unlinkErr } = await admin
+  const { error: unlinkStudentsErr } = await admin
+    .from("users_registry")
+    .update({
+      tenant_id: null,
+      gym: "未綁定分店",
+      coach: null,
+      added_by: null,
+    })
+    .eq("tenant_id", tenant.id)
+    .eq("role", "student");
+
+  if (unlinkStudentsErr) throw unlinkStudentsErr;
+
+  const { error: unlinkCoachesErr } = await admin
     .from("users_registry")
     .update({ tenant_id: null })
-    .eq("tenant_id", tenant.id);
+    .eq("tenant_id", tenant.id)
+    .eq("role", "coach");
 
-  if (unlinkErr) throw unlinkErr;
-
-  for (const email of coachEmails) {
-    if (email === SUPER_ADMIN_EMAIL) continue;
-    try {
-      await adminDeleteUser(email);
-    } catch (err) {
-      console.warn(`[admin-delete-tenant] coach ${email}:`, err);
-    }
-  }
+  if (unlinkCoachesErr) throw unlinkCoachesErr;
 
   await safeDeleteEq(admin, "community_posts", "tenant_id", tenant.id);
   await safeDeleteEq(admin, "student_nutrition_targets", "tenant_id", tenant.id);
@@ -665,5 +703,19 @@ export async function adminDeleteTenant(tenantId: string): Promise<void> {
   if (delErr) throw delErr;
   if (!deleted?.length) {
     throw new Error("刪除健身室失敗，請確認 Service Role 權限。");
+  }
+
+  const stillThere = await fetchTenantById(tenant.id);
+  if (stillThere) {
+    throw new Error("刪除後健身室仍存在，請稍後再試或檢查資料庫權限。");
+  }
+
+  for (const email of coachEmails) {
+    if (email === SUPER_ADMIN_EMAIL) continue;
+    try {
+      await adminDeleteUser(email);
+    } catch (err) {
+      console.warn(`[admin-delete-tenant] coach ${email}:`, err);
+    }
   }
 }
