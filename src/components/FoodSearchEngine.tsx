@@ -22,8 +22,9 @@ import type { FavoriteFood, FoodAdvancedNutrients, FoodSearchItem } from "@/lib/
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
+/** 至少 2 字先搜尋；打 1 字唔會開 dropdown / call API */
 const MIN_QUERY_LENGTH = 2;
-const DEBOUNCE_MS = 350;
+const DEBOUNCE_MS = 600;
 const SEARCH_TIMEOUT_MS = 15_000;
 
 export type PortionBasePayload = {
@@ -345,9 +346,8 @@ export function FoodSearchEngine({
   };
 
   const trimmedQuery = query.trim();
-  const showDropdown = dropdownOpen && trimmedQuery.length > 0;
-  const showMinChars =
-    showDropdown && trimmedQuery.length < MIN_QUERY_LENGTH && !loading;
+  const showDropdown =
+    dropdownOpen && trimmedQuery.length >= MIN_QUERY_LENGTH;
   const showEmpty =
     showDropdown &&
     !loading &&
@@ -393,12 +393,27 @@ export function FoodSearchEngine({
             ref={inputRef}
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
+              const next = e.target.value;
+              setQuery(next);
               setSelectedItem(null);
               setPortionBase(null);
-              setDropdownOpen(true);
+              const len = next.trim().length;
+              if (len < MIN_QUERY_LENGTH) {
+                searchSeq.current += 1;
+                setDropdownOpen(false);
+                setLoading(false);
+                setResults([]);
+                setSearchError(null);
+                setLastSource(null);
+              } else {
+                setDropdownOpen(true);
+              }
             }}
-            onFocus={() => setDropdownOpen(true)}
+            onFocus={() => {
+              if (trimmedQuery.length >= MIN_QUERY_LENGTH) {
+                setDropdownOpen(true);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Escape") setDropdownOpen(false);
               if (e.key === "Enter" && trimmedQuery.length >= MIN_QUERY_LENGTH) {
@@ -406,11 +421,14 @@ export function FoodSearchEngine({
                 setDropdownOpen(true);
               }
             }}
-            placeholder={t("foodSearch.placeholder", "搜尋食物名稱...")}
+            placeholder={t(
+              "foodSearch.placeholder",
+              "輸入至少兩個字搜尋食物…"
+            )}
             autoComplete="off"
             className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600"
           />
-          {loading && (
+          {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -422,13 +440,7 @@ export function FoodSearchEngine({
             className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.08)]"
             role="listbox"
           >
-            {showMinChars && (
-              <p className="px-3 py-3 text-sm text-gray-500">
-                {t("foodSearch.minCharsHint", "繼續輸入以顯示建議…")}
-              </p>
-            )}
-
-            {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
+            {loading && (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-emerald-700">
                 <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
                 {t("foodSearch.searching", "搜尋中...")}
