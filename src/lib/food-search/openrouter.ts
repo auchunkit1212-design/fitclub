@@ -27,6 +27,165 @@ export function isOpenRouterConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());
 }
 
+export function getOpenRouterReferer(): string {
+  return (
+    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "https://fitclub.hk"
+  );
+}
+
+function sanitizeOpenRouterDetail(detail: string): string {
+  const trimmed = detail.trim().slice(0, 400);
+  if (!trimmed) return "";
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      error?: { message?: string; code?: number | string };
+      message?: string;
+    };
+    const message =
+      parsed.error?.message?.trim() ||
+      parsed.message?.trim() ||
+      trimmed;
+    return message.slice(0, 300);
+  } catch {
+    return trimmed.slice(0, 300);
+  }
+}
+
+export function mapOpenRouterHttpError(status: number, detail = ""): {
+  message: string;
+  hint: string;
+  statusCode: number;
+} {
+  const sanitized = sanitizeOpenRouterDetail(detail);
+  const detailSuffix = sanitized ? `（${sanitized}）` : "";
+
+  switch (status) {
+    case 401:
+    case 403:
+      return {
+        message: "OpenRouter API 金鑰無效或未授權",
+        hint: "請到 Vercel 檢查 OPENROUTER_API_KEY 是否正確，並重新部署",
+        statusCode: status,
+      };
+    case 402:
+      return {
+        message: `OpenRouter 帳戶餘額不足${detailSuffix}`,
+        hint: "請到 openrouter.ai 儲值或提高 credit limit",
+        statusCode: 402,
+      };
+    case 429:
+      return {
+        message: `OpenRouter 請求過於頻繁，請稍後再試${detailSuffix}`,
+        hint: "稍等 1–2 分鐘後重試，或檢查 OpenRouter rate limit",
+        statusCode: 429,
+      };
+    case 404:
+      return {
+        message: `OpenRouter 找不到模型${detailSuffix}`,
+        hint: "請檢查 OPENROUTER_MODEL 是否有效（例如 google/gemini-2.5-flash）",
+        statusCode: 404,
+      };
+    case 400:
+      return {
+        message: `OpenRouter 請求格式錯誤${detailSuffix}`,
+        hint: "請檢查模型名稱與 HTTP-Referer 設定",
+        statusCode: 400,
+      };
+    default:
+      return {
+        message: `AI 聯想服務暫時不可用（HTTP ${status}）${detailSuffix}`,
+        hint: "請查看 Vercel Function Logs 或 OpenRouter 控制台",
+        statusCode: status >= 500 ? 502 : status,
+      };
+  }
+}
+
+async function openRouterChatRequest(body: Record<string, unknown>): Promise<Response> {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
+    throw new FoodSearchError(
+      "AI 食物搜尋尚未設定，請在環境變數加入 OPENROUTER_API_KEY",
+      503
+    );
+  }
+
+  return fetch(OPENROUTER_CHAT_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": getOpenRouterReferer(),
+      "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export type OpenRouterPingResult = {
+  ok: boolean;
+  httpStatus?: number;
+  error?: string;
+  hint?: string;
+  detail?: string;
+  referer: string;
+};
+
+/** 輕量連線測試：只驗證金鑰、餘額、模型是否可用 */
+export async function pingOpenRouter(): Promise<OpenRouterPingResult> {
+  const referer = getOpenRouterReferer();
+  const model = getOpenRouterModel();
+
+  if (!isOpenRouterConfigured()) {
+    return {
+      ok: false,
+      error: "OPENROUTER_API_KEY not set",
+      hint: "請在 Vercel 設定 OPENROUTER_API_KEY",
+      referer,
+    };
+  }
+
+  const res = await openRouterChatRequest({
+    model,
+    temperature: 0,
+    max_tokens: 8,
+    messages: [{ role: "user", content: "ping" }],
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("[openrouter] ping error", res.status, detail.slice(0, 500));
+    const mapped = mapOpenRouterHttpError(res.status, detail);
+    return {
+      ok: false,
+      httpStatus: res.status,
+      error: mapped.message,
+      hint: mapped.hint,
+      detail: sanitizeOpenRouterDetail(detail) || undefined,
+      referer,
+    };
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    error?: { message?: string };
+  };
+
+  if (data.error?.message) {
+    return {
+      ok: false,
+      httpStatus: 502,
+      error: `OpenRouter: ${data.error.message}`,
+      hint: "請檢查模型名稱與帳戶權限",
+      referer,
+    };
+  }
+
+  return { ok: true, httpStatus: res.status, referer };
+}
+
 export async function searchFoodWithOpenRouter(
   query: string,
   lang: AppLanguage = "zh-HK"
@@ -43,42 +202,25 @@ export async function searchFoodWithOpenRouter(
   }
 
   const model = getOpenRouterModel();
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk";
 
   const userMessage = `用戶輸入（可能未完成、含錯字或中英夾雜）：「${q}」
 請聯想 5 個最可能的食物選項並估算營養素。${getLanguageInstruction(lang)}`;
 
-  const res = await fetch(OPENROUTER_CHAT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": referer,
-      "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.35,
-      max_tokens: 1600,
-      messages: [
-        { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
-      ],
-    }),
+  const res = await openRouterChatRequest({
+    model,
+    temperature: 0.35,
+    max_tokens: 1600,
+    messages: [
+      { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
   });
 
   if (!res.ok) {
     const detail = await res.text();
     console.error("[openrouter] chat error", res.status, detail.slice(0, 500));
-    throw new FoodSearchError(
-      res.status === 401 || res.status === 403
-        ? "OpenRouter API 金鑰無效或未授權"
-        : "AI 聯想服務暫時不可用，請稍後再試",
-      res.status === 429 ? 429 : 502
-    );
+    const mapped = mapOpenRouterHttpError(res.status, detail);
+    throw new FoodSearchError(mapped.message, mapped.statusCode);
   }
 
   const data = (await res.json()) as {
@@ -110,17 +252,41 @@ export type OpenRouterDiagnostics = {
   ok: boolean;
   sampleCount?: number;
   error?: string;
+  httpStatus?: number;
+  hint?: string;
+  detail?: string;
+  referer?: string;
+  pingOk?: boolean;
 };
 
 export async function diagnoseOpenRouter(): Promise<OpenRouterDiagnostics> {
   const configured = isOpenRouterConfigured();
   const model = getOpenRouterModel();
+  const referer = getOpenRouterReferer();
+
   if (!configured) {
     return {
       configured: false,
       model,
       ok: false,
       error: "OPENROUTER_API_KEY not set",
+      hint: "請在 Vercel 設定 OPENROUTER_API_KEY",
+      referer,
+    };
+  }
+
+  const ping = await pingOpenRouter();
+  if (!ping.ok) {
+    return {
+      configured: true,
+      model,
+      ok: false,
+      pingOk: false,
+      httpStatus: ping.httpStatus,
+      error: ping.error,
+      hint: ping.hint,
+      detail: ping.detail,
+      referer: ping.referer,
     };
   }
 
@@ -130,14 +296,25 @@ export async function diagnoseOpenRouter(): Promise<OpenRouterDiagnostics> {
       configured: true,
       model,
       ok: items.length > 0,
+      pingOk: true,
       sampleCount: items.length,
+      httpStatus: ping.httpStatus,
+      referer,
     };
   } catch (err) {
     return {
       configured: true,
       model,
       ok: false,
+      pingOk: true,
+      httpStatus:
+        err instanceof FoodSearchError ? err.statusCode : ping.httpStatus,
       error: err instanceof Error ? err.message : "diagnostics failed",
+      hint:
+        err instanceof FoodSearchError && err.statusCode === 502
+          ? "連線正常但 AI 回應無法解析，請檢查模型輸出"
+          : "食物聯想測試失敗，請查看 Vercel logs",
+      referer,
     };
   }
 }

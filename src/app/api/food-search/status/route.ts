@@ -28,7 +28,9 @@ export async function GET() {
     source: "openrouter",
     ...diagnostics,
     message: diagnostics.ok
-      ? `OpenRouter ready (${diagnostics.model}).`
-      : diagnostics.error ?? "OpenRouter check failed.",
+      ? `OpenRouter ready (${diagnostics.model}, ${diagnostics.sampleCount ?? 0} sample items).`
+      : diagnostics.hint
+        ? `${diagnostics.error ?? "OpenRouter check failed."} — ${diagnostics.hint}`
+        : diagnostics.error ?? "OpenRouter check failed.",
   });
 }
