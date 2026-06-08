@@ -18,14 +18,11 @@ import {
 } from "@/lib/db";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { AdminAccountsConsole } from "@/components/AdminAccountsConsole";
+import { AdminTenantsConsole } from "@/components/AdminTenantsConsole";
 import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
-
-function partnerBrandLabel(user: RegistryUser): string {
-  return user.tenantName ?? user.appTitle ?? user.gym ?? "未設定品牌";
-}
 
 interface FranchiseConsoleProps {
   session: UserSession;
@@ -48,8 +45,6 @@ export function FranchiseConsole({
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const staffList = registry.filter((user) => user.role === "coach");
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +93,7 @@ export function FranchiseConsole({
       onToast(
         `已新增合作品牌「${data.tenant?.gymName ?? newBrandName.trim()}」教練：${newStaffName.trim()}`
       );
+      window.dispatchEvent(new CustomEvent("fitclub:admin-tenants-changed"));
     } catch {
       onToast("雲端寫入失敗，請稍後再試。");
     } finally {
@@ -204,29 +200,21 @@ export function FranchiseConsole({
               )}
             </button>
           </form>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {staffList.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-3">
-                暫未有合作教練，請用上方表單新增。
-              </p>
-            ) : (
-              staffList.map((staff) => (
-                <div
-                  key={staff.email}
-                  className="p-2.5 bg-zinc-50 rounded-xl flex justify-between gap-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{staff.name}</p>
-                    <p className="text-zinc-500 font-mono truncate">{staff.email}</p>
-                  </div>
-                  <span className="shrink-0 text-right text-blue-700 font-medium max-w-[45%] truncate">
-                    {partnerBrandLabel(staff)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
         </section>
+      )}
+
+      {session.role === "admin" && (
+        <AdminTenantsConsole
+          onToast={onToast}
+          onChanged={async () => {
+            try {
+              const updated = await fetchAllUsers();
+              onRegistryChange(updated);
+            } catch {
+              // list refresh is best-effort
+            }
+          }}
+        />
       )}
 
       {session.role === "coach" && (

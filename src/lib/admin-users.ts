@@ -581,3 +581,89 @@ export async function adminReassignStudentToTenant(
     syncTenantOwner: userRow.role === "coach",
   });
 }
+
+export type AdminTenantSummary = Tenant & {
+  ownerName?: string;
+  coachCount: number;
+  studentCount: number;
+};
+
+/** 總裁：已登記健身室列表（含成員統計） */
+export async function fetchTenantsAdminSummary(): Promise<AdminTenantSummary[]> {
+  const [tenants, users] = await Promise.all([
+    fetchAllTenantsAdmin(),
+    fetchAllUsersAdmin(),
+  ]);
+
+  return tenants.map((tenant) => {
+    const affiliated = users.filter((u) => u.tenantId === tenant.id);
+    const owner = affiliated.find(
+      (u) => u.email.toLowerCase() === tenant.ownerEmail.toLowerCase()
+    );
+    return {
+      ...tenant,
+      ownerName: owner?.name,
+      coachCount: affiliated.filter((u) => u.role === "coach").length,
+      studentCount: affiliated.filter((u) => u.role === "student").length,
+    };
+  });
+}
+
+/** 總裁：刪除健身室／品牌 Tenant（含教練帳戶；學員解除綁定） */
+export async function adminDeleteTenant(tenantId: string): Promise<void> {
+  const tenant = await fetchTenantById(tenantId.trim());
+  if (!tenant) throw new Error("找不到該健身室。");
+  if (isAiSoloTenantSlug(tenant.slug)) {
+    throw new Error("無法刪除系統 AI 散客健身室。");
+  }
+
+  let admin: SupabaseClient;
+  try {
+    admin = getSupabaseServiceRole();
+  } catch {
+    throw new Error(
+      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法刪除健身室。請在 Vercel 設定 Service Role 後重試。"
+    );
+  }
+
+  const { data: affiliated, error: affErr } = await admin
+    .from("users_registry")
+    .select("email, role")
+    .eq("tenant_id", tenant.id);
+
+  if (affErr) throw affErr;
+
+  const coachEmails = (affiliated ?? [])
+    .filter((row) => row.role === "coach")
+    .map((row) => String(row.email).trim().toLowerCase());
+
+  const { error: unlinkErr } = await admin
+    .from("users_registry")
+    .update({ tenant_id: null })
+    .eq("tenant_id", tenant.id);
+
+  if (unlinkErr) throw unlinkErr;
+
+  for (const email of coachEmails) {
+    if (email === SUPER_ADMIN_EMAIL) continue;
+    try {
+      await adminDeleteUser(email);
+    } catch (err) {
+      console.warn(`[admin-delete-tenant] coach ${email}:`, err);
+    }
+  }
+
+  await safeDeleteEq(admin, "community_posts", "tenant_id", tenant.id);
+  await safeDeleteEq(admin, "student_nutrition_targets", "tenant_id", tenant.id);
+
+  const { data: deleted, error: delErr } = await admin
+    .from("tenants")
+    .delete()
+    .eq("id", tenant.id)
+    .select("id");
+
+  if (delErr) throw delErr;
+  if (!deleted?.length) {
+    throw new Error("刪除健身室失敗，請確認 Service Role 權限。");
+  }
+}
