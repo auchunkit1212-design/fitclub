@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { readApiJson } from "@/lib/api-client";
 import {
   Building2,
   CircleUser,
@@ -11,7 +12,6 @@ import {
   Users,
 } from "@/components/icons";
 import { AI_SOLO_TENANT_SLUG } from "@/lib/registry-constants";
-import { readApiJson } from "@/lib/api-client";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { AdminUserProfileDetail } from "@/lib/admin-users";
 import type { RegistryUser, Tenant, ThemeColor, UserPlan } from "@/lib/types";
@@ -32,6 +32,10 @@ type AccountEditForm = {
   currentStreak: string;
   longestStreak: string;
 };
+
+function formSnapshot(form: AccountEditForm): string {
+  return JSON.stringify(form);
+}
 
 function profileToEditForm(profile: AdminUserProfileDetail): AccountEditForm {
   const user = profile.user;
@@ -106,7 +110,10 @@ export function AdminAccountsConsole({
   const [profile, setProfile] = useState<AdminUserProfileDetail | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [editForm, setEditForm] = useState<AccountEditForm | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState("");
   const [savingAccount, setSavingAccount] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const saveInFlightRef = useRef(false);
   const [resetPassword, setResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -178,7 +185,10 @@ export function AdminAccountsConsole({
         return;
       }
       setProfile(data);
-      setEditForm(profileToEditForm(data));
+      const form = profileToEditForm(data);
+      setEditForm(form);
+      setSavedSnapshot(formSnapshot(form));
+      setLastSavedAt(Date.now());
     } catch {
       onToast("讀取 profile 失敗");
       setSelectedEmail(null);
@@ -187,96 +197,174 @@ export function AdminAccountsConsole({
     }
   };
 
+  const isDirty = useMemo(() => {
+    if (!editForm) return false;
+    return formSnapshot(editForm) !== savedSnapshot;
+  }, [editForm, savedSnapshot]);
+
   const closeProfile = () => {
+    if (isDirty) {
+      const ok = window.confirm("有未儲存變更，確定關閉？");
+      if (!ok) return;
+    }
     setSelectedEmail(null);
     setProfile(null);
     setEditForm(null);
+    setSavedSnapshot("");
+    setLastSavedAt(null);
     setResetPassword("");
   };
 
-  const patchEditForm = (patch: Partial<AccountEditForm>) => {
-    setEditForm((prev) => (prev ? { ...prev, ...patch } : prev));
-  };
-
-  const handleSaveAccount = async () => {
-    if (!profile || !editForm) return;
-
-    if (editForm.name.trim().length < 1) {
-      onToastRef.current("請填寫姓名");
-      return;
-    }
-
-    if (
-      profile.user.role === "coach" &&
-      editForm.role === "student" &&
-      !window.confirm(
-        "確定將此教練帳戶改為學員？教練品牌設定會被清除，對應學員將以新角色登入。"
-      )
-    ) {
-      return;
-    }
-
-    setSavingAccount(true);
-    try {
-      const res = await fetch("/api/admin/users/update", {
-        method: "PATCH",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        body: JSON.stringify({
-          email: profile.user.email,
-          name: editForm.name.trim(),
-          role: editForm.role,
-          gym: editForm.gym.trim(),
-          tenantId: editForm.tenantId || null,
-          plan: editForm.plan,
-          coach: editForm.coach.trim() || null,
-          addedBy: editForm.addedBy.trim() || null,
-          appTitle: editForm.appTitle.trim() || null,
-          themeColor: editForm.themeColor,
-          logo: editForm.logo.trim() || null,
-          broadcast: editForm.broadcast.trim() || null,
-          avatarUrl: editForm.avatarUrl.trim() || null,
-          currentStreak: Number(editForm.currentStreak) || 0,
-          longestStreak: Number(editForm.longestStreak) || 0,
-          syncTenantOwner: editForm.role === "coach" && Boolean(editForm.tenantId),
-        }),
-      });
-      const data = (await res.json()) as {
-        user?: RegistryUser;
-        error?: string;
-      };
-      if (!res.ok || !data.user) {
-        onToastRef.current(data.error ?? "儲存失敗");
-        return;
-      }
-
-      const nextUser = data.user;
+  const applySavedUser = useCallback(
+    (nextUser: RegistryUser, options?: { toast?: string; reloadList?: boolean }) => {
       onRegistryChangeRef.current(
         registryRef.current.map((u) =>
           u.email.toLowerCase() === nextUser.email.toLowerCase() ? nextUser : u
         )
       );
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              user: nextUser,
-              tenant:
-                tenants.find((t) => t.id === nextUser.tenantId) ?? prev.tenant,
-            }
-          : prev
-      );
-      setEditForm(profileToEditForm({ ...profile, user: nextUser }));
-      onToastRef.current("帳戶資料已更新");
-      void loadAccounts({ silent: true });
-    } catch {
-      onToastRef.current("儲存失敗，請稍後再試");
-    } finally {
-      setSavingAccount(false);
+      setProfile((prev) => {
+        if (!prev) return prev;
+        const nextProfile = {
+          ...prev,
+          user: nextUser,
+          tenant:
+            tenants.find((t) => t.id === nextUser.tenantId) ?? prev.tenant,
+        };
+        const form = profileToEditForm(nextProfile);
+        setEditForm(form);
+        setSavedSnapshot(formSnapshot(form));
+        setLastSavedAt(Date.now());
+        return nextProfile;
+      });
+      if (options?.toast) onToastRef.current(options.toast);
+      if (options?.reloadList !== false) void loadAccounts({ silent: true });
+    },
+    [loadAccounts, tenants]
+  );
+
+  const patchEditForm = (patch: Partial<AccountEditForm>) => {
+    setEditForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const handleSaveAccount = useCallback(
+    async (options?: { auto?: boolean; formOverride?: AccountEditForm }) => {
+      if (!profile || saveInFlightRef.current) return false;
+      const form = options?.formOverride ?? editForm;
+      if (!form) return false;
+
+      if (form.name.trim().length < 1) {
+        if (!options?.auto) onToastRef.current("請填寫姓名");
+        return false;
+      }
+
+      if (!options?.auto && !options?.formOverride && !isDirty) {
+        onToastRef.current("沒有變更需要儲存");
+        return true;
+      }
+
+      if (
+        !options?.auto &&
+        profile.user.role === "coach" &&
+        form.role === "student" &&
+        !window.confirm(
+          "確定將此教練帳戶改為學員？教練品牌設定會被清除，對應學員將以新角色登入。"
+        )
+      ) {
+        return false;
+      }
+
+      saveInFlightRef.current = true;
+      setSavingAccount(true);
+      try {
+        const res = await fetch("/api/admin/users/update", {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionRequestHeaders(),
+          },
+          body: JSON.stringify({
+            email: profile.user.email,
+            name: form.name.trim(),
+            role: form.role,
+            gym: form.gym.trim(),
+            tenantId: form.tenantId || null,
+            plan: form.plan,
+            coach: form.coach.trim() || null,
+            addedBy: form.addedBy.trim() || null,
+            appTitle: form.appTitle.trim() || null,
+            themeColor: form.themeColor,
+            logo: form.logo.trim() || null,
+            broadcast: form.broadcast.trim() || null,
+            avatarUrl: form.avatarUrl.trim() || null,
+            currentStreak: Number(form.currentStreak) || 0,
+            longestStreak: Number(form.longestStreak) || 0,
+            syncTenantOwner: form.role === "coach" && Boolean(form.tenantId),
+          }),
+        });
+        const { data, parseError } = await readApiJson<{
+          user?: RegistryUser;
+          error?: string;
+        }>(res);
+
+        if (!res.ok || parseError || !data?.user) {
+          onToastRef.current(data?.error ?? "儲存失敗");
+          return false;
+        }
+
+        applySavedUser(data.user, {
+          toast: options?.auto ? "已自動儲存" : "帳戶資料已更新",
+        });
+        return true;
+      } catch {
+        onToastRef.current("儲存失敗，請稍後再試");
+        return false;
+      } finally {
+        saveInFlightRef.current = false;
+        setSavingAccount(false);
+      }
+    },
+    [applySavedUser, editForm, isDirty, profile]
+  );
+
+  useEffect(() => {
+    if (!editForm || !profile || !isDirty || savingAccount) return;
+
+    const timer = setTimeout(() => {
+      void handleSaveAccount({ auto: true });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [editForm, handleSaveAccount, isDirty, profile, savingAccount]);
+
+  const handleRoleChange = (role: RegistryUser["role"]) => {
+    if (!editForm || !profile) return;
+    if (profile.user.role === "coach" && role === "student") {
+      if (
+        !window.confirm(
+          "確定將此教練帳戶改為學員？教練品牌設定會被清除，對應學員將以新角色登入。"
+        )
+      ) {
+        return;
+      }
     }
+    const nextForm = { ...editForm, role };
+    setEditForm(nextForm);
+    void handleSaveAccount({ auto: true, formOverride: nextForm });
+  };
+
+  const handleTenantChange = (tenantId: string) => {
+    if (!editForm) return;
+    const nextForm = { ...editForm, tenantId };
+    setEditForm(nextForm);
+    void handleSaveAccount({ auto: true, formOverride: nextForm });
+  };
+
+  const handlePlanChange = (plan: UserPlan) => {
+    if (!editForm) return;
+    const nextForm = { ...editForm, plan };
+    setEditForm(nextForm);
+    void handleSaveAccount({ auto: true, formOverride: nextForm });
   };
 
   const handleResetPassword = async () => {
@@ -496,8 +584,8 @@ export function AdminAccountsConsole({
           aria-modal="true"
           aria-labelledby="admin-profile-title"
         >
-          <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-zinc-100 px-4 py-3 flex items-center justify-between">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl">
+            <div className="shrink-0 bg-white border-b border-zinc-100 px-4 py-3 flex items-center justify-between">
               <h3
                 id="admin-profile-title"
                 className="font-bold text-zinc-900 flex items-center gap-2"
@@ -523,17 +611,27 @@ export function AdminAccountsConsole({
                 載入 profile…
               </div>
             ) : editForm ? (
-              <div className="p-4 space-y-4 pb-8">
+              <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <div>
                   <p className="text-sm font-mono text-zinc-500">{profile.user.email}</p>
                   <p className="text-xs text-zinc-400 mt-1">
                     飲食記錄 {profile.mealCount} 筆
                     {profile.tenant ? ` · 邀請碼 ${profile.tenant.slug}` : ""}
                   </p>
+                  <p className="text-[11px] mt-1">
+                    {savingAccount ? (
+                      <span className="text-amber-700 font-medium">儲存中…</span>
+                    ) : isDirty ? (
+                      <span className="text-amber-700 font-medium">有未儲存變更（將自動儲存）</span>
+                    ) : lastSavedAt ? (
+                      <span className="text-emerald-700 font-medium">已儲存</span>
+                    ) : null}
+                  </p>
                 </div>
 
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 space-y-3">
-                  <p className="text-xs font-bold text-zinc-800">帳戶資料（可編輯）</p>
+                  <p className="text-xs font-bold text-zinc-800">帳戶資料（改完會自動儲存）</p>
 
                   <label className="block text-xs text-zinc-600">
                     姓名
@@ -550,9 +648,7 @@ export function AdminAccountsConsole({
                       <select
                         value={editForm.role}
                         onChange={(e) =>
-                          patchEditForm({
-                            role: e.target.value as RegistryUser["role"],
-                          })
+                          handleRoleChange(e.target.value as RegistryUser["role"])
                         }
                         className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
                       >
@@ -565,7 +661,7 @@ export function AdminAccountsConsole({
                       <select
                         value={editForm.plan}
                         onChange={(e) =>
-                          patchEditForm({ plan: e.target.value as UserPlan })
+                          handlePlanChange(e.target.value as UserPlan)
                         }
                         className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
                       >
@@ -588,7 +684,7 @@ export function AdminAccountsConsole({
                     綁定健身室 (Tenant)
                     <select
                       value={editForm.tenantId}
-                      onChange={(e) => patchEditForm({ tenantId: e.target.value })}
+                      onChange={(e) => handleTenantChange(e.target.value)}
                       className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
                     >
                       <option value="">— 不綁定 —</option>
@@ -707,14 +803,6 @@ export function AdminAccountsConsole({
                     />
                   </label>
 
-                  <button
-                    type="button"
-                    disabled={savingAccount}
-                    onClick={() => void handleSaveAccount()}
-                    className={`w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
-                  >
-                    {savingAccount ? "儲存中…" : "儲存帳戶資料"}
-                  </button>
                 </div>
 
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 space-y-2">
@@ -783,6 +871,22 @@ export function AdminAccountsConsole({
                   {deleting ? "刪除中…" : "永久刪除此帳戶"}
                 </button>
               </div>
+
+              <div className="shrink-0 border-t border-zinc-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  disabled={savingAccount || !isDirty}
+                  onClick={() => void handleSaveAccount()}
+                  className={`w-full py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
+                >
+                  {savingAccount
+                    ? "儲存中…"
+                    : isDirty
+                      ? "立即儲存變更"
+                      : "已儲存"}
+                </button>
+              </div>
+              </>
             ) : null}
           </div>
         </div>

@@ -382,7 +382,15 @@ export async function adminUpdateUser(
     throw new Error("無法修改總裁帳戶。");
   }
 
-  const admin = getRegistryWriteClient();
+  let admin: ReturnType<typeof getSupabaseServiceRole>;
+  try {
+    admin = getSupabaseServiceRole();
+  } catch {
+    throw new Error(
+      "缺少 SUPABASE_SERVICE_ROLE_KEY，無法更新帳戶。請在 Vercel 設定 Service Role 後重試。"
+    );
+  }
+
   const { data: existing, error: fetchErr } = await admin
     .from("users_registry")
     .select("*")
