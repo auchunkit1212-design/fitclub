@@ -27,6 +27,22 @@ export function isOpenRouterConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());
 }
 
+/** 脫敏顯示 key 格式，方便核對 Vercel 是否載入正確 env */
+export function getOpenRouterKeyHint(): {
+  length: number;
+  prefix: string;
+  looksValid: boolean;
+} {
+  const raw = process.env.OPENROUTER_API_KEY ?? "";
+  const key = raw.trim();
+  const prefix = key.slice(0, 12);
+  return {
+    length: key.length,
+    prefix: prefix ? `${prefix}…` : "(empty)",
+    looksValid: key.startsWith("sk-or-v1-") && key.length >= 40,
+  };
+}
+
 export function getOpenRouterReferer(): string {
   return (
     process.env.OPENROUTER_HTTP_REFERER?.trim() ||
