@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminReassignStudentToTenant } from "@/lib/admin-users";
+import { adminUpdateUser, type AdminUserUpdateInput } from "@/lib/admin-users";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -11,28 +11,23 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "需要平台管理員權限" }, { status: 403 });
   }
 
-  let body: { email?: string; tenantId?: string };
+  let body: AdminUserUpdateInput;
   try {
-    body = (await request.json()) as typeof body;
+    body = (await request.json()) as AdminUserUpdateInput;
   } catch {
     return NextResponse.json({ error: "請提供有效 JSON" }, { status: 400 });
   }
 
   const email = body.email?.trim().toLowerCase();
-  const tenantId = body.tenantId?.trim();
-  if (!email || !tenantId) {
-    return NextResponse.json(
-      { error: "請提供帳戶 email 與目標健身室" },
-      { status: 400 }
-    );
+  if (!email) {
+    return NextResponse.json({ error: "請提供帳戶 Email" }, { status: 400 });
   }
 
   try {
-    const user = await adminReassignStudentToTenant(email, tenantId);
+    const user = await adminUpdateUser({ ...body, email });
     return NextResponse.json({ ok: true, user });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "調配失敗";
+    const message = error instanceof Error ? error.message : "更新失敗";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

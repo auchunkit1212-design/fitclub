@@ -14,7 +14,44 @@ import { AI_SOLO_TENANT_SLUG } from "@/lib/registry-constants";
 import { readApiJson } from "@/lib/api-client";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { AdminUserProfileDetail } from "@/lib/admin-users";
-import type { RegistryUser, Tenant } from "@/lib/types";
+import type { RegistryUser, Tenant, ThemeColor, UserPlan } from "@/lib/types";
+
+type AccountEditForm = {
+  name: string;
+  role: RegistryUser["role"];
+  gym: string;
+  tenantId: string;
+  plan: UserPlan;
+  coach: string;
+  addedBy: string;
+  appTitle: string;
+  themeColor: ThemeColor;
+  logo: string;
+  broadcast: string;
+  avatarUrl: string;
+  currentStreak: string;
+  longestStreak: string;
+};
+
+function profileToEditForm(profile: AdminUserProfileDetail): AccountEditForm {
+  const user = profile.user;
+  return {
+    name: user.name,
+    role: user.role,
+    gym: user.gym ?? "",
+    tenantId: user.tenantId ?? "",
+    plan: user.plan ?? "free",
+    coach: user.coach ?? "",
+    addedBy: user.addedBy ?? "",
+    appTitle: user.appTitle ?? "",
+    themeColor: user.themeColor ?? "emerald",
+    logo: user.logo ?? "",
+    broadcast: user.broadcast ?? "",
+    avatarUrl: user.avatarUrl ?? "",
+    currentStreak: String(user.currentStreak ?? 0),
+    longestStreak: String(user.longestStreak ?? 0),
+  };
+}
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -68,8 +105,8 @@ export function AdminAccountsConsole({
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<AdminUserProfileDetail | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [assignTenantId, setAssignTenantId] = useState("");
-  const [assigning, setAssigning] = useState(false);
+  const [editForm, setEditForm] = useState<AccountEditForm | null>(null);
+  const [savingAccount, setSavingAccount] = useState(false);
   const [resetPassword, setResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -126,7 +163,7 @@ export function AdminAccountsConsole({
     setSelectedEmail(email);
     setProfile(null);
     setProfileLoading(true);
-    setAssignTenantId("");
+    setEditForm(null);
     try {
       const res = await fetch(
         `/api/admin/users/profile?email=${encodeURIComponent(email)}`,
@@ -141,7 +178,7 @@ export function AdminAccountsConsole({
         return;
       }
       setProfile(data);
-      setAssignTenantId(data.user.tenantId ?? "");
+      setEditForm(profileToEditForm(data));
     } catch {
       onToast("讀取 profile 失敗");
       setSelectedEmail(null);
@@ -153,8 +190,93 @@ export function AdminAccountsConsole({
   const closeProfile = () => {
     setSelectedEmail(null);
     setProfile(null);
-    setAssignTenantId("");
+    setEditForm(null);
     setResetPassword("");
+  };
+
+  const patchEditForm = (patch: Partial<AccountEditForm>) => {
+    setEditForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const handleSaveAccount = async () => {
+    if (!profile || !editForm) return;
+
+    if (editForm.name.trim().length < 1) {
+      onToastRef.current("請填寫姓名");
+      return;
+    }
+
+    if (
+      profile.user.role === "coach" &&
+      editForm.role === "student" &&
+      !window.confirm(
+        "確定將此教練帳戶改為學員？教練品牌設定會被清除，對應學員將以新角色登入。"
+      )
+    ) {
+      return;
+    }
+
+    setSavingAccount(true);
+    try {
+      const res = await fetch("/api/admin/users/update", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        body: JSON.stringify({
+          email: profile.user.email,
+          name: editForm.name.trim(),
+          role: editForm.role,
+          gym: editForm.gym.trim(),
+          tenantId: editForm.tenantId || null,
+          plan: editForm.plan,
+          coach: editForm.coach.trim() || null,
+          addedBy: editForm.addedBy.trim() || null,
+          appTitle: editForm.appTitle.trim() || null,
+          themeColor: editForm.themeColor,
+          logo: editForm.logo.trim() || null,
+          broadcast: editForm.broadcast.trim() || null,
+          avatarUrl: editForm.avatarUrl.trim() || null,
+          currentStreak: Number(editForm.currentStreak) || 0,
+          longestStreak: Number(editForm.longestStreak) || 0,
+          syncTenantOwner: editForm.role === "coach" && Boolean(editForm.tenantId),
+        }),
+      });
+      const data = (await res.json()) as {
+        user?: RegistryUser;
+        error?: string;
+      };
+      if (!res.ok || !data.user) {
+        onToastRef.current(data.error ?? "儲存失敗");
+        return;
+      }
+
+      const nextUser = data.user;
+      onRegistryChangeRef.current(
+        registryRef.current.map((u) =>
+          u.email.toLowerCase() === nextUser.email.toLowerCase() ? nextUser : u
+        )
+      );
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: nextUser,
+              tenant:
+                tenants.find((t) => t.id === nextUser.tenantId) ?? prev.tenant,
+            }
+          : prev
+      );
+      setEditForm(profileToEditForm({ ...profile, user: nextUser }));
+      onToastRef.current("帳戶資料已更新");
+      void loadAccounts({ silent: true });
+    } catch {
+      onToastRef.current("儲存失敗，請稍後再試");
+    } finally {
+      setSavingAccount(false);
+    }
   };
 
   const handleResetPassword = async () => {
@@ -255,75 +377,6 @@ export function AdminAccountsConsole({
     }
   };
 
-  const handleAssign = async () => {
-    if (!profile || profile.user.role !== "student") return;
-    if (!assignTenantId) {
-      onToastRef.current("請選擇目標健身室");
-      return;
-    }
-    const targetTenant = tenants.find((t) => t.id === assignTenantId);
-    setAssigning(true);
-    try {
-      const res = await fetch("/api/admin/users/assign-tenant", {
-        method: "PATCH",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        body: JSON.stringify({
-          email: profile.user.email,
-          tenantId: assignTenantId,
-        }),
-      });
-      const data = (await res.json()) as {
-        user?: RegistryUser;
-        unchanged?: boolean;
-        error?: string;
-      };
-      if (!res.ok) {
-        onToastRef.current(data.error ?? "調配失敗");
-        return;
-      }
-
-      const nextUser: RegistryUser = data.user
-        ? {
-            ...data.user,
-            tenantName: targetTenant?.gymName ?? data.user.tenantName ?? data.user.gym,
-            gym: targetTenant?.gymName ?? data.user.gym,
-            tenantId: assignTenantId,
-          }
-        : profile.user;
-
-      onRegistryChangeRef.current(
-        registryRef.current.map((u) =>
-          u.email.toLowerCase() === nextUser.email.toLowerCase() ? nextUser : u
-        )
-      );
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              user: nextUser,
-              tenant: targetTenant ?? prev.tenant,
-            }
-          : prev
-      );
-
-      onToastRef.current(
-        data.unchanged
-          ? `該學員已在「${targetTenant?.gymName ?? nextUser.gym}」，無需調配`
-          : `已調至「${targetTenant?.gymName ?? nextUser.gym}」`
-      );
-      void loadAccounts({ silent: true });
-    } catch {
-      onToastRef.current("調配失敗，請檢查網絡或稍後再試");
-    } finally {
-      setAssigning(false);
-    }
-  };
-
   return (
     <>
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
@@ -343,7 +396,7 @@ export function AdminAccountsConsole({
           </button>
         </div>
         <p className="text-xs text-zinc-500">
-          撳姓名查看 profile（含密碼）；學員可調健身室；可重設密碼或刪除帳戶。
+          撳姓名編輯帳戶：可改角色（教練↔學員）、健身室、品牌資料、密碼等所有欄位。
         </p>
 
         <div className="relative">
@@ -469,70 +522,200 @@ export function AdminAccountsConsole({
                 <Loader2 size={24} className="animate-spin" aria-hidden />
                 載入 profile…
               </div>
-            ) : (
+            ) : editForm ? (
               <div className="p-4 space-y-4 pb-8">
                 <div>
-                  <p className="text-lg font-bold text-zinc-900">{profile.user.name}</p>
-                  <p className="text-sm font-mono text-zinc-500 mt-0.5">
-                    {profile.user.email}
+                  <p className="text-sm font-mono text-zinc-500">{profile.user.email}</p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    飲食記錄 {profile.mealCount} 筆
+                    {profile.tenant ? ` · 邀請碼 ${profile.tenant.slug}` : ""}
                   </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {roleBadge(profile.user.role)}
-                    {profile.user.hasPassword ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
-                        已設密碼
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                        未設密碼
-                      </span>
-                    )}
-                    {profile.user.plan === "pro" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
-                        Pro
-                      </span>
-                    )}
-                  </div>
                 </div>
 
-                <dl className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-zinc-50 rounded-xl p-3">
-                    <dt className="text-zinc-500">健身室／品牌</dt>
-                    <dd className="font-semibold text-zinc-900 mt-1">
-                      {gymLabel(profile.user)}
-                    </dd>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 space-y-3">
+                  <p className="text-xs font-bold text-zinc-800">帳戶資料（可編輯）</p>
+
+                  <label className="block text-xs text-zinc-600">
+                    姓名
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => patchEditForm({ name: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-xs text-zinc-600">
+                      角色
+                      <select
+                        value={editForm.role}
+                        onChange={(e) =>
+                          patchEditForm({
+                            role: e.target.value as RegistryUser["role"],
+                          })
+                        }
+                        className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="student">學員</option>
+                        <option value="coach">教練</option>
+                      </select>
+                    </label>
+                    <label className="block text-xs text-zinc-600">
+                      方案
+                      <select
+                        value={editForm.plan}
+                        onChange={(e) =>
+                          patchEditForm({ plan: e.target.value as UserPlan })
+                        }
+                        className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="free">Free</option>
+                        <option value="pro">Pro</option>
+                      </select>
+                    </label>
                   </div>
-                  <div className="bg-zinc-50 rounded-xl p-3">
-                    <dt className="text-zinc-500">飲食記錄</dt>
-                    <dd className="font-semibold text-zinc-900 mt-1">
-                      {profile.mealCount} 筆
-                    </dd>
-                  </div>
-                  {profile.user.role === "student" && (
-                    <>
-                      <div className="bg-zinc-50 rounded-xl p-3">
-                        <dt className="text-zinc-500">負責教練</dt>
-                        <dd className="font-semibold text-zinc-900 mt-1 truncate">
-                          {profile.user.coach ?? "—"}
-                        </dd>
-                      </div>
-                      <div className="bg-zinc-50 rounded-xl p-3">
-                        <dt className="text-zinc-500">連續打卡</dt>
-                        <dd className="font-semibold text-zinc-900 mt-1">
-                          {profile.user.currentStreak ?? 0} 天
-                        </dd>
-                      </div>
-                    </>
-                  )}
-                  {profile.tenant && (
-                    <div className="col-span-2 bg-zinc-50 rounded-xl p-3">
-                      <dt className="text-zinc-500">邀請碼 (slug)</dt>
-                      <dd className="font-mono text-zinc-800 mt-1 text-[11px]">
-                        {profile.tenant.slug}
-                      </dd>
+
+                  <label className="block text-xs text-zinc-600">
+                    健身室／品牌名稱
+                    <input
+                      value={editForm.gym}
+                      onChange={(e) => patchEditForm({ gym: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                    />
+                  </label>
+
+                  <label className="block text-xs text-zinc-600">
+                    綁定健身室 (Tenant)
+                    <select
+                      value={editForm.tenantId}
+                      onChange={(e) => patchEditForm({ tenantId: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">— 不綁定 —</option>
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.gymName}
+                          {t.slug === AI_SOLO_TENANT_SLUG ? " (AI 散客)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {editForm.role === "student" && (
+                    <div className="grid grid-cols-1 gap-2">
+                      <label className="block text-xs text-zinc-600">
+                        負責教練（顯示名）
+                        <input
+                          value={editForm.coach}
+                          onChange={(e) => patchEditForm({ coach: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                        />
+                      </label>
+                      <label className="block text-xs text-zinc-600">
+                        加入者 Email (added_by)
+                        <input
+                          value={editForm.addedBy}
+                          onChange={(e) => patchEditForm({ addedBy: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm font-mono bg-white"
+                        />
+                      </label>
                     </div>
                   )}
-                </dl>
+
+                  {editForm.role === "coach" && (
+                    <div className="space-y-2 border-t border-zinc-200 pt-3">
+                      <p className="text-[11px] font-semibold text-indigo-800">
+                        教練品牌設定
+                      </p>
+                      <label className="block text-xs text-zinc-600">
+                        App 標題
+                        <input
+                          value={editForm.appTitle}
+                          onChange={(e) => patchEditForm({ appTitle: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                        />
+                      </label>
+                      <label className="block text-xs text-zinc-600">
+                        主題色
+                        <select
+                          value={editForm.themeColor}
+                          onChange={(e) =>
+                            patchEditForm({
+                              themeColor: e.target.value as ThemeColor,
+                            })
+                          }
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                        >
+                          <option value="emerald">Emerald</option>
+                          <option value="blue">Blue</option>
+                          <option value="black">Black</option>
+                        </select>
+                      </label>
+                      <label className="block text-xs text-zinc-600">
+                        Logo URL
+                        <input
+                          value={editForm.logo}
+                          onChange={(e) => patchEditForm({ logo: e.target.value })}
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm font-mono bg-white"
+                        />
+                      </label>
+                      <label className="block text-xs text-zinc-600">
+                        廣播訊息
+                        <textarea
+                          value={editForm.broadcast}
+                          onChange={(e) => patchEditForm({ broadcast: e.target.value })}
+                          rows={2}
+                          className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white resize-none"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-xs text-zinc-600">
+                      連續打卡
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.currentStreak}
+                        onChange={(e) =>
+                          patchEditForm({ currentStreak: e.target.value })
+                        }
+                        className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                      />
+                    </label>
+                    <label className="block text-xs text-zinc-600">
+                      最長連續
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.longestStreak}
+                        onChange={(e) =>
+                          patchEditForm({ longestStreak: e.target.value })
+                        }
+                        className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block text-xs text-zinc-600">
+                    頭像 URL
+                    <input
+                      value={editForm.avatarUrl}
+                      onChange={(e) => patchEditForm({ avatarUrl: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm font-mono bg-white"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={savingAccount}
+                    onClick={() => void handleSaveAccount()}
+                    className={`w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
+                  >
+                    {savingAccount ? "儲存中…" : "儲存帳戶資料"}
+                  </button>
+                </div>
 
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 space-y-2">
                   <p className="text-xs font-bold text-zinc-800">登入密碼</p>
@@ -590,41 +773,6 @@ export function AdminAccountsConsole({
                   </div>
                 )}
 
-                {profile.user.role === "student" && (
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
-                    <p className="text-xs font-bold text-indigo-900">
-                      調配健身室管理範圍
-                    </p>
-                    <select
-                      value={assignTenantId}
-                      onChange={(e) => setAssignTenantId(e.target.value)}
-                      className="w-full rounded-xl border border-indigo-200 px-3 py-2.5 text-sm bg-white"
-                    >
-                      <option value="">— 選擇健身室 —</option>
-                      {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.gymName}
-                          {t.slug === AI_SOLO_TENANT_SLUG ? " (AI 散客)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={assigning || !assignTenantId}
-                      onClick={() => void handleAssign()}
-                      className={`w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50 ${btnClass}`}
-                    >
-                      {assigning ? "調配中…" : "確認調配"}
-                    </button>
-                  </div>
-                )}
-
-                {profile.user.role === "coach" && (
-                  <p className="text-xs text-zinc-500 text-center">
-                    教練帳戶請在「新增合作 Gym」區塊管理品牌綁定。
-                  </p>
-                )}
-
                 <button
                   type="button"
                   disabled={deleting}
@@ -635,7 +783,7 @@ export function AdminAccountsConsole({
                   {deleting ? "刪除中…" : "永久刪除此帳戶"}
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

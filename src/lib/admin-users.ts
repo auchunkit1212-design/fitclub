@@ -7,7 +7,13 @@ import {
   getSupabaseServiceRole,
 } from "@/lib/supabase-admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { RegistryUser, StudentBodyProfile, Tenant } from "@/lib/types";
+import type {
+  RegistryUser,
+  StudentBodyProfile,
+  Tenant,
+  ThemeColor,
+  UserPlan,
+} from "@/lib/types";
 import { fetchMealLogs, fetchStudentBodyProfile } from "@/lib/db";
 
 type RegistryRow = {
@@ -20,6 +26,10 @@ type RegistryRow = {
   tenant_id: string | null;
   plan?: string | null;
   avatar_url?: string | null;
+  logo?: string | null;
+  app_title?: string | null;
+  theme_color?: string | null;
+  broadcast?: string | null;
   current_streak?: number | null;
   longest_streak?: number | null;
   password_hash?: string | null;
@@ -37,6 +47,10 @@ function mapRegistryRow(row: RegistryRow): RegistryUser {
     coach: row.coach ?? undefined,
     addedBy: row.added_by ?? undefined,
     tenantId: row.tenant_id ?? undefined,
+    logo: row.logo ?? undefined,
+    appTitle: row.app_title ?? undefined,
+    themeColor: (row.theme_color as ThemeColor) ?? undefined,
+    broadcast: row.broadcast ?? undefined,
     hasPassword: Boolean(row.password_hash),
     currentStreak: Number(row.current_streak) || 0,
     longestStreak: Number(row.longest_streak) || 0,
@@ -317,6 +331,200 @@ export async function adminDeleteUser(email: string): Promise<void> {
   await deleteSupabaseAuthUserByEmail(admin, normalized);
 }
 
+export type AdminUserUpdateInput = {
+  email: string;
+  name?: string;
+  role?: "student" | "coach";
+  gym?: string;
+  tenantId?: string | null;
+  coach?: string | null;
+  addedBy?: string | null;
+  plan?: UserPlan;
+  appTitle?: string | null;
+  themeColor?: ThemeColor | null;
+  logo?: string | null;
+  broadcast?: string | null;
+  avatarUrl?: string | null;
+  currentStreak?: number;
+  longestStreak?: number;
+  /** 教練綁定 tenant 時同步更新 tenants.owner_email */
+  syncTenantOwner?: boolean;
+};
+
+async function resolveStudentCoachFieldsForTenant(
+  tenant: Tenant
+): Promise<{ addedBy: string | null; coachName: string | null }> {
+  const isSolo = isAiSoloTenantSlug(tenant.slug);
+  if (isSolo) {
+    return { addedBy: null, coachName: null };
+  }
+
+  const admin = getRegistryWriteClient();
+  const { data: coachRow } = await admin
+    .from("users_registry")
+    .select("name")
+    .eq("email", tenant.ownerEmail)
+    .eq("role", "coach")
+    .maybeSingle();
+
+  return {
+    addedBy: tenant.ownerEmail,
+    coachName: coachRow?.name ? String(coachRow.name) : null,
+  };
+}
+
+/** 總裁：更新帳戶資料（含角色 coach ↔ student） */
+export async function adminUpdateUser(
+  input: AdminUserUpdateInput
+): Promise<RegistryUser> {
+  const normalized = input.email.trim().toLowerCase();
+  if (normalized === SUPER_ADMIN_EMAIL) {
+    throw new Error("無法修改總裁帳戶。");
+  }
+
+  const admin = getRegistryWriteClient();
+  const { data: existing, error: fetchErr } = await admin
+    .from("users_registry")
+    .select("*")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (fetchErr) throw fetchErr;
+  if (!existing) throw new Error("找不到該帳戶。");
+
+  const row = existing as RegistryRow;
+  const patch: Record<string, unknown> = {};
+  const nextRole = input.role ?? row.role;
+
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) throw new Error("姓名不可為空。");
+    patch.name = name;
+  }
+
+  if (input.plan !== undefined) {
+    patch.plan = input.plan === "pro" ? "pro" : "free";
+  }
+
+  if (input.gym !== undefined) {
+    patch.gym = input.gym.trim();
+  }
+
+  if (input.avatarUrl !== undefined) {
+    patch.avatar_url = input.avatarUrl?.trim() || null;
+  }
+
+  if (input.currentStreak !== undefined) {
+    patch.current_streak = Math.max(0, Math.round(input.currentStreak));
+  }
+
+  if (input.longestStreak !== undefined) {
+    patch.longest_streak = Math.max(0, Math.round(input.longestStreak));
+  }
+
+  if (input.role !== undefined) {
+    if (input.role !== "student" && input.role !== "coach") {
+      throw new Error("角色必須為 student 或 coach。");
+    }
+    patch.role = input.role;
+
+    if (input.role === "student" && row.role === "coach") {
+      patch.logo = null;
+      patch.app_title = null;
+      patch.theme_color = null;
+      patch.broadcast = null;
+    }
+
+    if (input.role === "coach" && row.role === "student") {
+      patch.added_by = null;
+      patch.coach = null;
+      if (input.appTitle === undefined && !row.app_title) {
+        patch.app_title =
+          (input.gym ?? row.gym ?? row.name)?.trim() || row.name;
+      }
+      if (input.themeColor === undefined && !row.theme_color) {
+        patch.theme_color = "emerald";
+      }
+    }
+  }
+
+  if (input.tenantId !== undefined) {
+    const tenantId = input.tenantId?.trim() || null;
+    if (tenantId) {
+      const tenant = await fetchTenantById(tenantId);
+      if (!tenant) throw new Error("找不到該健身室／品牌空間。");
+
+      patch.tenant_id = tenant.id;
+      if (input.gym === undefined) {
+        patch.gym = tenant.gymName;
+      }
+
+      if (nextRole === "student") {
+        const { addedBy, coachName } =
+          await resolveStudentCoachFieldsForTenant(tenant);
+        if (input.addedBy === undefined) patch.added_by = addedBy;
+        if (input.coach === undefined) patch.coach = coachName;
+      }
+
+      if (nextRole === "coach" && input.syncTenantOwner !== false) {
+        const { error: ownerErr } = await admin
+          .from("tenants")
+          .update({ owner_email: normalized })
+          .eq("id", tenant.id);
+        if (ownerErr) {
+          console.warn("[admin-update] tenant owner sync:", ownerErr.message);
+        }
+      }
+    } else {
+      patch.tenant_id = null;
+    }
+  }
+
+  if (nextRole === "student") {
+    if (input.coach !== undefined) {
+      patch.coach = input.coach?.trim() || null;
+    }
+    if (input.addedBy !== undefined) {
+      patch.added_by = input.addedBy?.trim().toLowerCase() || null;
+    }
+  }
+
+  if (nextRole === "coach") {
+    if (input.appTitle !== undefined) {
+      patch.app_title = input.appTitle?.trim() || null;
+    }
+    if (input.themeColor !== undefined) {
+      patch.theme_color = input.themeColor;
+    }
+    if (input.logo !== undefined) {
+      patch.logo = input.logo?.trim() || null;
+    }
+    if (input.broadcast !== undefined) {
+      patch.broadcast = input.broadcast?.trim() || null;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) {
+    const [unchanged] = await attachTenantNamesAdmin([mapRegistryRow(row)]);
+    return unchanged;
+  }
+
+  const { data: updatedRow, error: updateErr } = await admin
+    .from("users_registry")
+    .update(patch)
+    .eq("email", normalized)
+    .select("*")
+    .maybeSingle();
+
+  if (updateErr) throw updateErr;
+  if (!updatedRow) throw new Error("資料庫更新失敗，請稍後再試。");
+
+  const [user] = await attachTenantNamesAdmin([
+    mapRegistryRow(updatedRow as RegistryRow),
+  ]);
+  return user;
+}
+
 /** 總裁：將學員／散客調到指定健身室 Tenant */
 export async function adminReassignStudentToTenant(
   studentEmail: string,
@@ -329,20 +537,19 @@ export async function adminReassignStudentToTenant(
   }
 
   const admin = getRegistryWriteClient();
-  const { data: student, error: studentErr } = await admin
+  const { data: userRow, error: userErr } = await admin
     .from("users_registry")
     .select("email, role, tenant_id")
     .eq("email", normalized)
-    .eq("role", "student")
     .maybeSingle();
 
-  if (studentErr) throw studentErr;
-  if (!student) {
-    throw new Error("找不到該學員帳號。");
+  if (userErr) throw userErr;
+  if (!userRow) {
+    throw new Error("找不到該帳號。");
   }
 
-  const previousTenantId = student.tenant_id
-    ? String(student.tenant_id)
+  const previousTenantId = userRow.tenant_id
+    ? String(userRow.tenant_id)
     : null;
   if (previousTenantId === tenant.id) {
     const { data: full, error: readErr } = await admin
@@ -351,53 +558,18 @@ export async function adminReassignStudentToTenant(
       .eq("email", normalized)
       .maybeSingle();
     if (readErr) throw readErr;
-    if (!full) throw new Error("找不到該學員帳號。");
+    if (!full) throw new Error("找不到該帳號。");
     const [unchanged] = await attachTenantNamesAdmin([
       mapRegistryRow(full as RegistryRow),
     ]);
     return { ...unchanged, tenantName: tenant.gymName };
   }
 
-  const isSolo = isAiSoloTenantSlug(tenant.slug);
-  let coachName: string | null = null;
-
-  if (!isSolo) {
-    const { data: coachRow } = await admin
-      .from("users_registry")
-      .select("name")
-      .eq("email", tenant.ownerEmail)
-      .eq("role", "coach")
-      .maybeSingle();
-    coachName = coachRow?.name ? String(coachRow.name) : null;
-  }
-
-  const { data: updatedRow, error: updateErr } = await admin
-    .from("users_registry")
-    .update({
-      tenant_id: tenant.id,
-      gym: tenant.gymName,
-      added_by: isSolo ? null : tenant.ownerEmail,
-      coach: coachName,
-    })
-    .eq("email", normalized)
-    .eq("role", "student")
-    .select("*")
-    .maybeSingle();
-
-  if (updateErr) throw updateErr;
-  if (!updatedRow) {
-    throw new Error("資料庫更新失敗，請稍後再試或聯絡技術支援。");
-  }
-
-  const [user] = await attachTenantNamesAdmin([
-    mapRegistryRow(updatedRow as RegistryRow),
-  ]);
-  return {
-    ...user,
-    tenantName: tenant.gymName,
-    gym: tenant.gymName,
+  return adminUpdateUser({
+    email: normalized,
     tenantId: tenant.id,
-    coach: coachName ?? undefined,
-    addedBy: isSolo ? undefined : tenant.ownerEmail,
-  };
+    gym: tenant.gymName,
+    role: userRow.role === "coach" ? "coach" : "student",
+    syncTenantOwner: userRow.role === "coach",
+  });
 }
