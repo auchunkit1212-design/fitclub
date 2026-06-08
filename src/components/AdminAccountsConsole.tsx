@@ -7,6 +7,7 @@ import {
   CircleUser,
   IconLabel,
   Loader2,
+  RefreshCw,
   Search,
   Trash2,
   Users,
@@ -114,39 +115,62 @@ export function AdminAccountsConsole({
   const [savingAccount, setSavingAccount] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const saveInFlightRef = useRef(false);
+  const loadRequestRef = useRef(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [resetPassword, setResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const loadAccounts = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setLoading(true);
-    setLoadError(null);
-    try {
-      const res = await fetch("/api/admin/accounts", {
-        credentials: "include",
-        headers: getSessionRequestHeaders(),
-      });
-      const data = (await res.json()) as {
-        users?: RegistryUser[];
-        tenants?: Tenant[];
-        error?: string;
-      };
-      if (!res.ok) {
-        const msg = data.error ?? "讀取帳戶失敗";
+  const loadAccounts = useCallback(
+    async (opts?: { silent?: boolean; toastOnSuccess?: boolean }) => {
+      const requestId = ++loadRequestRef.current;
+      const showBusy = !opts?.silent;
+      if (showBusy) {
+        setLoading(true);
+        setRefreshing(true);
+      }
+      setLoadError(null);
+      try {
+        const res = await fetch(
+          `/api/admin/accounts?_=${Date.now()}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            headers: getSessionRequestHeaders(),
+          }
+        );
+        const data = (await res.json()) as {
+          users?: RegistryUser[];
+          tenants?: Tenant[];
+          error?: string;
+        };
+        if (requestId !== loadRequestRef.current) return false;
+
+        if (!res.ok) {
+          const msg = data.error ?? "讀取帳戶失敗";
+          setLoadError(msg);
+          onToastRef.current(msg);
+          return false;
+        }
+        if (data.users) onRegistryChangeRef.current(data.users);
+        if (data.tenants) setTenants(data.tenants);
+        if (opts?.toastOnSuccess) onToastRef.current("帳戶列表已重新整理");
+        return true;
+      } catch {
+        if (requestId !== loadRequestRef.current) return false;
+        const msg = "無法連線讀取帳戶";
         setLoadError(msg);
         onToastRef.current(msg);
-        return;
+        return false;
+      } finally {
+        if (requestId === loadRequestRef.current && showBusy) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
-      if (data.users) onRegistryChangeRef.current(data.users);
-      if (data.tenants) setTenants(data.tenants);
-    } catch {
-      const msg = "無法連線讀取帳戶";
-      setLoadError(msg);
-      onToastRef.current(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     void loadAccounts({ silent: registry.length > 0 });
@@ -166,41 +190,67 @@ export function AdminAccountsConsole({
     });
   }, [registry, search, roleFilter]);
 
-  const openProfile = async (email: string) => {
-    setSelectedEmail(email);
-    setProfile(null);
-    setProfileLoading(true);
-    setEditForm(null);
-    try {
-      const res = await fetch(
-        `/api/admin/users/profile?email=${encodeURIComponent(email)}`,
-        { credentials: "include", headers: getSessionRequestHeaders() }
-      );
-      const data = (await res.json()) as AdminUserProfileDetail & {
-        error?: string;
-      };
-      if (!res.ok) {
-        onToast(data.error ?? "讀取 profile 失敗");
-        setSelectedEmail(null);
-        return;
+  const reloadProfile = useCallback(
+    async (email: string, options?: { keepOpen?: boolean }) => {
+      if (!options?.keepOpen) {
+        setSelectedEmail(email);
+        setProfile(null);
+        setEditForm(null);
       }
-      setProfile(data);
-      const form = profileToEditForm(data);
-      setEditForm(form);
-      setSavedSnapshot(formSnapshot(form));
-      setLastSavedAt(Date.now());
-    } catch {
-      onToast("讀取 profile 失敗");
-      setSelectedEmail(null);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+      setProfileLoading(true);
+      try {
+        const res = await fetch(
+          `/api/admin/users/profile?email=${encodeURIComponent(email)}&_=${Date.now()}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            headers: getSessionRequestHeaders(),
+          }
+        );
+        const data = (await res.json()) as AdminUserProfileDetail & {
+          error?: string;
+        };
+        if (!res.ok) {
+          onToastRef.current(data.error ?? "讀取 profile 失敗");
+          if (!options?.keepOpen) setSelectedEmail(null);
+          return false;
+        }
+        setProfile(data);
+        const form = profileToEditForm(data);
+        setEditForm(form);
+        setSavedSnapshot(formSnapshot(form));
+        setLastSavedAt(Date.now());
+        return true;
+      } catch {
+        onToastRef.current("讀取 profile 失敗");
+        if (!options?.keepOpen) setSelectedEmail(null);
+        return false;
+      } finally {
+        setProfileLoading(false);
+      }
+    },
+    []
+  );
+
+  const openProfile = (email: string) => void reloadProfile(email);
 
   const isDirty = useMemo(() => {
     if (!editForm) return false;
     return formSnapshot(editForm) !== savedSnapshot;
   }, [editForm, savedSnapshot]);
+
+  const handleRefreshAll = useCallback(async () => {
+    if (isDirty) {
+      const ok = window.confirm(
+        "有未儲存變更，重新整理會捨棄目前編輯內容，確定繼續？"
+      );
+      if (!ok) return;
+    }
+    const ok = await loadAccounts({ toastOnSuccess: true });
+    if (ok && selectedEmail) {
+      await reloadProfile(selectedEmail, { keepOpen: true });
+    }
+  }, [isDirty, loadAccounts, reloadProfile, selectedEmail]);
 
   const closeProfile = () => {
     if (isDirty) {
@@ -476,11 +526,16 @@ export function AdminAccountsConsole({
           </h2>
           <button
             type="button"
-            onClick={() => void loadAccounts()}
-            disabled={loading}
-            className={`text-xs font-semibold text-zinc-600 underline ${btnClass}`}
+            onClick={() => void handleRefreshAll()}
+            disabled={refreshing}
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 disabled:opacity-50 ${btnClass}`}
           >
-            重新整理
+            <RefreshCw
+              size={14}
+              className={refreshing ? "animate-spin" : ""}
+              aria-hidden
+            />
+            {refreshing ? "重新整理中…" : "重新整理"}
           </button>
         </div>
         <p className="text-xs text-zinc-500">
@@ -536,7 +591,15 @@ export function AdminAccountsConsole({
             <Loader2 size={18} className="animate-spin" aria-hidden />
             載入帳戶中…
           </p>
-        ) : filtered.length === 0 ? (
+        ) : refreshing && registry.length > 0 ? (
+          <p className="text-xs text-zinc-500 text-center py-2 flex items-center justify-center gap-2">
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+            正在重新整理帳戶列表…
+          </p>
+        ) : null}
+
+        {!loading || registry.length > 0 ? (
+          filtered.length === 0 ? (
           <p className="text-sm text-zinc-500 text-center py-6">沒有符合的帳戶</p>
         ) : (
           <ul className="space-y-2 max-h-[min(420px,50vh)] overflow-y-auto">
@@ -574,7 +637,8 @@ export function AdminAccountsConsole({
               </li>
             ))}
           </ul>
-        )}
+          )
+        ) : null}
       </section>
 
       {selectedEmail && (
@@ -593,16 +657,34 @@ export function AdminAccountsConsole({
                 <CircleUser size={20} className="text-emerald-600" aria-hidden />
                 帳戶 Profile
               </h3>
-              <button
-                type="button"
-                onClick={closeProfile}
-                className={`p-2 rounded-full hover:bg-zinc-100 ${btnClass}`}
-                aria-label="關閉"
-              >
-                <span className="text-xl leading-none" aria-hidden>
-                  ×
-                </span>
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => void handleRefreshAll()}
+                  disabled={refreshing || profileLoading}
+                  className={`p-2 rounded-full hover:bg-zinc-100 disabled:opacity-50 ${btnClass}`}
+                  aria-label="重新整理"
+                  title="重新整理帳戶資料"
+                >
+                  <RefreshCw
+                    size={18}
+                    className={
+                      refreshing || profileLoading ? "animate-spin text-zinc-500" : "text-zinc-700"
+                    }
+                    aria-hidden
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={closeProfile}
+                  className={`p-2 rounded-full hover:bg-zinc-100 ${btnClass}`}
+                  aria-label="關閉"
+                >
+                  <span className="text-xl leading-none" aria-hidden>
+                    ×
+                  </span>
+                </button>
+              </div>
             </div>
 
             {profileLoading || !profile ? (
