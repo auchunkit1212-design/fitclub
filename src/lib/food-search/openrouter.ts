@@ -119,7 +119,10 @@ export function mapOpenRouterHttpError(status: number, detail = ""): {
   }
 }
 
-async function openRouterChatRequest(body: Record<string, unknown>): Promise<Response> {
+async function openRouterChatRequest(
+  body: Record<string, unknown>,
+  options?: { timeoutMs?: number }
+): Promise<Response> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
     throw new FoodSearchError(
@@ -128,16 +131,28 @@ async function openRouterChatRequest(body: Record<string, unknown>): Promise<Res
     );
   }
 
-  return fetch(OPENROUTER_CHAT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": getOpenRouterReferer(),
-      "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
-    },
-    body: JSON.stringify(body),
-  });
+  const timeoutMs = options?.timeoutMs;
+  const signal =
+    timeoutMs && timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined;
+
+  try {
+    return await fetch(OPENROUTER_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": getOpenRouterReferer(),
+        "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      throw new FoodSearchError("AI 聯想逾時，請稍後再試或使用本地關鍵字", 504);
+    }
+    throw err;
+  }
 }
 
 export type OpenRouterPingResult = {
@@ -222,15 +237,18 @@ export async function searchFoodWithOpenRouter(
   const userMessage = `用戶輸入（可能未完成、含錯字或中英夾雜）：「${q}」
 請聯想 5 個最可能的食物選項並估算營養素。${getLanguageInstruction(lang)}`;
 
-  const res = await openRouterChatRequest({
-    model,
-    temperature: 0.35,
-    max_tokens: 1600,
-    messages: [
-      { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
-      { role: "user", content: userMessage },
-    ],
-  });
+  const res = await openRouterChatRequest(
+    {
+      model,
+      temperature: 0.35,
+      max_tokens: 900,
+      messages: [
+        { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+    },
+    { timeoutMs: 12_000 }
+  );
 
   if (!res.ok) {
     const detail = await res.text();

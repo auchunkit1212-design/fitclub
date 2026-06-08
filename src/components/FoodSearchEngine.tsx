@@ -23,7 +23,8 @@ const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 const MIN_QUERY_LENGTH = 2;
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 350;
+const SEARCH_TIMEOUT_MS = 15_000;
 
 export type PortionBasePayload = {
   productName: string;
@@ -116,6 +117,12 @@ export function FoodSearchEngine({
       setLoading(true);
       setSearchError(null);
 
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SEARCH_TIMEOUT_MS
+      );
+
       try {
         const res = await fetch("/api/food-search", {
           method: "POST",
@@ -125,6 +132,7 @@ export function FoodSearchEngine({
           },
           credentials: "include",
           body: JSON.stringify({ query: trimmed, lang }),
+          signal: controller.signal,
         });
         const data = (await res.json()) as {
           items?: FoodSearchItem[];
@@ -155,12 +163,18 @@ export function FoodSearchEngine({
         setResults(items);
         setSearchError(null);
         setLastSource(items[0]?.source ?? data.source ?? "openrouter");
-      } catch {
+      } catch (err) {
         if (seq !== searchSeq.current) return;
         setResults([]);
         setLastSource(null);
-        setSearchError(t("foodSearch.searchFailed", "搜尋失敗，請稍後再試"));
+        const timedOut = err instanceof Error && err.name === "AbortError";
+        setSearchError(
+          timedOut
+            ? t("foodSearch.searchTimeout", "搜尋逾時，請再試一次")
+            : t("foodSearch.searchFailed", "搜尋失敗，請稍後再試")
+        );
       } finally {
+        window.clearTimeout(timeoutId);
         if (seq === searchSeq.current) setLoading(false);
       }
     },

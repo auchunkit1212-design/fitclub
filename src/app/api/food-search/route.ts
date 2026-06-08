@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** OpenRouter AI 聯想優先，本地港台 + 7-11 資料庫作後備 */
+/** 本地港台 + 7-11 資料庫優先（即時），AI 聯想作後備（錯字／冷門食物） */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
@@ -42,6 +42,17 @@ export async function POST(request: Request) {
   }
 
   const dbStats = getLocalFoodDatabaseStats();
+  const localItems = searchLocalFoodDatabase(query, 12);
+
+  if (localItems.length > 0) {
+    return NextResponse.json({
+      items: localItems,
+      source: localItems[0]?.source ?? "hk_tw",
+      lang,
+      databaseSize: dbStats.total,
+      localMatch: true,
+    });
+  }
 
   if (isOpenRouterConfigured()) {
     try {
@@ -59,24 +70,11 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       if (error instanceof FoodSearchError) {
-        console.warn("[food-search] AI failed, trying local DB:", error.message);
+        console.warn("[food-search] AI failed:", error.message);
       } else {
-        console.warn("[food-search] AI failed, trying local DB:", error);
+        console.warn("[food-search] AI failed:", error);
       }
     }
-  }
-
-  const localItems = searchLocalFoodDatabase(query, 12);
-
-  if (localItems.length > 0) {
-    return NextResponse.json({
-      items: localItems,
-      source: localItems[0]?.source ?? "hk_tw",
-      lang,
-      databaseSize: dbStats.total,
-      localMatch: true,
-      aiFallback: isOpenRouterConfigured(),
-    });
   }
 
   if (!isOpenRouterConfigured()) {
