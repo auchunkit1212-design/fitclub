@@ -46,12 +46,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "請輸入食物名稱" }, { status: 400 });
   }
 
-  if (query.length < 2) {
-    return NextResponse.json({ error: "請至少輸入 2 個字元", items: [] }, { status: 400 });
+  if (query.length < 1) {
+    return NextResponse.json({ error: "請輸入食物名稱", items: [] }, { status: 400 });
   }
 
   const dbStats = getLocalFoodDatabaseStats();
   const localItems = searchLocalFoodDatabase(query, 12);
+
+  // 單字搜尋：本地庫即時有結果就即刻返（避免等 AI）
+  if (query.length === 1 && localItems.length > 0) {
+    return NextResponse.json({
+      items: localItems,
+      source: localItems[0]?.source ?? "hk_tw",
+      lang,
+      databaseSize: dbStats.total,
+      localMatch: true,
+    });
+  }
 
   if (mode === "local") {
     return NextResponse.json({

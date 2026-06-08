@@ -22,8 +22,8 @@ import type { FavoriteFood, FoodAdvancedNutrients, FoodSearchItem } from "@/lib/
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-/** 至少 2 字先搜尋；打 1 字唔會開 dropdown / call API */
-const MIN_QUERY_LENGTH = 2;
+/** 打 1 個字即可搜尋 */
+const MIN_QUERY_LENGTH = 1;
 const DEBOUNCE_MS = 600;
 const SEARCH_TIMEOUT_MS = 15_000;
 const LOCAL_PREVIEW_DELAY_MS = 500;
@@ -128,6 +128,8 @@ export function FoodSearchEngine({
       );
 
       let previewShown = false;
+      const previewDelay =
+        trimmed.length === 1 ? 0 : LOCAL_PREVIEW_DELAY_MS;
       const previewTimer = window.setTimeout(() => {
         if (seq !== searchSeq.current) return;
         void (async () => {
@@ -157,7 +159,7 @@ export function FoodSearchEngine({
             /* preview is optional */
           }
         })();
-      }, LOCAL_PREVIEW_DELAY_MS);
+      }, previewDelay);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -447,8 +449,7 @@ export function FoodSearchEngine({
               setQuery(next);
               setSelectedItem(null);
               setPortionBase(null);
-              const len = next.trim().length;
-              if (len < MIN_QUERY_LENGTH) {
+              if (next.trim().length < MIN_QUERY_LENGTH) {
                 searchSeq.current += 1;
                 setDropdownOpen(false);
                 setLoading(false);
@@ -472,10 +473,7 @@ export function FoodSearchEngine({
                 setDropdownOpen(true);
               }
             }}
-            placeholder={t(
-              "foodSearch.placeholder",
-              "輸入至少兩個字搜尋食物…"
-            )}
+            placeholder={t("foodSearch.placeholder", "搜尋食物名稱…")}
             autoComplete="off"
             className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600"
           />
