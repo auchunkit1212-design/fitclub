@@ -1,4 +1,4 @@
-import { AI_CALORIE_SYSTEM_PROMPT } from "@/lib/ai-mock";
+import { AI_CALORIE_SYSTEM_PROMPT, estimateMacros, PORTION_NONE } from "@/lib/ai-mock";
 import { parseAdvancedFromAiRow } from "@/lib/food-advanced-nutrients";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
 import type { MacroEstimate } from "@/lib/macro-scale";
@@ -6,6 +6,8 @@ import {
   buildPortionGuidanceBlock,
   constrainMacrosToPortionHints,
   parsePortionHintsFromDescription,
+  type ParsedPortionHints,
+  type PortionSize,
 } from "@/lib/portion-hints";
 import {
   getOpenRouterVisionModel,
@@ -166,17 +168,83 @@ function macrosAdjusted(before: MacroEstimate | undefined, after: MacroEstimate)
   return calDiff >= Math.max(20, before.calories * 0.08);
 }
 
+const TEXT_MODEL_FALLBACKS = [
+  "google/gemini-2.5-flash",
+  "google/gemini-2.0-flash-001",
+  "openai/gpt-4o-mini",
+  "google/gemini-flash-1.5-8b",
+] as const;
+
+function getTextModelCandidates(): string[] {
+  const preferred = [
+    process.env.OPENROUTER_MODEL?.trim(),
+    ...TEXT_MODEL_FALLBACKS,
+  ].filter((m): m is string => Boolean(m));
+  return Array.from(new Set(preferred));
+}
+
+function getVisionModelCandidates(): string[] {
+  const preferred = [
+    process.env.OPENROUTER_VISION_MODEL?.trim(),
+    process.env.OPENROUTER_MODEL?.trim(),
+    getOpenRouterVisionModel(),
+    ...TEXT_MODEL_FALLBACKS,
+  ].filter((m): m is string => Boolean(m));
+  return Array.from(new Set(preferred));
+}
+
+function portionSizeToCarbsLegacy(size: PortionSize | null): string {
+  if (!size || size === "none") return PORTION_NONE;
+  if (size === "small") return "細拳";
+  if (size === "large") return "大拳";
+  return "中拳";
+}
+
+function portionSizeToProteinLegacy(size: PortionSize | null): string {
+  if (!size || size === "none") return PORTION_NONE;
+  if (size === "small") return "細掌";
+  if (size === "large") return "大掌";
+  return "中掌";
+}
+
+function veggiesLegacy(hints: ParsedPortionHints): string {
+  if (hints.hasVeggies === true) return "有";
+  if (hints.hasVeggies === false) return PORTION_NONE;
+  return PORTION_NONE;
+}
+
+function localRulesEstimate(input: MealVerifyInput): MealVerifyResult {
+  const description = input.description.trim();
+  const hints = parsePortionHintsFromDescription(description);
+  const descForRules = hints.foodBase || description;
+  let macros = estimateMacros(
+    descForRules,
+    portionSizeToCarbsLegacy(hints.carbsPortion),
+    portionSizeToProteinLegacy(hints.proteinPortion),
+    veggiesLegacy(hints)
+  );
+  const portionConstrained = constrainMacrosToPortionHints(macros, hints);
+  macros = portionConstrained.macros;
+
+  return {
+    macros,
+    advanced: input.advanced,
+    description,
+    source: "baseline",
+    note: "AI 暫時不可用，已使用本地規則估算",
+    adjusted: true,
+  };
+}
+
 async function requestOpenRouterVerify(
   input: MealVerifyInput,
-  useVision: boolean
+  useVision: boolean,
+  model: string
 ): Promise<MealVerifyResult> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
 
   const prompt = buildVerifyPrompt(input);
-  const model = useVision
-    ? getOpenRouterVisionModel()
-    : process.env.OPENROUTER_MODEL?.trim() || "google/gemini-2.5-flash";
 
   const userContent: unknown = useVision
     ? [
@@ -203,7 +271,8 @@ async function requestOpenRouterVerify(
   });
 
   if (!res.ok) {
-    throw new Error(`OpenRouter ${res.status}`);
+    const detail = await res.text();
+    throw new Error(`OpenRouter ${model} ${res.status}: ${detail.slice(0, 200)}`);
   }
 
   const data = (await res.json()) as {
@@ -237,6 +306,27 @@ async function requestOpenRouterVerify(
   };
 }
 
+async function requestOpenRouterVerifyWithFallbacks(
+  input: MealVerifyInput,
+  useVision: boolean
+): Promise<MealVerifyResult> {
+  const models = useVision ? getVisionModelCandidates() : getTextModelCandidates();
+  let lastErr: unknown;
+
+  for (const model of models) {
+    try {
+      return await requestOpenRouterVerify(input, useVision, model);
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("401") || msg.includes("403")) throw err;
+      console.warn(`[meal-ai-verify] ${model} skipped:`, err);
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error("OpenRouter failed");
+}
+
 /** AI 優先估算：結合描述、參考數值，有相片時用 Vision 一併分析 */
 export async function estimateMealNutritionWithAi(
   input: MealVerifyInput
@@ -246,32 +336,29 @@ export async function estimateMealNutritionWithAi(
     throw new MealAiEstimateError("請填寫食物描述", 400);
   }
 
-  if (!isOpenRouterConfigured()) {
-    throw new MealAiEstimateError(
-      "AI 營養估算尚未設定，請在環境變數加入 OPENROUTER_API_KEY",
-      503
-    );
-  }
-
   const image = input.imageBase64?.trim();
   const useVision = Boolean(image);
 
-  try {
-    return await requestOpenRouterVerify(input, useVision);
-  } catch (visionErr) {
-    if (useVision) {
-      console.warn("[meal-ai-verify] vision failed, retry text-only:", visionErr);
-      try {
-        return await requestOpenRouterVerify(
-          { ...input, imageBase64: undefined },
-          false
-        );
-      } catch (textErr) {
-        console.warn("[meal-ai-verify] text-only failed:", textErr);
+  if (isOpenRouterConfigured()) {
+    try {
+      return await requestOpenRouterVerifyWithFallbacks(input, useVision);
+    } catch (visionErr) {
+      if (useVision) {
+        console.warn("[meal-ai-verify] vision failed, retry text-only:", visionErr);
+        try {
+          return await requestOpenRouterVerifyWithFallbacks(
+            { ...input, imageBase64: undefined },
+            false
+          );
+        } catch (textErr) {
+          console.warn("[meal-ai-verify] text-only failed:", textErr);
+        }
+      } else {
+        console.warn("[meal-ai-verify] estimate failed:", visionErr);
       }
-    } else {
-      console.warn("[meal-ai-verify] estimate failed:", visionErr);
     }
+  } else {
+    console.warn("[meal-ai-verify] OPENROUTER_API_KEY not set, using local rules");
   }
 
   const baseline = input.baseline;
@@ -286,10 +373,7 @@ export async function estimateMealNutritionWithAi(
     };
   }
 
-  throw new MealAiEstimateError(
-    "AI 營養估算暫時失敗，請稍後再試或檢查網絡",
-    502
-  );
+  return localRulesEstimate(input);
 }
 
 /** 儲存前 AI 覆核（一律先走 AI 估算） */

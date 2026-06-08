@@ -118,6 +118,7 @@ function AddMealPageContent() {
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
   const [macrosFromSearch, setMacrosFromSearch] = useState(false);
+  const [macrosLockedFromPicker, setMacrosLockedFromPicker] = useState(false);
   const [searchAdvanced, setSearchAdvanced] = useState<
     FoodAdvancedNutrients | undefined
   >();
@@ -292,7 +293,7 @@ function AddMealPageContent() {
   useEffect(() => {
     if (
       multiFoodMode ||
-      macrosFromSearch ||
+      macrosLockedFromPicker ||
       ocrPortionBase ||
       !description.trim() ||
       description.trim().length < 2
@@ -329,7 +330,6 @@ function AddMealPageContent() {
           setCarbs(result.macros.carbs);
           setFats(result.macros.fats);
           setNutritionSource("openrouter");
-          setMacrosFromSearch(true);
         } catch (err) {
           if (!cancelled) {
             setAiEstimateError(
@@ -353,7 +353,7 @@ function AddMealPageContent() {
     hasVeggies,
     imageBase64,
     multiFoodMode,
-    macrosFromSearch,
+    macrosLockedFromPicker,
     ocrPortionBase,
     calories,
     protein,
@@ -640,6 +640,7 @@ function AddMealPageContent() {
             setCarbs(item.carbs);
             setFats(item.fats);
             setMacrosFromSearch(item.fromSearch);
+            setMacrosLockedFromPicker(item.fromSearch);
             setSearchAdvanced(item.advanced);
             setProNutrition(Boolean(item.proNutrition));
             setNutritionSource(item.nutritionSource);
@@ -684,6 +685,7 @@ function AddMealPageContent() {
               onChange={(e) => {
                 setDescription(e.target.value);
                 setMacrosFromSearch(false);
+                setMacrosLockedFromPicker(false);
                 setSearchAdvanced(undefined);
                 setProNutrition(false);
                 setNutritionSource(undefined);
