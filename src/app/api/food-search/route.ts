@@ -17,9 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-type FoodSearchMode = "ai-first" | "local";
-
-/** AI 聯想優先；mode=local 只查本地庫（供前端等候 AI 時顯示預覽） */
+/** 最優先 OpenRouter AI；AI 失敗或無結果時才 fallback 本地庫 */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
@@ -28,16 +26,10 @@ export async function POST(request: Request) {
 
   let query = "";
   let lang = normalizeLanguage("zh-HK");
-  let mode: FoodSearchMode = "ai-first";
   try {
-    const body = (await request.json()) as {
-      query?: string;
-      lang?: string;
-      mode?: FoodSearchMode;
-    };
+    const body = (await request.json()) as { query?: string; lang?: string };
     query = body.query?.trim() ?? "";
     lang = normalizeLanguage(body.lang);
-    if (body.mode === "local") mode = "local";
   } catch {
     return NextResponse.json({ error: "請提供 query" }, { status: 400 });
   }
@@ -52,28 +44,6 @@ export async function POST(request: Request) {
 
   const dbStats = getLocalFoodDatabaseStats();
   const localItems = searchLocalFoodDatabase(query, 12);
-
-  // 單字搜尋：本地庫即時有結果就即刻返（避免等 AI）
-  if (query.length === 1 && localItems.length > 0) {
-    return NextResponse.json({
-      items: localItems,
-      source: localItems[0]?.source ?? "hk_tw",
-      lang,
-      databaseSize: dbStats.total,
-      localMatch: true,
-    });
-  }
-
-  if (mode === "local") {
-    return NextResponse.json({
-      items: localItems,
-      source: localItems[0]?.source ?? "hk_tw",
-      lang,
-      databaseSize: dbStats.total,
-      localMatch: true,
-      preview: true,
-    });
-  }
 
   if (isOpenRouterConfigured()) {
     try {
@@ -91,9 +61,9 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       if (error instanceof FoodSearchError) {
-        console.warn("[food-search] AI failed, trying local DB:", error.message);
+        console.warn("[food-search] AI failed, fallback local DB:", error.message);
       } else {
-        console.warn("[food-search] AI failed, trying local DB:", error);
+        console.warn("[food-search] AI failed, fallback local DB:", error);
       }
     }
   }

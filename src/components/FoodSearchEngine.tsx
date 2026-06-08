@@ -26,7 +26,6 @@ const btnClass =
 const MIN_QUERY_LENGTH = 1;
 const DEBOUNCE_MS = 600;
 const SEARCH_TIMEOUT_MS = 15_000;
-const LOCAL_PREVIEW_DELAY_MS = 500;
 
 export type PortionBasePayload = {
   productName: string;
@@ -81,7 +80,7 @@ export function FoodSearchEngine({
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [localPreview, setLocalPreview] = useState(false);
+  const [aiFallback, setAiFallback] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [portionBase, setPortionBase] = useState<
     (PortionBasePayload & { itemMeta?: FoodSearchItem }) | null
@@ -119,47 +118,13 @@ export function FoodSearchEngine({
       const seq = ++searchSeq.current;
       setLoading(true);
       setSearchError(null);
-      setLocalPreview(false);
+      setAiFallback(false);
 
       const controller = new AbortController();
       const timeoutId = window.setTimeout(
         () => controller.abort(),
         SEARCH_TIMEOUT_MS
       );
-
-      let previewShown = false;
-      const previewDelay =
-        trimmed.length === 1 ? 0 : LOCAL_PREVIEW_DELAY_MS;
-      const previewTimer = window.setTimeout(() => {
-        if (seq !== searchSeq.current) return;
-        void (async () => {
-          try {
-            const previewRes = await fetch("/api/food-search", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...getSessionRequestHeaders(),
-              },
-              credentials: "include",
-              body: JSON.stringify({ query: trimmed, lang, mode: "local" }),
-            });
-            if (seq !== searchSeq.current || !previewRes.ok) return;
-            const previewData = (await previewRes.json()) as {
-              items?: FoodSearchItem[];
-            };
-            if (seq !== searchSeq.current) return;
-            const previewItems = previewData.items ?? [];
-            if (previewItems.length > 0) {
-              previewShown = true;
-              setResults(previewItems);
-              setLastSource(previewItems[0]?.source ?? "hk_tw");
-              setLocalPreview(true);
-            }
-          } catch {
-            /* preview is optional */
-          }
-        })();
-      }, previewDelay);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -169,7 +134,7 @@ export function FoodSearchEngine({
             ...getSessionRequestHeaders(),
           },
           credentials: "include",
-          body: JSON.stringify({ query: trimmed, lang, mode: "ai-first" }),
+          body: JSON.stringify({ query: trimmed, lang }),
           signal: controller.signal,
         });
         const data = (await res.json()) as {
@@ -177,6 +142,7 @@ export function FoodSearchEngine({
           source?: string;
           error?: string;
           databaseSize?: number;
+          aiFallback?: boolean;
         };
 
         if (seq !== searchSeq.current) return;
@@ -200,14 +166,13 @@ export function FoodSearchEngine({
         const items = data.items ?? [];
         setResults(items);
         setSearchError(null);
-        setLocalPreview(false);
+        setAiFallback(Boolean(data.aiFallback));
         setLastSource(items[0]?.source ?? data.source ?? "openrouter");
       } catch (err) {
         if (seq !== searchSeq.current) return;
-        if (!previewShown) {
-          setResults([]);
-          setLastSource(null);
-        }
+        setResults([]);
+        setLastSource(null);
+        setAiFallback(false);
         const timedOut = err instanceof Error && err.name === "AbortError";
         setSearchError(
           timedOut
@@ -216,7 +181,6 @@ export function FoodSearchEngine({
         );
       } finally {
         window.clearTimeout(timeoutId);
-        window.clearTimeout(previewTimer);
         if (seq === searchSeq.current) setLoading(false);
       }
     },
@@ -422,9 +386,9 @@ export function FoodSearchEngine({
               {t("foodSearch.sourceAi", "AI 聯想")}
             </span>
           )}
-        {localPreview && loading && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-            {t("foodSearch.localPreview", "本地預覽")}
+        {aiFallback && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            {t("foodSearch.aiFallbackLocal", "AI 暫不可用 · 本地")}
           </span>
         )}
         {results.some((r) => r.source === "hk_711") && (
@@ -456,7 +420,7 @@ export function FoodSearchEngine({
                 setResults([]);
                 setSearchError(null);
                 setLastSource(null);
-                setLocalPreview(false);
+                setAiFallback(false);
               } else {
                 setDropdownOpen(true);
               }
