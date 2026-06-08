@@ -187,12 +187,14 @@ function AddMealPageContent() {
       clearMultiFoodDetection();
 
       const result = await detectMealFoodsFromPhoto(imageData, lang);
-      if (!result?.foods?.length) {
+      if (!result.ok || !result.foods.length) {
         setFoodDetectError(
-          t(
-            "addMeal.errors.foodDetectFailed",
-            "AI 未能分拆食物，請手動輸入描述同份量。"
-          )
+          !result.ok
+            ? result.error
+            : t(
+                "addMeal.errors.foodDetectFailed",
+                "AI 未能分拆食物，請手動輸入描述同份量。"
+              )
         );
         setFoodDetecting(false);
         return;
@@ -383,6 +385,7 @@ function AddMealPageContent() {
       const compressed = await compressFileImage(file);
       setImageBase64(compressed);
       void runFoodDetection(compressed);
+      setFoodDetectError("");
     } catch (err) {
       console.error("[add-meal] image compress failed", err);
       alert(t("addMeal.errors.compressFailed", "相片壓縮失敗，請換一張較細的相片或再試一次。"));

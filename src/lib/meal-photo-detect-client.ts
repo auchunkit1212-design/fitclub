@@ -3,10 +3,14 @@ import type { AppLanguage } from "@/lib/i18n";
 import type { DetectedMealFood } from "@/lib/meal-photo-detect";
 import { getSessionRequestHeaders } from "@/lib/session";
 
+export type DetectMealFoodsResult =
+  | { ok: true; foods: DetectedMealFood[]; source?: string }
+  | { ok: false; error: string };
+
 export async function detectMealFoodsFromPhoto(
   imageBase64: string,
   lang: AppLanguage
-): Promise<{ foods: DetectedMealFood[]; source?: string } | null> {
+): Promise<DetectMealFoodsResult> {
   try {
     const res = await fetch("/api/ai/detect-meal-foods", {
       method: "POST",
@@ -24,14 +28,26 @@ export async function detectMealFoodsFromPhoto(
       error?: string;
     }>(res);
 
-    if (!res.ok || parseError || !data?.foods?.length) {
-      console.warn("[meal-photo-detect-client]", data?.error ?? res.status);
-      return null;
+    if (!res.ok || parseError) {
+      return {
+        ok: false,
+        error: data?.error ?? `AI 食物辨識失敗 (HTTP ${res.status})`,
+      };
     }
 
-    return { foods: data.foods, source: data.source };
+    if (!data?.foods?.length) {
+      return {
+        ok: false,
+        error: data?.error ?? "AI 未能辨識食物，請手動輸入描述",
+      };
+    }
+
+    return { ok: true, foods: data.foods, source: data.source };
   } catch (err) {
     console.warn("[meal-photo-detect-client] fetch failed", err);
-    return null;
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "無法連線 AI 食物辨識",
+    };
   }
 }

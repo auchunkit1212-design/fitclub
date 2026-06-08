@@ -1,4 +1,6 @@
+import { estimateFoodSearchMacros } from "@/lib/ai-mock";
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
+import { estimateMealNutritionWithAi } from "@/lib/meal-ai-verify";
 import {
   getOpenRouterVisionModel,
   normalizeImageBase64,
@@ -11,6 +13,8 @@ const OPENROUTER_VISION_FALLBACKS = [
   "google/gemini-2.5-flash",
   "google/gemini-2.0-flash-001",
   "openai/gpt-4o-mini",
+  "google/gemini-flash-1.5-8b",
+  "anthropic/claude-3.5-haiku",
 ] as const;
 
 const SYSTEM_PROMPT = `你是香港飲食視覺辨識專家。從食物相片中辨識【所有可見的獨立食物項目】。
@@ -76,40 +80,125 @@ function getVisionModelCandidates(): string[] {
   return Array.from(new Set(preferred));
 }
 
-function parseDetectedFoodsJson(text: string): DetectedMealFood[] {
+function extractDetectedRows(text: string): Record<string, unknown>[] {
   const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
-  const match = cleaned.match(/\[[\s\S]*\]/);
-  if (!match) return [];
 
-  const raw = JSON.parse(match[0]) as unknown;
-  if (!Array.isArray(raw)) return [];
+  const tryParse = (snippet: string): Record<string, unknown>[] | null => {
+    try {
+      const parsed = JSON.parse(snippet) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (row): row is Record<string, unknown> =>
+            Boolean(row) && typeof row === "object" && !Array.isArray(row)
+        );
+      }
+      if (parsed && typeof parsed === "object") {
+        const obj = parsed as Record<string, unknown>;
+        for (const key of ["foods", "items", "food_items", "results", "dishes"]) {
+          const nested = obj[key];
+          if (Array.isArray(nested)) {
+            return nested.filter(
+              (row): row is Record<string, unknown> =>
+                Boolean(row) && typeof row === "object" && !Array.isArray(row)
+            );
+          }
+        }
+        if (obj.name || obj.food_name || obj.title) {
+          return [obj];
+        }
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
 
+  const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    const rows = tryParse(arrayMatch[0]);
+    if (rows?.length) return rows;
+  }
+
+  const objectMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    const rows = tryParse(objectMatch[0]);
+    if (rows?.length) return rows;
+  }
+
+  return [];
+}
+
+function rowToDetectedFood(item: Record<string, unknown>): DetectedMealFood | null {
+  const name = String(item.name ?? item.food_name ?? item.title ?? "").trim();
+  if (!name) return null;
+
+  let protein = readMacro(item.protein ?? item.protein_g);
+  let carbs = readMacro(item.carbs ?? item.carbs_g);
+  let fats = readMacro(item.fats ?? item.fat ?? item.fat_g);
+  let calories = readMacro(item.calories ?? item.kcal);
+
+  if (calories <= 0) {
+    calories = Math.round(protein * 4 + carbs * 4 + fats * 9);
+  }
+
+  if (calories <= 0) {
+    const est = estimateFoodSearchMacros(name);
+    calories = est.calories;
+    if (protein <= 0) protein = est.protein;
+    if (carbs <= 0) carbs = est.carbs;
+    if (fats <= 0) fats = est.fats;
+  }
+
+  if (calories <= 0) return null;
+
+  const baseWeightG = readMacro(item.base_weight_g ?? item.baseWeightG ?? item.weight_g);
+  const portionHint = String(item.portion_hint ?? item.portionHint ?? "").trim();
+
+  return {
+    name,
+    calories,
+    protein,
+    carbs,
+    fats,
+    baseWeightG: baseWeightG > 0 ? baseWeightG : undefined,
+    portionHint: portionHint || undefined,
+  };
+}
+
+function parseDetectedFoodsJson(text: string): DetectedMealFood[] {
+  const rows = extractDetectedRows(text);
   const foods: DetectedMealFood[] = [];
 
-  for (const row of raw) {
-    if (!row || typeof row !== "object") continue;
-    const item = row as Record<string, unknown>;
-    const name = String(item.name ?? item.food_name ?? "").trim();
-    const calories = readMacro(item.calories);
-    if (!name || calories <= 0) continue;
-
-    const baseWeightG = readMacro(item.base_weight_g ?? item.baseWeightG);
-    const portionHint = String(item.portion_hint ?? item.portionHint ?? "").trim();
-
-    foods.push({
-      name,
-      calories,
-      protein: readMacro(item.protein ?? item.protein_g),
-      carbs: readMacro(item.carbs ?? item.carbs_g),
-      fats: readMacro(item.fats ?? item.fat ?? item.fat_g),
-      baseWeightG: baseWeightG > 0 ? baseWeightG : undefined,
-      portionHint: portionHint || undefined,
-    });
-
+  for (const row of rows) {
+    const food = rowToDetectedFood(row);
+    if (!food) continue;
+    foods.push(food);
     if (foods.length >= 8) break;
   }
 
   return foods;
+}
+
+async function fallbackFoodsFromMealVision(
+  imageBase64: string
+): Promise<DetectedMealFood[]> {
+  const result = await estimateMealNutritionWithAi({
+    description: "相片內的食物（請依可見菜式估算整餐營養）",
+    imageBase64,
+    baselineSource: "rules",
+  });
+
+  const name = result.description.trim() || "相片食物";
+  return [
+    {
+      name,
+      calories: result.macros.calories,
+      protein: result.macros.protein,
+      carbs: result.macros.carbs,
+      fats: result.macros.fats,
+      portionHint: "一份",
+    },
+  ];
 }
 
 async function requestOpenRouterVisionDetect(
@@ -124,7 +213,7 @@ async function requestOpenRouterVisionDetect(
     body: JSON.stringify({
       model,
       temperature: 0.2,
-      max_tokens: 1200,
+      max_tokens: 2000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -188,7 +277,7 @@ async function requestOpenAiVisionDetect(
     body: JSON.stringify({
       model,
       temperature: 0.2,
-      max_tokens: 1200,
+      max_tokens: 2000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -230,13 +319,13 @@ export function isMealPhotoDetectConfigured(): boolean {
 export async function detectFoodsFromMealPhoto(
   imageBase64: string,
   lang: AppLanguage = "zh-HK"
-): Promise<{ foods: DetectedMealFood[]; source: "openrouter" | "openai" }> {
+): Promise<{ foods: DetectedMealFood[]; source: "openrouter" | "openai" | "vision_estimate" }> {
   const dataUrl = normalizeImageBase64(imageBase64);
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  let lastError: unknown;
 
   if (apiKey) {
     const models = getVisionModelCandidates();
-    let lastError: unknown;
     for (const model of models) {
       try {
         const foods = await requestOpenRouterVisionDetect(
@@ -248,31 +337,43 @@ export async function detectFoodsFromMealPhoto(
         return { foods, source: "openrouter" };
       } catch (err) {
         lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("401") || msg.includes("403")) throw err;
         console.warn("[meal-photo-detect] model failed", model, err);
       }
     }
-
-    if (process.env.OPENAI_API_KEY?.trim()) {
-      try {
-        const foods = await requestOpenAiVisionDetect(dataUrl, lang);
-        return { foods, source: "openai" };
-      } catch (openAiErr) {
-        console.warn("[meal-photo-detect] openai fallback failed", openAiErr);
-      }
-    }
-
-    throw lastError instanceof MealPhotoDetectError
-      ? lastError
-      : new MealPhotoDetectError("AI 食物辨識暫時不可用", 502);
   }
 
   if (process.env.OPENAI_API_KEY?.trim()) {
-    const foods = await requestOpenAiVisionDetect(dataUrl, lang);
-    return { foods, source: "openai" };
+    try {
+      const foods = await requestOpenAiVisionDetect(dataUrl, lang);
+      return { foods, source: "openai" };
+    } catch (openAiErr) {
+      lastError = openAiErr;
+      console.warn("[meal-photo-detect] openai fallback failed", openAiErr);
+    }
   }
 
-  throw new MealPhotoDetectError(
-    "AI 食物辨識尚未設定，請設定 OPENROUTER_API_KEY 或 OPENAI_API_KEY",
-    503
-  );
+  if (isMealPhotoDetectConfigured()) {
+    try {
+      const foods = await fallbackFoodsFromMealVision(imageBase64);
+      if (foods.length > 0) {
+        return { foods, source: "vision_estimate" };
+      }
+    } catch (visionEstErr) {
+      lastError = visionEstErr;
+      console.warn("[meal-photo-detect] vision estimate fallback failed", visionEstErr);
+    }
+  }
+
+  if (!isMealPhotoDetectConfigured()) {
+    throw new MealPhotoDetectError(
+      "AI 食物辨識尚未設定，請設定 OPENROUTER_API_KEY 或 OPENAI_API_KEY",
+      503
+    );
+  }
+
+  throw lastError instanceof MealPhotoDetectError
+    ? lastError
+    : new MealPhotoDetectError("AI 食物辨識暫時不可用，請稍後再試", 502);
 }
