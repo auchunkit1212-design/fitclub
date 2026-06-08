@@ -9,6 +9,12 @@ import {
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const DEFAULT_MODEL = "deepseek/deepseek-chat";
+const DEFAULT_AUTOCOMPLETE_MODEL = "meta-llama/llama-4-scout";
+
+const FAST_AUTOCOMPLETE_SYSTEM_PROMPT = `你是營養學食物聯想 API。用戶輸入未完成、錯別字或中英夾雜的食物名稱，請聯想 3 個最可能選項（含香港／台灣地道飲食）。
+每項估算標準一人份營養（整數）：calories、protein、carbs、fat、weight_g；可選 fiber、sugar、saturated_fat、sodium_mg、cholesterol_mg。
+只回傳合法 JSON Array，不要 Markdown，不要其他文字。
+格式：[{"food_name":"茶走","calories":95,"protein":3,"carbs":8,"fat":5,"weight_g":350}]`;
 
 const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺服器（Pro 級微量營養分析）。用戶會輸入未完成的拼音、錯別字或中英夾雜的食物名稱，請你自動推斷他們想找的食物，並聯想出 5 個最可能的選項（必須包含香港與台灣的地道飲食，亦可包含合理的國際常見食物）。
 每個選項請估算【標準一人份】的完整營養素（整數），包含宏量與進階微量營養素。
@@ -21,6 +27,15 @@ const AUTOCOMPLETE_SYSTEM_PROMPT = `你是一個極度專業的營養學 API 伺
 
 export function getOpenRouterModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;
+}
+
+/** 食物搜尋 autocomplete 用較快模型（可獨立於 OPENROUTER_MODEL） */
+export function getOpenRouterAutocompleteModel(): string {
+  return (
+    process.env.OPENROUTER_AUTOCOMPLETE_MODEL?.trim() ||
+    process.env.OPENROUTER_MODEL?.trim() ||
+    DEFAULT_AUTOCOMPLETE_MODEL
+  );
 }
 
 export function isOpenRouterConfigured(): boolean {
@@ -232,22 +247,22 @@ export async function searchFoodWithOpenRouter(
     );
   }
 
-  const model = getOpenRouterModel();
+  const model = getOpenRouterAutocompleteModel();
 
-  const userMessage = `用戶輸入（可能未完成、含錯字或中英夾雜）：「${q}」
-請聯想 5 個最可能的食物選項並估算營養素。${getLanguageInstruction(lang)}`;
+  const userMessage = `用戶輸入：「${q}」
+請聯想 3 個最可能的食物並估算營養素。${getLanguageInstruction(lang)}`;
 
   const res = await openRouterChatRequest(
     {
       model,
-      temperature: 0.35,
-      max_tokens: 900,
+      temperature: 0.25,
+      max_tokens: 550,
       messages: [
-        { role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
+        { role: "system", content: FAST_AUTOCOMPLETE_SYSTEM_PROMPT },
         { role: "user", content: userMessage },
       ],
     },
-    { timeoutMs: 12_000 }
+    { timeoutMs: 8_000 }
   );
 
   if (!res.ok) {

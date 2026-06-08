@@ -5,6 +5,7 @@ import {
   searchLocalFoodDatabase,
 } from "@/lib/food-search/local-database";
 import {
+  getOpenRouterAutocompleteModel,
   getOpenRouterModel,
   isOpenRouterConfigured,
   searchFoodWithOpenRouter,
@@ -16,7 +17,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** 本地港台 + 7-11 資料庫優先（即時），AI 聯想作後備（錯字／冷門食物） */
+type FoodSearchMode = "ai-first" | "local";
+
+/** AI 聯想優先；mode=local 只查本地庫（供前端等候 AI 時顯示預覽） */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
@@ -25,10 +28,16 @@ export async function POST(request: Request) {
 
   let query = "";
   let lang = normalizeLanguage("zh-HK");
+  let mode: FoodSearchMode = "ai-first";
   try {
-    const body = (await request.json()) as { query?: string; lang?: string };
+    const body = (await request.json()) as {
+      query?: string;
+      lang?: string;
+      mode?: FoodSearchMode;
+    };
     query = body.query?.trim() ?? "";
     lang = normalizeLanguage(body.lang);
+    if (body.mode === "local") mode = "local";
   } catch {
     return NextResponse.json({ error: "請提供 query" }, { status: 400 });
   }
@@ -44,13 +53,14 @@ export async function POST(request: Request) {
   const dbStats = getLocalFoodDatabaseStats();
   const localItems = searchLocalFoodDatabase(query, 12);
 
-  if (localItems.length > 0) {
+  if (mode === "local") {
     return NextResponse.json({
       items: localItems,
       source: localItems[0]?.source ?? "hk_tw",
       lang,
       databaseSize: dbStats.total,
       localMatch: true,
+      preview: true,
     });
   }
 
@@ -62,7 +72,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           items,
           source: "openrouter" as const,
-          model: getOpenRouterModel(),
+          model: getOpenRouterAutocompleteModel(),
           lang,
           databaseSize: dbStats.total,
           localMatch: false,
@@ -70,11 +80,22 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       if (error instanceof FoodSearchError) {
-        console.warn("[food-search] AI failed:", error.message);
+        console.warn("[food-search] AI failed, trying local DB:", error.message);
       } else {
-        console.warn("[food-search] AI failed:", error);
+        console.warn("[food-search] AI failed, trying local DB:", error);
       }
     }
+  }
+
+  if (localItems.length > 0) {
+    return NextResponse.json({
+      items: localItems,
+      source: localItems[0]?.source ?? "hk_tw",
+      lang,
+      databaseSize: dbStats.total,
+      localMatch: true,
+      aiFallback: isOpenRouterConfigured(),
+    });
   }
 
   if (!isOpenRouterConfigured()) {

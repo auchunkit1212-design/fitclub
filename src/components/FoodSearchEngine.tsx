@@ -26,6 +26,7 @@ const btnClass =
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 600;
 const SEARCH_TIMEOUT_MS = 15_000;
+const LOCAL_PREVIEW_DELAY_MS = 500;
 
 export type PortionBasePayload = {
   productName: string;
@@ -80,6 +81,7 @@ export function FoodSearchEngine({
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [portionBase, setPortionBase] = useState<
     (PortionBasePayload & { itemMeta?: FoodSearchItem }) | null
@@ -117,12 +119,45 @@ export function FoodSearchEngine({
       const seq = ++searchSeq.current;
       setLoading(true);
       setSearchError(null);
+      setLocalPreview(false);
 
       const controller = new AbortController();
       const timeoutId = window.setTimeout(
         () => controller.abort(),
         SEARCH_TIMEOUT_MS
       );
+
+      let previewShown = false;
+      const previewTimer = window.setTimeout(() => {
+        if (seq !== searchSeq.current) return;
+        void (async () => {
+          try {
+            const previewRes = await fetch("/api/food-search", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...getSessionRequestHeaders(),
+              },
+              credentials: "include",
+              body: JSON.stringify({ query: trimmed, lang, mode: "local" }),
+            });
+            if (seq !== searchSeq.current || !previewRes.ok) return;
+            const previewData = (await previewRes.json()) as {
+              items?: FoodSearchItem[];
+            };
+            if (seq !== searchSeq.current) return;
+            const previewItems = previewData.items ?? [];
+            if (previewItems.length > 0) {
+              previewShown = true;
+              setResults(previewItems);
+              setLastSource(previewItems[0]?.source ?? "hk_tw");
+              setLocalPreview(true);
+            }
+          } catch {
+            /* preview is optional */
+          }
+        })();
+      }, LOCAL_PREVIEW_DELAY_MS);
 
       try {
         const res = await fetch("/api/food-search", {
@@ -132,7 +167,7 @@ export function FoodSearchEngine({
             ...getSessionRequestHeaders(),
           },
           credentials: "include",
-          body: JSON.stringify({ query: trimmed, lang }),
+          body: JSON.stringify({ query: trimmed, lang, mode: "ai-first" }),
           signal: controller.signal,
         });
         const data = (await res.json()) as {
@@ -163,11 +198,14 @@ export function FoodSearchEngine({
         const items = data.items ?? [];
         setResults(items);
         setSearchError(null);
+        setLocalPreview(false);
         setLastSource(items[0]?.source ?? data.source ?? "openrouter");
       } catch (err) {
         if (seq !== searchSeq.current) return;
-        setResults([]);
-        setLastSource(null);
+        if (!previewShown) {
+          setResults([]);
+          setLastSource(null);
+        }
         const timedOut = err instanceof Error && err.name === "AbortError";
         setSearchError(
           timedOut
@@ -176,6 +214,7 @@ export function FoodSearchEngine({
         );
       } finally {
         window.clearTimeout(timeoutId);
+        window.clearTimeout(previewTimer);
         if (seq === searchSeq.current) setLoading(false);
       }
     },
@@ -369,10 +408,21 @@ export function FoodSearchEngine({
             {t("foodSearch.title", "巨型食物搜尋引擎")}
           </IconLabel>
         </h2>
-        {(lastSource === "openrouter" ||
-          results.some((r) => r.source === "openrouter")) && (
+        {loading && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
-            {t("foodSearch.sourceAi", "AI 聯想")}
+            {t("foodSearch.aiThinking", "AI 聯想中…")}
+          </span>
+        )}
+        {!loading &&
+          (lastSource === "openrouter" ||
+            results.some((r) => r.source === "openrouter")) && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
+              {t("foodSearch.sourceAi", "AI 聯想")}
+            </span>
+          )}
+        {localPreview && loading && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            {t("foodSearch.localPreview", "本地預覽")}
           </span>
         )}
         {results.some((r) => r.source === "hk_711") && (
@@ -405,6 +455,7 @@ export function FoodSearchEngine({
                 setResults([]);
                 setSearchError(null);
                 setLastSource(null);
+                setLocalPreview(false);
               } else {
                 setDropdownOpen(true);
               }
@@ -441,9 +492,9 @@ export function FoodSearchEngine({
             role="listbox"
           >
             {loading && (
-              <div className="flex items-center gap-2 px-3 py-3 text-sm text-emerald-700">
-                <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                {t("foodSearch.searching", "搜尋中...")}
+              <div className="flex items-center gap-2 px-3 py-3 text-sm text-violet-700 border-b border-gray-50">
+                <div className="w-4 h-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                {t("foodSearch.aiSearching", "AI 聯想中…")}
               </div>
             )}
 
@@ -460,7 +511,7 @@ export function FoodSearchEngine({
               </p>
             )}
 
-            {!loading &&
+            {results.length > 0 &&
               results.map((item) => {
                 const active = hoveredId === item.id;
                 return (
