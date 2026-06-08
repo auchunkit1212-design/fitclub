@@ -62,9 +62,12 @@ export function CommunityFeedCard({
   const [liked, setLiked] = useState(post.likedByMe ?? false);
   const [likeCount, setLikeCount] = useState(post.likes);
   const [likeLoading, setLikeLoading] = useState(false);
-  const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<CommunityComment[]>([]);
+  const [commentCount, setCommentCount] = useState(
+    post.commentCount ?? post.comments?.length ?? 0
+  );
+  const [comments, setComments] = useState<CommunityComment[]>(
+    post.comments ?? []
+  );
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -95,33 +98,37 @@ export function CommunityFeedCard({
   useEffect(() => {
     setLiked(post.likedByMe ?? false);
     setLikeCount(post.likes);
-    setCommentCount(post.commentCount ?? 0);
-    setCommentsOpen(false);
-    setComments([]);
+    setCommentCount(post.commentCount ?? post.comments?.length ?? 0);
+    setComments(post.comments ?? []);
     setCommentText("");
-  }, [post.id, post.likedByMe, post.likes, post.commentCount]);
+  }, [
+    post.id,
+    post.likedByMe,
+    post.likes,
+    post.commentCount,
+    post.comments,
+  ]);
 
-  const loadComments = async () => {
-    if (post.isDemo || feedSource !== "cloud") return;
+  useEffect(() => {
+    if (post.isDemo || feedSource !== "cloud" || post.comments != null) return;
+    let cancelled = false;
     setCommentsLoading(true);
-    try {
-      const rows = await fetchCommunityCommentsCloud(post.id);
-      setComments(rows);
-      setCommentCount(rows.length);
-    } catch {
-      // keep existing count
-    } finally {
-      setCommentsLoading(false);
-    }
-  };
-
-  const toggleComments = async () => {
-    const next = !commentsOpen;
-    setCommentsOpen(next);
-    if (next && comments.length === 0) {
-      await loadComments();
-    }
-  };
+    void fetchCommunityCommentsCloud(post.id)
+      .then((rows) => {
+        if (cancelled) return;
+        setComments(rows);
+        setCommentCount(rows.length);
+      })
+      .catch(() => {
+        // keep existing count
+      })
+      .finally(() => {
+        if (!cancelled) setCommentsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [feedSource, post.comments, post.id, post.isDemo]);
 
   const submitComment = async () => {
     const text = commentText.trim();
@@ -135,7 +142,6 @@ export function CommunityFeedCard({
       setComments((prev) => [...prev, comment]);
       setCommentCount((c) => c + 1);
       setCommentText("");
-      if (!commentsOpen) setCommentsOpen(true);
     } catch {
       alert(t("community.comment.postFailed", "留言失敗，請稍後再試"));
     } finally {
@@ -454,23 +460,13 @@ export function CommunityFeedCard({
             {t("community.feed.like", "讚好")} · {likeCount}
           </button>
 
-          <button
-            type="button"
-            onClick={() => void toggleComments()}
-            className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${
-              commentsOpen
-                ? "bg-sky-50 text-sky-700"
-                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-            } ${btnClass}`}
-            aria-expanded={commentsOpen}
-          >
+          <span className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold bg-gray-50 text-gray-600">
             <MessageCircle size={18} strokeWidth={2} aria-hidden />
             {t("community.feed.comment", "留言")} · {commentCount}
-          </button>
+          </span>
         </div>
 
-        {commentsOpen && (
-          <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 space-y-3">
+        <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 space-y-3">
             {commentsLoading ? (
               <p className="text-xs text-gray-500">
                 {t("community.comment.loading", "載入留言中…")}
@@ -547,7 +543,6 @@ export function CommunityFeedCard({
               </div>
             )}
           </div>
-        )}
       </div>
     </article>
   );

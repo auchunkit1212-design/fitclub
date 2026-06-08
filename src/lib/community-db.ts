@@ -178,32 +178,46 @@ export async function fetchCommunityFeed(input: {
     if (userEmail === viewer) likedSet.add(postId);
   }
 
+  const now = Date.now();
   const commentCountMap = new Map<string, number>();
+  const commentsByPost = new Map<string, CommunityComment[]>();
   const { data: commentRows, error: commentError } = await client
     .from("community_post_comments")
-    .select("post_id")
-    .in("post_id", postIds);
+    .select("*")
+    .in("post_id", postIds)
+    .order("created_at", { ascending: true });
 
   if (!commentError) {
     for (const row of commentRows ?? []) {
-      const postId = String((row as { post_id: string }).post_id);
+      const typed = row as {
+        id: string;
+        post_id: string;
+        author_email: string;
+        author_name: string;
+        body_text: string;
+        created_at: string;
+      };
+      const postId = String(typed.post_id);
       commentCountMap.set(postId, (commentCountMap.get(postId) ?? 0) + 1);
+      const list = commentsByPost.get(postId) ?? [];
+      list.push(rowToComment(typed, now));
+      commentsByPost.set(postId, list);
     }
   }
 
   const avatarMap = await fetchAvatarMap(posts.map((p) => p.author_email));
-  const now = Date.now();
 
-  return posts.map((row) =>
-    rowToFeedPost(
+  return posts.map((row) => ({
+    ...rowToFeedPost(
       row,
       likeCountMap.get(row.id) ?? 0,
       likedSet.has(row.id),
       avatarMap.get(row.author_email.trim().toLowerCase()),
       commentCountMap.get(row.id) ?? 0,
       now
-    )
-  );
+    ),
+    comments: commentsByPost.get(row.id) ?? [],
+  }));
 }
 
 export async function fetchCommunityPostById(

@@ -31,6 +31,8 @@ export type CommunityFeedPost = {
   likes: number;
   likedByMe?: boolean;
   commentCount?: number;
+  /** 雲端 feed 會一併帶上留言，直接顯示喺貼文下面 */
+  comments?: CommunityComment[];
   isDemo?: boolean;
 };
 
