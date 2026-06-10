@@ -113,6 +113,7 @@ export function CoachActivityWall({
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
   const [nudgeStudent, setNudgeStudent] = useState<RegistryUser | null>(null);
   const [nudgeSending, setNudgeSending] = useState(false);
+  const [bulkNudgeSending, setBulkNudgeSending] = useState(false);
 
   const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
 
@@ -228,16 +229,82 @@ export function CoachActivityWall({
     }
   };
 
+  const sendAllAppNudges = async () => {
+    if (students.length === 0) {
+      onToast("未有學員可提醒");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `確定發送 App 提醒俾全部 ${students.length} 位學員？\n\n學員需已開啟推播訂閱先會收到通知。`
+    );
+    if (!confirmed) return;
+
+    setBulkNudgeSending(true);
+    try {
+      const res = await fetch("/api/coach/nudge-all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        hint?: string;
+        message?: string;
+        sentStudents?: number;
+        noSubscription?: number;
+        total?: number;
+      };
+
+      if (res.ok && data.ok) {
+        const skipped =
+          data.noSubscription && data.noSubscription > 0
+            ? `（${data.noSubscription} 位未訂閱推播）`
+            : "";
+        onToast(
+          data.message ??
+            `已發送提醒俾 ${data.sentStudents ?? 0} 位學員${skipped}`
+        );
+        return;
+      }
+
+      onToast(
+        data.hint ? `${data.error} — ${data.hint}` : data.error ?? "批量發送失敗"
+      );
+    } catch (err) {
+      onToast(errorMessage(err, "批量發送失敗"));
+    } finally {
+      setBulkNudgeSending(false);
+    }
+  };
+
   const coachName = getSession()?.name ?? "教練";
 
   return (
     <div className="space-y-4">
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
-        <h2 className="font-semibold text-zinc-800">
-          <IconLabel icon={ScrollText} iconClassName="text-gray-600">
-            教練聖旨 · 遠端控球
-          </IconLabel>
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold text-zinc-800">
+            <IconLabel icon={ScrollText} iconClassName="text-gray-600">
+              教練聖旨 · 遠端控球
+            </IconLabel>
+          </h2>
+          <button
+            type="button"
+            onClick={sendAllAppNudges}
+            disabled={bulkNudgeSending || students.length === 0}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-semibold disabled:opacity-50 ${btnClass}`}
+            title="一鍵向全部學員發送 App 飲食提醒"
+          >
+            <Megaphone size={16} strokeWidth={2} aria-hidden />
+            {bulkNudgeSending ? "發送中…" : "一鍵提醒全部"}
+          </button>
+        </div>
 
         <ul className="space-y-2">
           {students.map((s) => {

@@ -5,6 +5,50 @@ export interface CoachMealNudgeResult {
   failed: number;
 }
 
+export type CoachBulkNudgeResult = {
+  total: number;
+  sentStudents: number;
+  failedDeliveries: number;
+  noSubscription: number;
+  studentNames: string[];
+};
+
+export async function notifyCoachStudentsBulk(input: {
+  students: { email: string; name: string; todayMealCount?: number }[];
+  coachName: string;
+}): Promise<CoachBulkNudgeResult> {
+  const coachName = input.coachName.trim() || "教練";
+  let sentStudents = 0;
+  let failedDeliveries = 0;
+  let noSubscription = 0;
+  const studentNames: string[] = [];
+
+  for (const student of input.students) {
+    const result = await notifyStudentOfCoachMealNudge({
+      studentEmail: student.email,
+      studentName: student.name,
+      coachName,
+      todayMealCount: student.todayMealCount ?? 0,
+    });
+
+    if (result.sent > 0) {
+      sentStudents += 1;
+      studentNames.push(student.name);
+    } else {
+      noSubscription += 1;
+    }
+    failedDeliveries += result.failed;
+  }
+
+  return {
+    total: input.students.length,
+    sentStudents,
+    failedDeliveries,
+    noSubscription,
+    studentNames,
+  };
+}
+
 export async function notifyStudentOfCoachMealNudge(input: {
   studentEmail: string;
   studentName: string;
