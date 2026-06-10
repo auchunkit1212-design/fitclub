@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   buildStudentDailyCompliance,
   COMPLIANCE_CLASS,
   COMPLIANCE_LABEL,
+  TARGET_SOURCE_LABEL,
   type ComplianceLevel,
+  type MacroTargets,
   type StudentDailyComplianceRow,
+  type TargetsSource,
 } from "@/lib/nutrition-compliance";
 import { getSessionRequestHeaders } from "@/lib/session";
-import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
+import type {
+  MealLog,
+  RegistryUser,
+  StudentBodyProfile,
+  StudentNutritionTargets,
+} from "@/lib/types";
 import { IconLabel, Target } from "@/components/icons";
 
 function ComplianceBadge({ level }: { level: ComplianceLevel }) {
@@ -22,12 +30,30 @@ function ComplianceBadge({ level }: { level: ComplianceLevel }) {
   );
 }
 
+function SourceBadge({ source }: { source: TargetsSource }) {
+  const className =
+    source === "coach"
+      ? "bg-emerald-100 text-emerald-800"
+      : source === "ai"
+        ? "bg-violet-100 text-violet-800"
+        : "bg-zinc-100 text-zinc-600";
+  return (
+    <span
+      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${className}`}
+    >
+      {TARGET_SOURCE_LABEL[source]}
+    </span>
+  );
+}
+
 function MacroCell({
+  label,
   current,
   target,
   unit,
   level,
 }: {
+  label: string;
   current: number;
   target: number;
   unit: string;
@@ -35,10 +61,11 @@ function MacroCell({
 }) {
   const pct = target > 0 ? Math.round((current / target) * 100) : 0;
   return (
-    <div className="text-xs">
+    <div className="rounded-lg bg-zinc-50 px-2.5 py-2 text-xs">
+      <p className="text-[10px] font-semibold text-zinc-500 mb-0.5">{label}</p>
       <p className="font-medium text-zinc-800">
         {Math.round(current)}
-        {unit ? unit : ""}
+        {unit}
         <span className="text-zinc-400 font-normal">
           {" "}
           / {Math.round(target)}
@@ -47,6 +74,29 @@ function MacroCell({
       </p>
       <p className="text-[10px] text-zinc-500">{pct}%</p>
       <ComplianceBadge level={level} />
+    </div>
+  );
+}
+
+function TargetSnapshotRow({
+  title,
+  badge,
+  targets,
+}: {
+  title: string;
+  badge: ReactNode;
+  targets: MacroTargets;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <p className="text-[10px] font-semibold text-zinc-600">{title}</p>
+        {badge}
+      </div>
+      <p className="text-[11px] text-zinc-700 leading-relaxed">
+        卡路里 {targets.calories} kcal · 蛋白質 {targets.protein}g · 碳水{" "}
+        {targets.carbs}g · 脂肪 {targets.fats}g
+      </p>
     </div>
   );
 }
@@ -60,12 +110,16 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
   const [targetsMap, setTargetsMap] = useState<
     Record<string, StudentNutritionTargets | null>
   >({});
+  const [bodyMap, setBodyMap] = useState<
+    Record<string, StudentBodyProfile | null>
+  >({});
   const [loadingTargets, setLoadingTargets] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     if (students.length === 0) {
       setTargetsMap({});
+      setBodyMap({});
       return;
     }
     let cancelled = false;
@@ -75,22 +129,48 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
       const entries = await Promise.all(
         students.map(async (s) => {
           try {
-            const res = await fetch(
-              `/api/coach/student-targets?studentEmail=${encodeURIComponent(s.email)}`,
-              { credentials: "include", headers }
-            );
-            if (!res.ok) return [s.email, null] as const;
-            const data = (await res.json()) as {
-              targets: StudentNutritionTargets | null;
-            };
-            return [s.email, data.targets ?? null] as const;
+            const [targetsRes, bodyRes] = await Promise.all([
+              fetch(
+                `/api/coach/student-targets?studentEmail=${encodeURIComponent(s.email)}`,
+                { credentials: "include", headers }
+              ),
+              fetch(
+                `/api/coach/student-body-profile?studentEmail=${encodeURIComponent(s.email)}`,
+                { credentials: "include", headers }
+              ),
+            ]);
+            const targetsData = targetsRes.ok
+              ? ((await targetsRes.json()) as {
+                  targets: StudentNutritionTargets | null;
+                })
+              : { targets: null };
+            const bodyData = bodyRes.ok
+              ? ((await bodyRes.json()) as {
+                  profile: StudentBodyProfile | null;
+                })
+              : { profile: null };
+            return [
+              s.email,
+              {
+                targets: targetsData.targets ?? null,
+                body: bodyData.profile ?? null,
+              },
+            ] as const;
           } catch {
-            return [s.email, null] as const;
+            return [
+              s.email,
+              { targets: null, body: null },
+            ] as const;
           }
         })
       );
       if (!cancelled) {
-        setTargetsMap(Object.fromEntries(entries));
+        setTargetsMap(
+          Object.fromEntries(entries.map(([email, data]) => [email, data.targets]))
+        );
+        setBodyMap(
+          Object.fromEntries(entries.map(([email, data]) => [email, data.body]))
+        );
         setLoadingTargets(false);
       }
     })();
@@ -106,6 +186,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
           student,
           logs,
           coachTargets: targetsMap[student.email] ?? null,
+          bodyProfile: bodyMap[student.email] ?? null,
         })
       )
       .sort((a, b) => {
@@ -118,7 +199,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
         };
         return order[a.macroLevels.overall] - order[b.macroLevels.overall];
       });
-  }, [students, logs, targetsMap]);
+  }, [students, logs, targetsMap, bodyMap]);
 
   if (students.length === 0) return null;
 
@@ -135,12 +216,38 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
         )}
       </div>
       <p className="text-xs text-zinc-500 leading-relaxed">
-        對照每位學員今日總攝取與教練設定目標（未設定則用預設值）。優先顯示未達標學員。
+        對照今日總攝取與生效目標（教練聖旨優先，否則 AI
+        建議或預設值）。展開可睇教練同 AI 建議分別。
       </p>
 
       <div className="space-y-2">
         {rows.map((row) => {
           const isOpen = expanded === row.email;
+          const snapshots = row.targetSnapshots;
+          const showComparison =
+            snapshots.coach &&
+            snapshots.ai &&
+            (snapshots.coach.calories !== snapshots.ai.calories ||
+              snapshots.coach.protein !== snapshots.ai.protein ||
+              snapshots.coach.carbs !== snapshots.ai.carbs ||
+              snapshots.coach.fats !== snapshots.ai.fats);
+
+          const subtitleParts: string[] = [`${row.mealCount} 餐`];
+          if (snapshots.coach) {
+            subtitleParts.push(
+              snapshots.coachLocked ? "教練聖旨（已鎖定）" : "教練草稿"
+            );
+          }
+          if (snapshots.ai) {
+            subtitleParts.push(
+              snapshots.aiFromBody ? "AI 建議（身體檔案）" : "AI 建議（已鎖定）"
+            );
+          }
+          if (!snapshots.coach && !snapshots.ai) {
+            subtitleParts.push(TARGET_SOURCE_LABEL.default);
+          }
+          subtitleParts.push(`對照：${TARGET_SOURCE_LABEL[row.targetsSource]}`);
+
           return (
             <div
               key={row.email}
@@ -148,9 +255,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
             >
               <button
                 type="button"
-                onClick={() =>
-                  setExpanded(isOpen ? null : row.email)
-                }
+                onClick={() => setExpanded(isOpen ? null : row.email)}
                 className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 bg-zinc-50/80 hover:bg-zinc-50 transition-colors"
               >
                 <div className="min-w-0">
@@ -158,8 +263,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
                     {row.name}
                   </p>
                   <p className="text-[10px] text-zinc-500 truncate">
-                    {row.mealCount} 餐 ·{" "}
-                    {row.targetsSource === "coach" ? "教練目標" : "預設目標"}
+                    {subtitleParts.join(" · ")}
                   </p>
                 </div>
                 <ComplianceBadge level={row.macroLevels.overall} />
@@ -167,32 +271,81 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
 
               {isOpen && (
                 <div className="px-3 py-3 space-y-3 border-t border-zinc-100 bg-white">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-semibold text-zinc-600">
+                      今日攝取 vs 生效目標
+                    </p>
+                    <SourceBadge source={row.targetsSource} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <MacroCell
+                      label="卡路里"
                       current={row.totals.calories}
                       target={row.targets.calories}
-                      unit=""
+                      unit=" kcal"
                       level={row.macroLevels.calories}
                     />
                     <MacroCell
+                      label="蛋白質"
                       current={row.totals.protein}
                       target={row.targets.protein}
                       unit="g"
                       level={row.macroLevels.protein}
                     />
                     <MacroCell
+                      label="碳水"
                       current={row.totals.carbs}
                       target={row.targets.carbs}
                       unit="g"
                       level={row.macroLevels.carbs}
                     />
                     <MacroCell
+                      label="脂肪"
                       current={row.totals.fats}
                       target={row.targets.fats}
                       unit="g"
                       level={row.macroLevels.fats}
                     />
                   </div>
+
+                  {showComparison && (
+                    <div className="space-y-2 border-t border-zinc-100 pt-2">
+                      <p className="text-[10px] font-semibold text-zinc-600">
+                        目標對照
+                      </p>
+                      {snapshots.coach && (
+                        <TargetSnapshotRow
+                          title="教練建議"
+                          badge={
+                            snapshots.coachLocked ? (
+                              <span className="text-[10px] text-emerald-700 font-medium">
+                                已鎖定
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-zinc-500">
+                                草稿
+                              </span>
+                            )
+                          }
+                          targets={snapshots.coach}
+                        />
+                      )}
+                      {snapshots.ai && (
+                        <TargetSnapshotRow
+                          title="AI 建議"
+                          badge={
+                            <span className="text-[10px] text-violet-700 font-medium">
+                              {snapshots.aiFromBody
+                                ? "身體檔案估算"
+                                : "AI 聖旨"}
+                            </span>
+                          }
+                          targets={snapshots.ai}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   <div className="border-t border-zinc-100 pt-2">
                     <p className="text-[10px] font-semibold text-zinc-600 mb-2">

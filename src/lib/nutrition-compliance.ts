@@ -1,6 +1,16 @@
-import { estimateMicronutrients } from "@/lib/body-profile";
+import {
+  computeTargetProfile,
+  estimateMicronutrients,
+  isBodyProfileComplete,
+} from "@/lib/body-profile";
 import { getRecommendedMicronutrientTargets } from "@/lib/micronutrient-targets";
-import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
+import { AI_GORILLA_COACH_EMAIL } from "@/lib/registry-constants";
+import type {
+  MealLog,
+  RegistryUser,
+  StudentBodyProfile,
+  StudentNutritionTargets,
+} from "@/lib/types";
 
 export type ComplianceLevel = "met" | "partial" | "low" | "over" | "none";
 
@@ -87,17 +97,119 @@ export function overallMacroLevel(
   return "met";
 }
 
+export type MacroTargets = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+};
+
+export type TargetsSource = "coach" | "ai" | "default";
+
+export type ResolvedStudentTargets = {
+  active: MacroTargets;
+  activeSource: TargetsSource;
+  coach: MacroTargets | null;
+  coachLocked: boolean;
+  ai: MacroTargets | null;
+  aiFromBody: boolean;
+};
+
+const DEFAULT_TARGETS: MacroTargets = {
+  calories: 2000,
+  protein: 120,
+  carbs: 200,
+  fats: 65,
+};
+
+export function isAiCoachEmail(email?: string | null): boolean {
+  return (
+    email?.trim().toLowerCase() === AI_GORILLA_COACH_EMAIL.toLowerCase()
+  );
+}
+
+export function targetsFromNutritionRow(
+  row: StudentNutritionTargets
+): MacroTargets {
+  return {
+    calories: row.targetCalories,
+    protein: row.targetProtein,
+    carbs: row.targetCarbs,
+    fats: row.targetFats,
+  };
+}
+
+/** Body-profile TDEE split (same as history calendar). */
+export function computeAiTargetsFromBody(
+  body: StudentBodyProfile
+): MacroTargets {
+  const computed = computeTargetProfile(body);
+  const cal = computed.targetCalories;
+  return {
+    calories: cal,
+    protein: computed.targetProtein,
+    carbs: Math.round((cal * 0.4) / 4),
+    fats: Math.round((cal * 0.28) / 9),
+  };
+}
+
+export function resolveStudentTargetSnapshots(input: {
+  storedTargets?: StudentNutritionTargets | null;
+  bodyProfile?: StudentBodyProfile | null;
+}): ResolvedStudentTargets {
+  const bodyAi =
+    input.bodyProfile && isBodyProfileComplete(input.bodyProfile)
+      ? computeAiTargetsFromBody(input.bodyProfile)
+      : null;
+
+  let coach: MacroTargets | null = null;
+  let coachLocked = false;
+  let ai: MacroTargets | null = bodyAi;
+  let aiFromBody = Boolean(bodyAi);
+
+  const stored = input.storedTargets;
+  if (stored?.targetCalories) {
+    const snapshot = targetsFromNutritionRow(stored);
+    if (isAiCoachEmail(stored.setByCoachEmail)) {
+      ai = snapshot;
+      aiFromBody = false;
+    } else {
+      coach = snapshot;
+      coachLocked = Boolean(stored.locked);
+    }
+  }
+
+  let active: MacroTargets;
+  let activeSource: TargetsSource;
+
+  if (stored?.locked && stored.targetCalories) {
+    active = targetsFromNutritionRow(stored);
+    activeSource = isAiCoachEmail(stored.setByCoachEmail) ? "ai" : "coach";
+  } else if (bodyAi) {
+    active = bodyAi;
+    activeSource = "ai";
+  } else {
+    active = DEFAULT_TARGETS;
+    activeSource = "default";
+  }
+
+  return {
+    active,
+    activeSource,
+    coach,
+    coachLocked,
+    ai,
+    aiFromBody,
+  };
+}
+
 export type StudentDailyComplianceRow = {
   email: string;
   name: string;
   mealCount: number;
   totals: MacroTotals;
-  targets: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-  };
+  targets: MacroTargets;
+  targetSnapshots: ResolvedStudentTargets;
   macroLevels: {
     calories: ComplianceLevel;
     protein: ComplianceLevel;
@@ -120,36 +232,26 @@ export type StudentDailyComplianceRow = {
     sodium: ComplianceLevel;
     cholesterol: ComplianceLevel;
   };
-  targetsSource: "coach" | "default";
+  targetsSource: TargetsSource;
 };
 
 export function resolveStudentTargets(
-  student: RegistryUser,
+  _student: RegistryUser,
   coachTargets: StudentNutritionTargets | null | undefined,
-  fallback?: { calories: number; protein: number }
-): StudentDailyComplianceRow["targets"] {
-  if (coachTargets?.targetCalories) {
-    return {
-      calories: coachTargets.targetCalories,
-      protein: coachTargets.targetProtein,
-      carbs: coachTargets.targetCarbs,
-      fats: coachTargets.targetFats,
-    };
-  }
-  return {
-    calories: fallback?.calories ?? 2000,
-    protein: fallback?.protein ?? 120,
-    carbs: 200,
-    fats: 65,
-  };
+  bodyProfile?: StudentBodyProfile | null
+): MacroTargets {
+  return resolveStudentTargetSnapshots({
+    storedTargets: coachTargets,
+    bodyProfile,
+  }).active;
 }
 
 export function buildStudentDailyCompliance(input: {
   student: RegistryUser;
   logs: MealLog[];
   coachTargets?: StudentNutritionTargets | null;
+  bodyProfile?: StudentBodyProfile | null;
   day?: string;
-  fallbackProfile?: { calories: number; protein: number };
 }): StudentDailyComplianceRow {
   const day = input.day ?? todayDateKey();
   const totals = sumLogsForDay(input.logs, input.student.email, day);
@@ -160,12 +262,12 @@ export function buildStudentDailyCompliance(input: {
       l.date.slice(0, 10) === day
   ).length;
 
-  const targets = resolveStudentTargets(
-    input.student,
-    input.coachTargets,
-    input.fallbackProfile
-  );
-  const targetsSource = input.coachTargets?.targetCalories ? "coach" : "default";
+  const targetSnapshots = resolveStudentTargetSnapshots({
+    storedTargets: input.coachTargets,
+    bodyProfile: input.bodyProfile,
+  });
+  const targets = targetSnapshots.active;
+  const targetsSource = targetSnapshots.activeSource;
 
   const macroLevels = {
     calories: macroComplianceLevel(totals.calories, targets.calories),
@@ -214,6 +316,7 @@ export function buildStudentDailyCompliance(input: {
     mealCount,
     totals,
     targets,
+    targetSnapshots,
     macroLevels,
     micro: {
       fiberG: micro.fiberG,
@@ -227,6 +330,12 @@ export function buildStudentDailyCompliance(input: {
     targetsSource,
   };
 }
+
+export const TARGET_SOURCE_LABEL: Record<TargetsSource, string> = {
+  coach: "教練聖旨",
+  ai: "AI 建議",
+  default: "預設目標",
+};
 
 export const COMPLIANCE_LABEL: Record<ComplianceLevel, string> = {
   met: "達標",
