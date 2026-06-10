@@ -153,7 +153,16 @@ export default function CoachStudentsPage() {
               </section>
             ) : (
               <>
-                <CoachStudentDailyPanel logs={logs} students={students} />
+                <CoachStudentDailyPanel
+                  logs={logs}
+                  students={students}
+                  onLogUpdated={(updated) =>
+                    setLogs((prev) =>
+                      prev.map((l) => (l.id === updated.id ? updated : l))
+                    )
+                  }
+                  onToast={showToast}
+                />
 
                 {session?.role === "coach" && (
                   <CoachActivityWall

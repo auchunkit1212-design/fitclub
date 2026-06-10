@@ -18,7 +18,11 @@ import type {
   StudentBodyProfile,
   StudentNutritionTargets,
 } from "@/lib/types";
-import { IconLabel, Target } from "@/components/icons";
+import { CoachStudentMealsModal } from "@/components/CoachStudentMealsModal";
+import { ChevronRight, IconLabel, Target, UtensilsCrossed } from "@/components/icons";
+
+const btnClass =
+  "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 function ComplianceBadge({ level }: { level: ComplianceLevel }) {
   return (
@@ -104,9 +108,16 @@ function TargetSnapshotRow({
 type Props = {
   logs: MealLog[];
   students: RegistryUser[];
+  onLogUpdated?: (log: MealLog) => void;
+  onToast?: (message: string) => void;
 };
 
-export function CoachStudentDailyPanel({ logs, students }: Props) {
+export function CoachStudentDailyPanel({
+  logs,
+  students,
+  onLogUpdated,
+  onToast,
+}: Props) {
   const [targetsMap, setTargetsMap] = useState<
     Record<string, StudentNutritionTargets | null>
   >({});
@@ -115,6 +126,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
   >({});
   const [loadingTargets, setLoadingTargets] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [mealsStudent, setMealsStudent] = useState<RegistryUser | null>(null);
 
   useEffect(() => {
     if (students.length === 0) {
@@ -216,8 +228,7 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
         )}
       </div>
       <p className="text-xs text-zinc-500 leading-relaxed">
-        對照今日總攝取與生效目標（教練聖旨優先，否則 AI
-        建議或預設值）。展開可睇教練同 AI 建議分別。
+        對照今日總攝取與生效目標。撳「飲食紀錄」可睇每位學員打卡詳情。
       </p>
 
       <div className="space-y-2">
@@ -248,29 +259,70 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
           }
           subtitleParts.push(`對照：${TARGET_SOURCE_LABEL[row.targetsSource]}`);
 
+          const student = students.find((s) => s.email === row.email);
+
           return (
             <div
               key={row.email}
               className="rounded-xl border border-zinc-100 overflow-hidden"
             >
-              <button
-                type="button"
-                onClick={() => setExpanded(isOpen ? null : row.email)}
-                className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 bg-zinc-50/80 hover:bg-zinc-50 transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 truncate">
-                    {row.name}
-                  </p>
-                  <p className="text-[10px] text-zinc-500 truncate">
-                    {subtitleParts.join(" · ")}
-                  </p>
-                </div>
-                <ComplianceBadge level={row.macroLevels.overall} />
-              </button>
+              <div className="flex items-stretch bg-zinc-50/80">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : row.email)}
+                  className={`flex-1 min-w-0 text-left px-3 py-2.5 hover:bg-zinc-50 transition-colors ${btnClass}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-zinc-900 truncate">
+                        {row.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 truncate">
+                        {subtitleParts.join(" · ")}
+                      </p>
+                    </div>
+                    <ComplianceBadge level={row.macroLevels.overall} />
+                  </div>
+                </button>
+                {student && (
+                  <button
+                    type="button"
+                    onClick={() => setMealsStudent(student)}
+                    className={`shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 border-l border-zinc-100 text-emerald-700 hover:bg-emerald-50 transition-colors ${btnClass}`}
+                    aria-label={`查看 ${row.name} 飲食紀錄`}
+                  >
+                    <UtensilsCrossed size={16} strokeWidth={2} aria-hidden />
+                    <span className="text-[10px] font-semibold whitespace-nowrap">
+                      飲食紀錄
+                    </span>
+                    <span className="text-[9px] text-emerald-600/80">
+                      {row.mealCount} 餐
+                    </span>
+                  </button>
+                )}
+              </div>
 
               {isOpen && (
                 <div className="px-3 py-3 space-y-3 border-t border-zinc-100 bg-white">
+                  {student && (
+                    <button
+                      type="button"
+                      onClick={() => setMealsStudent(student)}
+                      className={`w-full flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 text-left text-emerald-800 ${btnClass}`}
+                    >
+                      <span className="text-xs font-semibold">
+                        <IconLabel
+                          icon={UtensilsCrossed}
+                          size="sm"
+                          iconClassName="text-emerald-700"
+                        >
+                          查看今日飲食紀錄（{row.mealCount} 餐）
+                        </IconLabel>
+                      </span>
+                      <ChevronRight size={16} strokeWidth={2} aria-hidden />
+                    </button>
+                  )}
+
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-semibold text-zinc-600">
                       今日攝取 vs 生效目標
@@ -382,6 +434,16 @@ export function CoachStudentDailyPanel({ logs, students }: Props) {
           );
         })}
       </div>
+
+      {mealsStudent && (
+        <CoachStudentMealsModal
+          student={mealsStudent}
+          logs={logs}
+          onClose={() => setMealsStudent(null)}
+          onLogUpdated={onLogUpdated}
+          onToast={onToast}
+        />
+      )}
     </section>
   );
 }
