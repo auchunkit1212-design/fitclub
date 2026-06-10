@@ -524,6 +524,18 @@ export async function updateMealLog(
   return mapMeal(data as MealRow);
 }
 
+export async function deleteMealLog(
+  id: string,
+  options?: { useServiceRole?: boolean }
+): Promise<void> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { error } = await client.from("meal_logs").delete().eq("id", id);
+  if (error) throw toReadableError(error, "meal_logs 刪除失敗");
+}
+
 export async function fetchMealLogsForSession(
   session: UserSession,
   registry: RegistryUser[],

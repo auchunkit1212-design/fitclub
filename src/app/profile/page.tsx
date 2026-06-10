@@ -308,6 +308,11 @@ export default function ProfilePage() {
               prev.map((l) => (l.id === updated.id ? updated : l))
             );
           }}
+          onDeleted={(id) => {
+            setSelectedMealLog(null);
+            setLogs((prev) => prev.filter((l) => l.id !== id));
+            showToast("已刪除飲食記錄");
+          }}
         />
       )}
 

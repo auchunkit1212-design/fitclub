@@ -18,11 +18,13 @@ import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { HistoryDayDetailPanel } from "@/components/HistoryDayDetail";
+import { MealDetailModal } from "@/components/MealDetailModal";
 import type {
   HistoryDayDetail,
   HistoryDaySummary,
   ResolvedNutritionTargets,
 } from "@/lib/history-calendar";
+import type { MealLog } from "@/lib/types";
 
 const SOFT_CARD =
   "rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -52,6 +54,7 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<HistoryDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
+  const [selectedMealLog, setSelectedMealLog] = useState<MealLog | null>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth() + 1;
@@ -238,7 +241,44 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
         </div>
       </div>
 
-      <HistoryDayDetailPanel detail={dayDetail} loading={dayLoading} />
+      <HistoryDayDetailPanel
+        detail={dayDetail}
+        loading={dayLoading}
+        onSelectMeal={setSelectedMealLog}
+      />
+
+      {selectedMealLog && (
+        <MealDetailModal
+          log={selectedMealLog}
+          onClose={() => setSelectedMealLog(null)}
+          onUpdated={(updated) => {
+            setSelectedMealLog(updated);
+            setDayDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    meals: prev.meals.map((m) =>
+                      m.id === updated.id ? updated : m
+                    ),
+                  }
+                : prev
+            );
+            void loadMonth();
+          }}
+          onDeleted={(id) => {
+            setSelectedMealLog(null);
+            setDayDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    meals: prev.meals.filter((m) => m.id !== id),
+                  }
+                : prev
+            );
+            void loadMonth();
+          }}
+        />
+      )}
     </div>
   );
 }

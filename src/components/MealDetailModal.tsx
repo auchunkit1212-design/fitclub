@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
-import { IconLabel, Sparkles } from "@/components/icons";
+import { IconLabel, Sparkles, Trash2 } from "@/components/icons";
 import { errorMessage } from "@/lib/errors";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
@@ -17,6 +17,7 @@ interface MealDetailModalProps {
   coachReviewMode?: boolean;
   onClose: () => void;
   onUpdated?: (log: MealLog) => void;
+  onDeleted?: (id: string) => void;
   onCoachFeedbackSent?: () => void;
 }
 
@@ -30,6 +31,7 @@ export function MealDetailModal({
   coachReviewMode = false,
   onClose,
   onUpdated,
+  onDeleted,
   onCoachFeedbackSent,
 }: MealDetailModalProps) {
   const imageSrc = getMealImageSrc(log);
@@ -41,6 +43,7 @@ export function MealDetailModal({
   const [carbs, setCarbs] = useState(String(log.carbs ?? 0));
   const [fats, setFats] = useState(String(log.fats ?? 0));
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +137,32 @@ export function MealDetailModal({
       setError(errorMessage(e, "儲存失敗"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!canEdit || !onDeleted) return;
+    const confirmed = window.confirm(
+      `確定刪除呢餐記錄？\n\n${log.mealType} · ${description.trim() || log.description}\n\n刪除後無法復原。`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/meals/${log.id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: getSessionRequestHeaders(),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "刪除失敗");
+      onDeleted(log.id);
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e, "刪除失敗"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -349,6 +378,17 @@ export function MealDetailModal({
                   「套用並儲存」會依上方描述用 AI／本地規則重算並寫入雲端；若你已手動改數字，可先按「AI
                   預覽」對照再決定是否套用。
                 </p>
+                {onDeleted && (
+                  <button
+                    type="button"
+                    disabled={deleting || saving || aiBusy}
+                    onClick={handleDelete}
+                    className={`w-full py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold text-sm inline-flex items-center justify-center gap-2 ${btnClass}`}
+                  >
+                    <Trash2 size={16} aria-hidden />
+                    {deleting ? "刪除中…" : "刪除此餐記錄"}
+                  </button>
+                )}
               </div>
             </>
           ) : (

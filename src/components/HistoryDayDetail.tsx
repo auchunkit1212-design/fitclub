@@ -8,7 +8,7 @@ import { getMealImageSrc } from "@/lib/meal-display";
 import { isValidSticker } from "@/lib/meal-stickers";
 import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
-import type { MealLogFeedback, MealLogReaction } from "@/lib/types";
+import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
 const SOFT_CARD =
   "rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -51,9 +51,11 @@ function MacroBar({
 export function HistoryDayDetailPanel({
   detail,
   loading,
+  onSelectMeal,
 }: {
   detail: DayDetail | null;
   loading: boolean;
+  onSelectMeal?: (meal: MealLog) => void;
 }) {
   const { t } = useI18n();
 
@@ -153,7 +155,22 @@ export function HistoryDayDetailPanel({
               return (
                 <li
                   key={meal.id}
-                  className="flex gap-3 p-3 rounded-2xl bg-gray-50/80"
+                  role={onSelectMeal ? "button" : undefined}
+                  tabIndex={onSelectMeal ? 0 : undefined}
+                  onClick={onSelectMeal ? () => onSelectMeal(meal) : undefined}
+                  onKeyDown={
+                    onSelectMeal
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectMeal(meal);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`flex gap-3 p-3 rounded-2xl bg-gray-50/80 ${
+                    onSelectMeal ? "cursor-pointer active:opacity-80" : ""
+                  }`}
                 >
                   <div className="shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
                     {img ? (

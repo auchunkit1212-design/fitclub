@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateMealLog } from "@/lib/db";
+import { deleteMealLog, updateMealLog } from "@/lib/db";
 import { assertCanEditMealLog, fetchMealLogById } from "@/lib/meal-log-access";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
@@ -56,6 +56,36 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, log: updated });
   } catch (error) {
     const readable = toReadableError(error, "更新失敗");
+    return NextResponse.json({ error: readable.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const session = parseSessionFromRequest(request);
+  if (!session?.email) {
+    return NextResponse.json({ error: "未登入" }, { status: 401 });
+  }
+
+  const id = context.params.id?.trim();
+  if (!id) {
+    return NextResponse.json({ error: "缺少記錄 ID" }, { status: 400 });
+  }
+
+  const existing = await fetchMealLogById(id, { useServiceRole: true });
+  if (!existing) {
+    return NextResponse.json({ error: "找不到飲食記錄" }, { status: 404 });
+  }
+
+  const access = await assertCanEditMealLog(session, existing);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  try {
+    await deleteMealLog(id, { useServiceRole: true });
+    return NextResponse.json({ ok: true, id });
+  } catch (error) {
+    const readable = toReadableError(error, "刪除失敗");
     return NextResponse.json({ error: readable.message }, { status: 500 });
   }
 }
