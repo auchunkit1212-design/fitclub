@@ -7,8 +7,9 @@ export async function syncSessionPlan(): Promise<UserSession | null> {
   if (!session?.email) return null;
 
   try {
-    const res = await fetch("/api/me/plan", {
+    const res = await fetch(`/api/me/plan?_=${Date.now()}`, {
       credentials: "include",
+      cache: "no-store",
       headers: getSessionRequestHeaders(),
     });
     if (!res.ok) return session;
@@ -19,6 +20,14 @@ export async function syncSessionPlan(): Promise<UserSession | null> {
       isPro: data.isPro === true,
     };
     saveSession(next);
+    if (
+      next.plan !== session.plan ||
+      next.isPro !== session.isPro
+    ) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("fitclub:plan-synced"));
+      }
+    }
     return next;
   } catch {
     return applyUserPlanToSession(session);

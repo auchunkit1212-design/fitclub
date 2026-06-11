@@ -12,6 +12,7 @@ import {
   LineChart,
 } from "@/components/icons";
 import { ProUpgradePrompt } from "@/components/ProUpgradePrompt";
+import { useSyncedSession } from "@/hooks/use-synced-session";
 import { resolveFoodAdvancedNutrients } from "@/lib/food-advanced-nutrients";
 import { hasProAccessFromSession } from "@/lib/plan-access";
 import type { FoodAdvancedNutrients } from "@/lib/types";
@@ -43,7 +44,8 @@ export function AdvancedNutritionCard({
   className = "",
 }: AdvancedNutritionCardProps) {
   const { t } = useI18n();
-  const showMicro = hasProAccessFromSession();
+  const session = useSyncedSession();
+  const showMicro = hasProAccessFromSession(session);
 
   const resolved = useMemo(
     () => resolveFoodAdvancedNutrients(macros, advanced),

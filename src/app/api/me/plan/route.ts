@@ -23,10 +23,17 @@ export async function GET(request: NextRequest) {
   try {
     const user = await fetchUserByEmailForAuth(session.email);
     const enriched = await applyEffectivePlanToSession(session, user ?? undefined);
-    return NextResponse.json({
-      plan: enriched.plan ?? "free",
-      isPro: enriched.isPro === true,
-    });
+    return NextResponse.json(
+      {
+        plan: enriched.plan ?? "free",
+        isPro: enriched.isPro === true,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err) {
     console.error("[me/plan]", err);
     const isPro = await resolveEffectiveIsPro(session);

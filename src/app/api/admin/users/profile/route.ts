@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: "找不到帳戶" }, { status: 404 });
     }
-    return NextResponse.json(profile);
+    return NextResponse.json(profile, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
   } catch (error) {
     console.error("[admin/users/profile]", error);
     return NextResponse.json({ error: "讀取帳戶資料失敗" }, { status: 500 });

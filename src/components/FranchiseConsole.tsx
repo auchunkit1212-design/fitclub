@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { IconLabel, Palette, Rocket, Wrench } from "@/components/icons";
-import { emailExists, fetchAllUsers } from "@/lib/db";
+import { emailExists } from "@/lib/db";
+import { fetchRegistryForSession } from "@/lib/registry";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { AdminAccountsConsole } from "@/components/AdminAccountsConsole";
 import { AdminTenantsConsole } from "@/components/AdminTenantsConsole";
@@ -71,7 +72,7 @@ export function FranchiseConsole({
         return;
       }
 
-      const updated = await fetchAllUsers();
+      const updated = await fetchRegistryForSession(session);
       onRegistryChange(updated);
       setNewStaffEmail("");
       setNewStaffName("");
@@ -155,7 +156,7 @@ export function FranchiseConsole({
           onToast={onToast}
           onChanged={async () => {
             try {
-              const updated = await fetchAllUsers();
+              const updated = await fetchRegistryForSession(session);
               onRegistryChange(updated);
             } catch {
               // list refresh is best-effort

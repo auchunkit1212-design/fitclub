@@ -22,7 +22,14 @@ export async function GET(request: Request) {
     } catch (tenantErr) {
       console.warn("[admin/accounts] tenants fetch failed:", tenantErr);
     }
-    return NextResponse.json({ users, tenants });
+    return NextResponse.json(
+      { users, tenants },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("[admin/accounts]", error);
     const message =

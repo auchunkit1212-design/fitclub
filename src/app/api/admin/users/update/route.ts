@@ -25,7 +25,14 @@ export async function PATCH(request: Request) {
 
   try {
     const user = await adminUpdateUser({ ...body, email });
-    return NextResponse.json({ ok: true, user });
+    return NextResponse.json(
+      { ok: true, user },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新失敗";
     return NextResponse.json({ error: message }, { status: 400 });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useBranding } from "@/components/BrandingProvider";
 import { IconLabel, Smartphone } from "@/components/icons";
+import { syncSessionPlan } from "@/lib/plan-client";
 import { isStandaloneDisplay } from "@/lib/session";
 
 const btnClass =
@@ -28,6 +29,16 @@ export function PwaShell() {
     }
     setShowStandaloneLoginHint(false);
   };
+
+  useEffect(() => {
+    const syncPlan = () => {
+      if (document.visibilityState !== "visible") return;
+      void syncSessionPlan();
+    };
+    void syncSessionPlan();
+    document.addEventListener("visibilitychange", syncPlan);
+    return () => document.removeEventListener("visibilitychange", syncPlan);
+  }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {

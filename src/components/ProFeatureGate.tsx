@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ProUpgradePrompt } from "@/components/ProUpgradePrompt";
+import { useSyncedSession } from "@/hooks/use-synced-session";
 import { hasProAccessFromSession } from "@/lib/plan-access";
 
 type Props = {
@@ -12,7 +13,8 @@ type Props = {
 
 /** Pro 會員內容；學員可透過個人 Pro 或 Pro 教練繼承 */
 export function ProFeatureGate({ children, fallback, feature }: Props) {
-  const isPro = hasProAccessFromSession();
+  const session = useSyncedSession();
+  const isPro = hasProAccessFromSession(session);
 
   if (isPro) return <>{children}</>;
 

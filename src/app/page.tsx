@@ -50,7 +50,7 @@ import {
   isBodyProfileComplete,
 } from "@/lib/body-profile";
 import { fetchStudentBodyProfile } from "@/lib/db";
-import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
+import { fetchRegistryForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
 import { syncSessionPlan } from "@/lib/plan-client";
@@ -308,7 +308,7 @@ export default function StudentDashboard() {
         await withTimeout(initUserRegistry(), 12_000, t("errors.cloudInitTimeout", "雲端初始化逾時"));
 
         const registry = await withTimeout(
-          fetchUsersForSession(activeSession),
+          fetchRegistryForSession(activeSession),
           12_000,
           t("errors.fetchUsersTimeout", "讀取用戶逾時")
         );
@@ -554,7 +554,7 @@ export default function StudentDashboard() {
         advanced: item.advanced,
       });
       applyStreakApiPayload(result.streak);
-      const registry = await fetchUsersForSession(session);
+      const registry = await fetchRegistryForSession(session);
       const mealLogs = await getMealLogs(session, registry);
       setLogs(mealLogs);
       setMealSearchOpen(false);

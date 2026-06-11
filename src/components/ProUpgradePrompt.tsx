@@ -3,7 +3,7 @@
 import { useI18n } from "@/components/I18nProvider";
 import { Sparkles } from "@/components/icons";
 import { ProCheckoutButton } from "@/components/ProCheckoutButton";
-import { getSession } from "@/lib/session";
+import { useSyncedSession } from "@/hooks/use-synced-session";
 
 type Props = {
   feature?: string;
@@ -12,7 +12,7 @@ type Props = {
 
 export function ProUpgradePrompt({ feature, className = "" }: Props) {
   const { t } = useI18n();
-  const session = getSession();
+  const session = useSyncedSession();
   const tier = session?.role === "coach" ? "coach_pro" : "solo";
   const label =
     feature ??

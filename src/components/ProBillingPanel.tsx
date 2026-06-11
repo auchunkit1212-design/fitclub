@@ -2,8 +2,8 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { Cpu, GraduationCap, Sparkles, IconLabel } from "@/components/icons";
+import { useSyncedSession } from "@/hooks/use-synced-session";
 import { hasProAccessFromSession } from "@/lib/plan-access";
-import { getSession } from "@/lib/session";
 import {
   ProCheckoutButton,
   ProManageBillingButton,
@@ -11,7 +11,7 @@ import {
 
 export function ProBillingPanel() {
   const { t } = useI18n();
-  const session = getSession();
+  const session = useSyncedSession();
   const isPro = hasProAccessFromSession(session);
 
   if (!session?.email || session.role === "admin") return null;

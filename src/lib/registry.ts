@@ -1,4 +1,5 @@
 export { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+export { fetchRegistryForSession } from "@/lib/registry-client";
 export {
   createAdminSession,
   emailExists,

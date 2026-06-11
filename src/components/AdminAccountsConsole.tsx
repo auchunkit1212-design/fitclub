@@ -314,7 +314,8 @@ export function AdminAccountsConsole({
         return nextProfile;
       });
       if (options?.toast) onToastRef.current(options.toast);
-      if (options?.reloadList !== false) void loadAccounts({ silent: true });
+      // 避免儲存後立刻全量 reload 用舊資料覆蓋剛寫入的變更
+      if (options?.reloadList === true) void loadAccounts({ silent: true });
     },
     [loadAccounts, tenants]
   );
