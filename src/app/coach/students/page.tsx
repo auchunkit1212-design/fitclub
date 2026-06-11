@@ -1,21 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { CoachStudentManagementPanel } from "@/components/CoachStudentManagementPanel";
+import {
+  CoachStudentsSectionPicker,
+  type CoachStudentsSection,
+} from "@/components/CoachStudentsSectionPicker";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
+import { useMealRatings } from "@/hooks/use-meal-ratings";
 import {
   fetchAllUsers,
   fetchMealLogsForSession,
   fetchUsersForSession,
   filterStudentsForSession,
 } from "@/lib/db";
+import {
+  countUnreviewedMeals,
+  filterRecentStudentLogs,
+} from "@/lib/coach-unreviewed-meals";
 import { errorMessage } from "@/lib/errors";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession } from "@/lib/session";
@@ -37,6 +46,39 @@ export default function CoachStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const [section, setSection] = useState<CoachStudentsSection>("daily");
+  const sectionInitialized = useRef(false);
+
+  const studentEmails = useMemo(
+    () => students.map((s) => s.email),
+    [students]
+  );
+
+  const recentLogIds = useMemo(
+    () => filterRecentStudentLogs(logs, studentEmails).map((log) => log.id),
+    [logs, studentEmails]
+  );
+
+  const { ratingByMealId, applyRating, loading: ratingsLoading } =
+    useMealRatings(recentLogIds);
+
+  const isCoach = session?.role === "coach";
+
+  const unreviewedCount = useMemo(
+    () =>
+      countUnreviewedMeals(logs, studentEmails, ratingByMealId.keys()),
+    [logs, studentEmails, ratingByMealId]
+  );
+
+  useEffect(() => {
+    if (loading || ratingsLoading || sectionInitialized.current) return;
+    sectionInitialized.current = true;
+    if (isCoach && unreviewedCount > 0) {
+      setSection("review");
+    } else {
+      setSection("daily");
+    }
+  }, [loading, ratingsLoading, isCoach, unreviewedCount]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -96,6 +138,16 @@ export default function CoachStudentsPage() {
     }
   };
 
+  const handleLogUpdated = (updated: MealLog) => {
+    setLogs((prev) =>
+      prev.map((l) => (l.id === updated.id ? updated : l))
+    );
+  };
+
+  const handleLogDeleted = (id: string) => {
+    setLogs((prev) => prev.filter((l) => l.id !== id));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
@@ -104,17 +156,28 @@ export default function CoachStudentsPage() {
     );
   }
 
+  const hasStudents = students.length > 0;
+  const showEmptyStudents =
+    !loadError && section !== "roster" && !hasStudents;
+
   return (
     <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
       <PageHeader
         title="學員"
         subtitle={brand.gymName}
         variant="dark"
-        backLabel="← 返回主頁"
-        onBack={() => router.push("/")}
+        leftSlot={
+          <CoachStudentsSectionPicker
+            activeSection={section}
+            onSectionChange={setSection}
+            unreviewedCount={unreviewedCount}
+            isCoach={isCoach}
+            onBack={() => router.push("/")}
+          />
+        }
       />
 
-      <main className="px-4 py-4 space-y-4">
+      <main className="px-4 py-4">
         {loadError ? (
           <section className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
             <p className="font-semibold text-red-800">載入失敗</p>
@@ -129,7 +192,7 @@ export default function CoachStudentsPage() {
           </section>
         ) : (
           <>
-            {session && (
+            {section === "roster" && session && (
               <CoachStudentManagementPanel
                 session={session}
                 registry={registry}
@@ -138,7 +201,7 @@ export default function CoachStudentsPage() {
               />
             )}
 
-            {students.length === 0 ? (
+            {showEmptyStudents ? (
               <section className="bg-white rounded-2xl border border-zinc-100 p-8 text-center shadow-sm">
                 <ClipboardList
                   size={48}
@@ -152,49 +215,48 @@ export default function CoachStudentsPage() {
                 </p>
               </section>
             ) : (
-              <>
-                <CoachStudentDailyPanel
-                  logs={logs}
-                  students={students}
-                  onLogUpdated={(updated) =>
-                    setLogs((prev) =>
-                      prev.map((l) => (l.id === updated.id ? updated : l))
-                    )
-                  }
-                  onLogDeleted={(id) =>
-                    setLogs((prev) => prev.filter((l) => l.id !== id))
-                  }
-                  onToast={showToast}
-                />
+              hasStudents && (
+                <>
+                  {section === "daily" && (
+                    <CoachStudentDailyPanel
+                      logs={logs}
+                      students={students}
+                      onLogUpdated={handleLogUpdated}
+                      onLogDeleted={handleLogDeleted}
+                      onToast={showToast}
+                    />
+                  )}
 
-                {session?.role === "coach" && (
-                  <CoachActivityWall
-                    logs={logs}
-                    students={students}
-                    onToast={showToast}
-                    onLogUpdated={(updated) =>
-                      setLogs((prev) =>
-                        prev.map((l) => (l.id === updated.id ? updated : l))
-                      )
-                    }
-                    onLogDeleted={(id) =>
-                      setLogs((prev) => prev.filter((l) => l.id !== id))
-                    }
-                  />
-                )}
+                  {section === "review" && isCoach && (
+                    <CoachActivityWall
+                      logs={logs}
+                      students={students}
+                      onToast={showToast}
+                      onLogUpdated={handleLogUpdated}
+                      onLogDeleted={handleLogDeleted}
+                      ratingByMealId={ratingByMealId}
+                      applyRating={applyRating}
+                    />
+                  )}
 
-                <CoachMealHistoryPanel
-                  logs={logs}
-                  students={students}
-                  gymName={brand.gymName}
-                />
-              </>
+                  {section === "history" && (
+                    <CoachMealHistoryPanel
+                      logs={logs}
+                      students={students}
+                      gymName={brand.gymName}
+                    />
+                  )}
+                </>
+              )
             )}
           </>
         )}
       </main>
 
-      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
+      <BottomNav
+        role={session?.role === "admin" ? "admin" : "coach"}
+        studentsBadgeCount={isCoach ? unreviewedCount : undefined}
+      />
 
       {toast && (
         <div className="fixed bottom-28 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">

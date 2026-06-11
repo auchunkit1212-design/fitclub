@@ -15,9 +15,15 @@ import {
 import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
+import type { CoachMealRatingValue } from "@/lib/meal-rating";
 import { mealRatingBadgeStyle, mealRatingLabel } from "@/lib/meal-rating";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
-import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
+import type {
+  MealLog,
+  MealLogRating,
+  RegistryUser,
+  StudentNutritionTargets,
+} from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -101,6 +107,8 @@ interface CoachActivityWallProps {
   onToast: (msg: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
+  ratingByMealId?: Map<string, CoachMealRatingValue>;
+  applyRating?: (row: MealLogRating) => void;
 }
 
 export function CoachActivityWall({
@@ -109,6 +117,8 @@ export function CoachActivityWall({
   onToast,
   onLogUpdated,
   onLogDeleted,
+  ratingByMealId: externalRatingByMealId,
+  applyRating: externalApplyRating,
 }: CoachActivityWallProps) {
   const [targetStudent, setTargetStudent] = useState(students[0]?.email ?? "");
   const [targets, setTargets] = useState<TargetFormState>(DEFAULT_TARGETS);
@@ -119,9 +129,13 @@ export function CoachActivityWall({
   const [bulkNudgeSending, setBulkNudgeSending] = useState(false);
 
   const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
-  const { ratingByMealId, applyRating } = useMealRatings(
-    recentLogs.map((log) => log.id)
+  const internalRatings = useMealRatings(
+    externalRatingByMealId !== undefined
+      ? []
+      : recentLogs.map((log) => log.id)
   );
+  const ratingByMealId = externalRatingByMealId ?? internalRatings.ratingByMealId;
+  const applyRating = externalApplyRating ?? internalRatings.applyRating;
 
   const todayMealCountByEmail = useMemo(() => {
     const today = todayIso();

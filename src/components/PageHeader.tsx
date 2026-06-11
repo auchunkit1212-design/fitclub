@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -8,11 +9,13 @@ const btnClass =
 
 interface PageHeaderProps {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
   backLabel?: string;
   subtitle?: string;
   variant?: "light" | "dark";
   sticky?: boolean;
+  /** Replaces the default back button when provided. */
+  leftSlot?: ReactNode;
 }
 
 export function PageHeader({
@@ -22,6 +25,7 @@ export function PageHeader({
   subtitle,
   variant = "light",
   sticky = true,
+  leftSlot,
 }: PageHeaderProps) {
   const { t } = useI18n();
   const computedBackLabel = backLabel === "← 返回" ? t("header.back", "← 返回") : backLabel;
@@ -33,13 +37,15 @@ export function PageHeader({
       } bg-white text-gray-900 border-b border-gray-200 shadow-sm`}
     >
       <div className="flex items-center gap-3 min-h-[44px]">
-        <button
-          type="button"
-          onClick={onBack}
-          className={`shrink-0 text-sm font-medium px-3 py-2.5 rounded-lg min-h-[44px] ${btnClass} text-gray-700 bg-gray-100`}
-        >
-          {computedBackLabel}
-        </button>
+        {leftSlot ?? (
+          <button
+            type="button"
+            onClick={onBack}
+            className={`shrink-0 text-sm font-medium px-3 py-2.5 rounded-lg min-h-[44px] ${btnClass} text-gray-700 bg-gray-100`}
+          >
+            {computedBackLabel}
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <h1 className="font-bold truncate text-lg text-gray-900">
             {title}

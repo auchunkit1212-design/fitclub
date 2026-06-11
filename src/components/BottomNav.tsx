@@ -20,6 +20,7 @@ const btnClass =
 interface BottomNavProps {
   role: "student" | "coach" | "admin";
   onFabClick?: () => void;
+  studentsBadgeCount?: number;
 }
 
 function NavTabButton({
@@ -27,12 +28,18 @@ function NavTabButton({
   label,
   icon: Icon,
   onClick,
+  badgeCount,
 }: {
   active: boolean;
   label: string;
   icon: typeof Home;
   onClick: () => void;
+  badgeCount?: number;
 }) {
+  const showBadge = badgeCount !== undefined && badgeCount > 0;
+  const badgeLabel =
+    badgeCount !== undefined && badgeCount > 99 ? "99+" : String(badgeCount);
+
   return (
     <button
       type="button"
@@ -41,11 +48,18 @@ function NavTabButton({
       aria-current={active ? "page" : undefined}
       aria-label={label}
     >
-      <Icon
-        size={24}
-        strokeWidth={active ? 2.25 : 2}
-        className={`shrink-0 ${active ? "text-emerald-600" : "text-zinc-400"}`}
-      />
+      <span className="relative shrink-0">
+        <Icon
+          size={24}
+          strokeWidth={active ? 2.25 : 2}
+          className={`shrink-0 ${active ? "text-emerald-600" : "text-zinc-400"}`}
+        />
+        {showBadge && (
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none inline-flex items-center justify-center">
+            {badgeLabel}
+          </span>
+        )}
+      </span>
       <span
         className={`text-[10px] leading-tight font-semibold text-center ${
           active ? "text-emerald-600" : "text-zinc-400"
@@ -57,7 +71,11 @@ function NavTabButton({
   );
 }
 
-export function BottomNav({ role, onFabClick }: BottomNavProps) {
+export function BottomNav({
+  role,
+  onFabClick,
+  studentsBadgeCount,
+}: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useI18n();
@@ -115,6 +133,7 @@ export function BottomNav({ role, onFabClick }: BottomNavProps) {
         active={studentsActive}
         label={t("nav.students", "學員")}
         icon={Users}
+        badgeCount={studentsBadgeCount}
         onClick={() => router.push("/coach/students")}
       />
       <NavTabButton
