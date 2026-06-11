@@ -62,6 +62,7 @@ const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 type RoleFilter = "all" | "student" | "coach";
+type PlanFilter = "all" | "free" | "pro";
 
 type Props = {
   registry: RegistryUser[];
@@ -88,6 +89,21 @@ function roleBadge(role: RegistryUser["role"]) {
   );
 }
 
+function planBadge(plan: UserPlan | undefined) {
+  if (plan === "pro") {
+    return (
+      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+        Pro
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
+      Free
+    </span>
+  );
+}
+
 export function AdminAccountsConsole({
   registry,
   onRegistryChange,
@@ -107,6 +123,8 @@ export function AdminAccountsConsole({
   });
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
+  const [planUpdatingEmail, setPlanUpdatingEmail] = useState<string | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<AdminUserProfileDetail | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -188,6 +206,8 @@ export function AdminAccountsConsole({
     const q = search.trim().toLowerCase();
     return registry.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      const userPlan = u.plan ?? "free";
+      if (planFilter !== "all" && userPlan !== planFilter) return false;
       if (!q) return true;
       return (
         u.name.toLowerCase().includes(q) ||
@@ -195,7 +215,7 @@ export function AdminAccountsConsole({
         gymLabel(u).toLowerCase().includes(q)
       );
     });
-  }, [registry, search, roleFilter]);
+  }, [registry, search, roleFilter, planFilter]);
 
   const reloadProfile = useCallback(
     async (email: string, options?: { keepOpen?: boolean }) => {
@@ -429,6 +449,53 @@ export function AdminAccountsConsole({
     void handleSaveAccount({ auto: true, formOverride: nextForm });
   };
 
+  const handleQuickPlanChange = async (
+    user: RegistryUser,
+    plan: UserPlan,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    const current = user.plan ?? "free";
+    if (current === plan || planUpdatingEmail) return;
+
+    const label = plan === "pro" ? "Pro" : "Free";
+    if (!window.confirm(`將「${user.name}」設為 ${label}？`)) return;
+
+    setPlanUpdatingEmail(user.email);
+    try {
+      const res = await fetch("/api/admin/users/update", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        body: JSON.stringify({ email: user.email, plan }),
+      });
+      const { data, parseError } = await readApiJson<{
+        user?: RegistryUser;
+        error?: string;
+      }>(res);
+
+      if (!res.ok || parseError || !data?.user) {
+        onToastRef.current(data?.error ?? "更新方案失敗");
+        return;
+      }
+
+      applySavedUser(data.user, { toast: `已設為 ${label}` });
+      if (
+        selectedEmail?.toLowerCase() === user.email.toLowerCase() &&
+        profile
+      ) {
+        await reloadProfile(user.email, { keepOpen: true });
+      }
+    } catch {
+      onToastRef.current("更新方案失敗");
+    } finally {
+      setPlanUpdatingEmail(null);
+    }
+  };
+
   const handleResetPassword = async () => {
     if (!profile || resetPassword.length < 6) {
       onToastRef.current("請輸入至少 6 位新密碼");
@@ -551,7 +618,7 @@ export function AdminAccountsConsole({
           </button>
         </div>
         <p className="text-xs text-zinc-500">
-          撳姓名編輯帳戶：可改角色（教練↔學員）、健身室、品牌資料、密碼等所有欄位。
+          列表可直接一鍵切換 Pro／Free；撳姓名可編輯角色、健身室、品牌、密碼等所有欄位。
         </p>
 
         <div className="relative">
@@ -585,6 +652,29 @@ export function AdminAccountsConsole({
                 roleFilter === key
                   ? "bg-white text-zinc-900 shadow-sm"
                   : "text-zinc-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-1 p-1 bg-amber-50 rounded-xl border border-amber-100">
+          {(
+            [
+              ["all", "全部方案"],
+              ["free", "Free"],
+              ["pro", "Pro"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setPlanFilter(key)}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold ${btnClass} ${
+                planFilter === key
+                  ? "bg-white text-amber-950 shadow-sm"
+                  : "text-amber-800/70"
               }`}
             >
               {label}
@@ -631,7 +721,10 @@ export function AdminAccountsConsole({
                         {user.email}
                       </p>
                     </div>
-                    {roleBadge(user.role)}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {roleBadge(user.role)}
+                      {planBadge(user.plan)}
+                    </div>
                   </div>
                   <p className="text-xs text-emerald-800 mt-2 truncate flex items-center gap-1">
                     <Building2 size={12} className="shrink-0" aria-hidden />
@@ -645,6 +738,36 @@ export function AdminAccountsConsole({
                   <p className="text-[10px] text-zinc-600 mt-1.5 font-mono truncate">
                     密碼：{user.adminPasswordPlain ?? "（未記錄明文）"}
                   </p>
+                  <div
+                    className="mt-2 flex gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      disabled={planUpdatingEmail === user.email}
+                      onClick={(e) => void handleQuickPlanChange(user, "pro", e)}
+                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border ${btnClass} ${
+                        (user.plan ?? "free") === "pro"
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-white text-amber-900 border-amber-200 hover:bg-amber-50"
+                      } disabled:opacity-50`}
+                    >
+                      {planUpdatingEmail === user.email ? "…" : "設 Pro"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={planUpdatingEmail === user.email}
+                      onClick={(e) => void handleQuickPlanChange(user, "free", e)}
+                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border ${btnClass} ${
+                        (user.plan ?? "free") === "free"
+                          ? "bg-zinc-700 text-white border-zinc-700"
+                          : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
+                      } disabled:opacity-50`}
+                    >
+                      {planUpdatingEmail === user.email ? "…" : "設 Free"}
+                    </button>
+                  </div>
                 </button>
               </li>
             ))}
