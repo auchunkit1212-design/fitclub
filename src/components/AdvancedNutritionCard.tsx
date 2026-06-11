@@ -11,7 +11,9 @@ import {
   Leaf,
   LineChart,
 } from "@/components/icons";
+import { ProUpgradePrompt } from "@/components/ProUpgradePrompt";
 import { resolveFoodAdvancedNutrients } from "@/lib/food-advanced-nutrients";
+import { hasProAccessFromSession } from "@/lib/plan-access";
 import type { FoodAdvancedNutrients } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,6 +43,7 @@ export function AdvancedNutritionCard({
   className = "",
 }: AdvancedNutritionCardProps) {
   const { t } = useI18n();
+  const showMicro = hasProAccessFromSession();
 
   const resolved = useMemo(
     () => resolveFoodAdvancedNutrients(macros, advanced),
@@ -142,25 +145,42 @@ export function AdvancedNutritionCard({
         </div>
       </div>
 
-      <ul className="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-1 border-t border-zinc-200/80">
-        {microRows.map(({ key, label, value, unit, Icon, iconClass }) => (
-          <li key={key} className="flex items-center gap-2 min-w-0">
-            <Icon size={16} strokeWidth={2} className={`shrink-0 ${iconClass}`} aria-hidden />
-            <span className="text-xs text-zinc-500 truncate flex-1">{label}</span>
-            <span className="text-xs font-semibold text-zinc-600 tabular-nums shrink-0">
-              {value}
-              <span className="font-normal text-zinc-400 ml-0.5">{unit}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <p className="text-[10px] text-zinc-400 leading-relaxed">
-        {t(
-          "foodSearch.advanced.disclaimer",
-          "進階營養素由 AI 估算或依宏量推算，僅供 Pro 參考，非醫療建議。"
-        )}
-      </p>
+      {showMicro ? (
+        <>
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-1 border-t border-zinc-200/80">
+            {microRows.map(({ key, label, value, unit, Icon, iconClass }) => (
+              <li key={key} className="flex items-center gap-2 min-w-0">
+                <Icon
+                  size={16}
+                  strokeWidth={2}
+                  className={`shrink-0 ${iconClass}`}
+                  aria-hidden
+                />
+                <span className="text-xs text-zinc-500 truncate flex-1">
+                  {label}
+                </span>
+                <span className="text-xs font-semibold text-zinc-600 tabular-nums shrink-0">
+                  {value}
+                  <span className="font-normal text-zinc-400 ml-0.5">
+                    {unit}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10px] text-zinc-400 leading-relaxed">
+            {t(
+              "foodSearch.advanced.disclaimer",
+              "進階營養素由 AI 估算或依宏量推算，僅供 Pro 參考，非醫療建議。"
+            )}
+          </p>
+        </>
+      ) : (
+        <ProUpgradePrompt
+          feature={t("nutritionDash.micro.title", "微營養數據")}
+          className="mt-1"
+        />
+      )}
     </div>
   );
 }

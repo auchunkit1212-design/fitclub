@@ -27,6 +27,7 @@ import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
+import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
@@ -1039,28 +1040,32 @@ export default function StudentDashboard() {
               />
             </section>
 
-            <CoachSuggestCard
-              targetCalories={targetCalories}
-              targetProtein={targetProtein}
-              targetCarbs={targetCarbs}
-              targetFats={targetFats}
-              consumedCalories={todayCalories}
-              consumedProtein={todayProtein}
-              consumedCarbs={todayCarbs}
-              consumedFats={todayFats}
-              mealsLoggedToday={todayLogs.length}
-            />
+            <ProFeatureGate feature="AI 推薦菜單">
+              <CoachSuggestCard
+                targetCalories={targetCalories}
+                targetProtein={targetProtein}
+                targetCarbs={targetCarbs}
+                targetFats={targetFats}
+                consumedCalories={todayCalories}
+                consumedProtein={todayProtein}
+                consumedCarbs={todayCarbs}
+                consumedFats={todayFats}
+                mealsLoggedToday={todayLogs.length}
+              />
+            </ProFeatureGate>
 
-            <StudentMicronutrientPanel
-              todayCalories={todayCalories}
-              todayCarbs={todayCarbs}
-              todayFats={todayFats}
-              todayProtein={todayProtein}
-              targetCalories={targetCalories}
-              targetCarbs={targetCarbs}
-              targetFats={targetFats}
-              weightKg={bodyProfile?.weightKg}
-            />
+            <ProFeatureGate feature="微營養數據分析">
+              <StudentMicronutrientPanel
+                todayCalories={todayCalories}
+                todayCarbs={todayCarbs}
+                todayFats={todayFats}
+                todayProtein={todayProtein}
+                targetCalories={targetCalories}
+                targetCarbs={targetCarbs}
+                targetFats={targetFats}
+                weightKg={bodyProfile?.weightKg}
+              />
+            </ProFeatureGate>
 
             <p className="text-center text-xs text-gray-400">
               {t("home.profileHint", "體重、飲食記錄同個人資料請到「我的」分頁查看")}

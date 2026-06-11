@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from "recharts";
 import { MicronutrientGuideSection } from "@/components/NutritionMicroBars";
+import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { useI18n } from "@/components/I18nProvider";
 import { IconLabel, Lightbulb } from "@/components/icons";
 import { groupLogsByBucket, type MealBucket } from "@/lib/meal-buckets";
@@ -330,18 +331,22 @@ export function NutritionDashboard({
             )}
           </section>
 
-          <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
-            <h3 className="font-semibold text-zinc-800">{t("nutritionDash.micro.title", "微量元素 Micronutrients")}</h3>
-            <MicronutrientGuideSection
-              calories={totals.calories}
-              carbs={totals.carbs}
-              fats={totals.fats}
-              protein={totals.protein}
-              targetCalories={goalCalories}
-              targetCarbs={goalCarbs}
-              targetFats={goalFats}
-            />
-          </section>
+          <ProFeatureGate feature={t("nutritionDash.micro.title", "微營養數據")}>
+            <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
+              <h3 className="font-semibold text-zinc-800">
+                {t("nutritionDash.micro.title", "微量元素 Micronutrients")}
+              </h3>
+              <MicronutrientGuideSection
+                calories={totals.calories}
+                carbs={totals.carbs}
+                fats={totals.fats}
+                protein={totals.protein}
+                targetCalories={goalCalories}
+                targetCarbs={goalCarbs}
+                targetFats={goalFats}
+              />
+            </section>
+          </ProFeatureGate>
         </div>
       </div>
     </div>

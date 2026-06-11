@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchUserByEmailForAuth } from "@/lib/db";
 import { parseSessionFromRequest } from "@/lib/session-server";
-import { applyUserPlanToSession } from "@/lib/user-plan";
+import {
+  applyEffectivePlanToSession,
+  normalizeUserPlan,
+  resolveEffectiveIsPro,
+} from "@/lib/user-plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,26 +17,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (session.role === "admin") {
-    const enriched = applyUserPlanToSession(session);
-    return NextResponse.json({
-      plan: enriched.plan ?? "pro",
-      isPro: true,
-    });
+    return NextResponse.json({ plan: "pro", isPro: true });
   }
 
   try {
     const user = await fetchUserByEmailForAuth(session.email);
-    const enriched = applyUserPlanToSession(session, user ?? undefined);
+    const enriched = await applyEffectivePlanToSession(session, user ?? undefined);
     return NextResponse.json({
       plan: enriched.plan ?? "free",
       isPro: enriched.isPro === true,
     });
   } catch (err) {
     console.error("[me/plan]", err);
-    const enriched = applyUserPlanToSession(session);
+    const isPro = await resolveEffectiveIsPro(session);
     return NextResponse.json({
-      plan: enriched.plan ?? "free",
-      isPro: enriched.isPro === true,
+      plan: normalizeUserPlan(session.plan),
+      isPro,
     });
   }
 }

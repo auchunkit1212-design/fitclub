@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateCoachMealSuggestion } from "@/lib/coach-suggest";
 import { normalizeLanguage } from "@/lib/i18n";
 import { parseSessionFromRequest } from "@/lib/session-server";
+import { assertProSession, ProRequiredError } from "@/lib/user-plan";
 
 function readMacro(value: unknown, fallback = 0): number {
   const n = Number(value);
@@ -12,6 +13,18 @@ export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
+  }
+
+  try {
+    await assertProSession(session);
+  } catch (err) {
+    if (err instanceof ProRequiredError) {
+      return NextResponse.json(
+        { error: "AI 推薦菜單僅供 Pro 會員", code: "PRO_REQUIRED" },
+        { status: 403 }
+      );
+    }
+    throw err;
   }
 
   const body = (await request.json()) as {

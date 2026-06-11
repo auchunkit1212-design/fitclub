@@ -9,7 +9,7 @@ import { verifyPassword } from "@/lib/password";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
 import { backfillCoachStudentTenants, fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
-import { applyUserPlanToSession } from "@/lib/user-plan";
+import { applyEffectivePlanToSession } from "@/lib/user-plan";
 import type { RegistryUser, UserSession } from "@/lib/types";
 
 export async function enrichSession(
@@ -46,7 +46,7 @@ export async function enrichSession(
     session.isSoloStudent = true;
   }
 
-  return applyUserPlanToSession(session, user);
+  return await applyEffectivePlanToSession(session, user);
 }
 
 export async function loginWithCredentials(

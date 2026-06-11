@@ -13,11 +13,11 @@ export async function syncSessionPlan(): Promise<UserSession | null> {
     });
     if (!res.ok) return session;
     const data = (await res.json()) as { plan?: UserPlan; isPro?: boolean };
-    const next = applyUserPlanToSession({
+    const next = {
       ...session,
       plan: data.plan ?? session.plan,
-      isPro: data.isPro ?? session.isPro,
-    });
+      isPro: data.isPro === true,
+    };
     saveSession(next);
     return next;
   } catch {
