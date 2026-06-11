@@ -1,6 +1,7 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
 import { GraduationCap, Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
@@ -147,6 +148,13 @@ export function StudentAppSettingsPanel({
           </button>
         </div>
       )}
+
+      <div className="pt-1 border-t border-gray-100 space-y-3">
+        <p className="text-xs font-medium text-zinc-600">
+          {t("legal.sectionTitle", "法律與帳戶")}
+        </p>
+        <LegalFooterLinks showDeleteAccount />
+      </div>
 
       <button
         type="button"

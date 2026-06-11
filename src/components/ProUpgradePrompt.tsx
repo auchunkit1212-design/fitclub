@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { Sparkles } from "@/components/icons";
+import { ProCheckoutButton } from "@/components/ProCheckoutButton";
 
 type Props = {
   feature?: string;
@@ -35,6 +36,7 @@ export function ProUpgradePrompt({ feature, className = "" }: Props) {
           "教練升 Pro：無限學員 + 旗下學員享有微營養分析同 AI 推薦菜單。"
         )}
       </p>
+      <ProCheckoutButton />
     </div>
   );
 }

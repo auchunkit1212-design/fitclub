@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
+import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { resetAppGuide } from "@/lib/app-guide";
@@ -69,7 +70,8 @@ export default function SettingsPage() {
         </h1>
       </header>
 
-      <main className="px-4 py-5 min-w-0">
+      <main className="px-4 py-5 min-w-0 space-y-4">
+        <ProBillingPanel />
         <StudentAppSettingsPanel
           settings={settings}
           onSettingsChange={setSettings}

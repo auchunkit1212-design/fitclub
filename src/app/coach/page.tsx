@@ -18,6 +18,8 @@ import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
+import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { IconLabel } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
@@ -221,6 +223,10 @@ export default function CoachPage() {
           <CoachSelfMealPanel logs={ownMealLogs} />
         )}
 
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <ProBillingPanel />
+        )}
+
         {session && (
           <CoachAiReportPanel
             session={session}
@@ -317,6 +323,8 @@ export default function CoachPage() {
             </button>
           </section>
         )}
+
+        <LegalFooterLinks className="py-2" />
 
       </main>
 
