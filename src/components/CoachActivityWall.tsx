@@ -16,7 +16,16 @@ import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
-import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
+import {
+  isMealReviewedByCoach,
+} from "@/lib/meal-review-status";
+import type {
+  MealLog,
+  MealLogFeedback,
+  MealLogReaction,
+  RegistryUser,
+  StudentNutritionTargets,
+} from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -94,9 +103,15 @@ function buildPushNudgeBody(coachName: string, todayMealCount: number): string {
   return `${coachName} 教練提醒你：今日已記 ${todayMealCount} 餐，請繼續補記同飲水，保持完整打卡！`;
 }
 
+type WallFilter = "all" | "unreviewed";
+
 interface CoachActivityWallProps {
   logs: MealLog[];
   students: RegistryUser[];
+  coachEmail: string;
+  reactions?: MealLogReaction[];
+  feedback?: MealLogFeedback[];
+  onReviewChange?: () => void;
   onToast: (msg: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
@@ -105,6 +120,10 @@ interface CoachActivityWallProps {
 export function CoachActivityWall({
   logs,
   students,
+  coachEmail,
+  reactions = [],
+  feedback = [],
+  onReviewChange,
   onToast,
   onLogUpdated,
   onLogDeleted,
@@ -116,8 +135,24 @@ export function CoachActivityWall({
   const [nudgeStudent, setNudgeStudent] = useState<RegistryUser | null>(null);
   const [nudgeSending, setNudgeSending] = useState(false);
   const [bulkNudgeSending, setBulkNudgeSending] = useState(false);
+  const [wallFilter, setWallFilter] = useState<WallFilter>("all");
 
-  const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
+  const recentLogs = useMemo(() => {
+    const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+    const filtered =
+      wallFilter === "unreviewed"
+        ? sorted.filter(
+            (log) =>
+              !isMealReviewedByCoach(
+                log.id,
+                coachEmail,
+                reactions,
+                feedback
+              )
+          )
+        : sorted;
+    return filtered.slice(0, 30);
+  }, [logs, wallFilter, coachEmail, reactions, feedback]);
 
   const todayMealCountByEmail = useMemo(() => {
     const today = todayIso();
@@ -405,10 +440,47 @@ export function CoachActivityWall({
         <p className="text-xs text-zinc-400 mb-2">
           撳卡片查看大圖、修正營養或刪除記錄
         </p>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setWallFilter("all")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${
+              wallFilter === "all"
+                ? "bg-zinc-900 text-white border-zinc-900"
+                : "bg-white text-zinc-600 border-zinc-200"
+            }`}
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            onClick={() => setWallFilter("unreviewed")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${
+              wallFilter === "unreviewed"
+                ? "bg-amber-600 text-white border-amber-600"
+                : "bg-white text-amber-800 border-amber-200"
+            }`}
+          >
+            未檢閱
+          </button>
+        </div>
         <ul className="space-y-3 max-h-[480px] overflow-y-auto">
+          {recentLogs.length === 0 ? (
+            <li className="text-sm text-zinc-500 text-center py-6">
+              {wallFilter === "unreviewed"
+                ? "暫無未檢閱記錄"
+                : "暫無飲食動態"}
+            </li>
+          ) : null}
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
             const status = getMealStatus(log);
+            const reviewed = isMealReviewedByCoach(
+              log.id,
+              coachEmail,
+              reactions,
+              feedback
+            );
             const calories = Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0;
             const protein = Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0;
             const carbs = Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0;
@@ -433,11 +505,18 @@ export function CoachActivityWall({
                       {carbs} F{fats}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealStatusStyles(status)}`}
-                  >
-                    {status}
-                  </span>
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    {!reviewed && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
+                        未檢閱
+                      </span>
+                    )}
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealStatusStyles(status)}`}
+                    >
+                      {status}
+                    </span>
+                  </div>
                 </div>
                 <div
                   className="mt-2"
@@ -446,13 +525,14 @@ export function CoachActivityWall({
                   <CoachMealReviewActions
                     log={log}
                     compact
-                    onSent={(kind) =>
+                    onSent={(kind) => {
+                      onReviewChange?.();
                       onToast(
                         kind === "feedback"
                           ? "已送出評語，學員會收到 App 通知"
                           : "已送出貼紙"
-                      )
-                    }
+                      );
+                    }}
                     onError={(msg) => onToast(msg)}
                   />
                 </div>
@@ -475,12 +555,14 @@ export function CoachActivityWall({
             onLogUpdated?.(updated);
             onToast("飲食記錄已更新");
           }}
-          onCoachFeedbackSent={() =>
-            onToast("已送出評語，學員會收到 App 通知")
-          }
+          onCoachFeedbackSent={() => {
+            onReviewChange?.();
+            onToast("已送出評語，學員會收到 App 通知");
+          }}
           onDeleted={(id) => {
             setSelectedLog(null);
             onLogDeleted?.(id);
+            onReviewChange?.();
             onToast("已刪除學員飲食記錄");
           }}
         />

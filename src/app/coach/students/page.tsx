@@ -6,6 +6,8 @@ import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { CoachStudentManagementPanel } from "@/components/CoachStudentManagementPanel";
+import { CoachUnreviewedMealsPanel } from "@/components/CoachUnreviewedMealsPanel";
+import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
@@ -37,6 +39,13 @@ export default function CoachStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+
+  const coachCanReview =
+    session?.role === "coach" || session?.role === "admin";
+  const reviewIndex = useCoachMealReviewIndex(
+    logs,
+    coachCanReview ? session?.email : null
+  );
 
   const showToast = (message: string) => {
     setToast(message);
@@ -167,20 +176,45 @@ export default function CoachStudentsPage() {
                   onToast={showToast}
                 />
 
-                {session?.role === "coach" && (
-                  <CoachActivityWall
-                    logs={logs}
-                    students={students}
-                    onToast={showToast}
-                    onLogUpdated={(updated) =>
-                      setLogs((prev) =>
-                        prev.map((l) => (l.id === updated.id ? updated : l))
-                      )
-                    }
-                    onLogDeleted={(id) =>
-                      setLogs((prev) => prev.filter((l) => l.id !== id))
-                    }
-                  />
+                {coachCanReview && session && (
+                  <>
+                    <CoachUnreviewedMealsPanel
+                      logs={logs}
+                      students={students}
+                      coachEmail={session.email}
+                      reactions={reviewIndex.reactions}
+                      feedback={reviewIndex.feedback}
+                      loading={reviewIndex.loading}
+                      onReviewChange={() => void reviewIndex.reload()}
+                      onToast={showToast}
+                      onLogUpdated={(updated) =>
+                        setLogs((prev) =>
+                          prev.map((l) => (l.id === updated.id ? updated : l))
+                        )
+                      }
+                      onLogDeleted={(id) =>
+                        setLogs((prev) => prev.filter((l) => l.id !== id))
+                      }
+                    />
+
+                    <CoachActivityWall
+                      logs={logs}
+                      students={students}
+                      coachEmail={session.email}
+                      reactions={reviewIndex.reactions}
+                      feedback={reviewIndex.feedback}
+                      onReviewChange={() => void reviewIndex.reload()}
+                      onToast={showToast}
+                      onLogUpdated={(updated) =>
+                        setLogs((prev) =>
+                          prev.map((l) => (l.id === updated.id ? updated : l))
+                        )
+                      }
+                      onLogDeleted={(id) =>
+                        setLogs((prev) => prev.filter((l) => l.id !== id))
+                      }
+                    />
+                  </>
                 )}
 
                 <CoachMealHistoryPanel
