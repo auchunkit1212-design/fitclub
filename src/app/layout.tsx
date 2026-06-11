@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Nutrition Coach 專屬飲食打卡同教練管理 — Coach! what to eat?",
   applicationName: BRAND_NAME,
   manifest: "/api/manifest",
-    icons: {
+  icons: {
     icon: [{ url: APP_LOGO_PATH, type: "image/png" }],
     apple: [{ url: APP_LOGO_PATH, type: "image/png" }],
   },
@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  other: {
+    "privacy-policy": "/privacy",
+    "terms-of-service": "/terms",
   },
 };
 

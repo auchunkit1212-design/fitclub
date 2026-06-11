@@ -14,6 +14,7 @@ import {
   Ticket,
 } from "@/components/icons";
 import { IosPwaInstallBanner } from "@/components/IosPwaInstallBanner";
+import { RegisterLegalConsent } from "@/components/RegisterLegalConsent";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import {
   hasInviteInUrl,
@@ -553,6 +554,8 @@ export default function RegisterPage() {
           </>
         )}
       </div>
+
+      <RegisterLegalConsent className="mt-4 px-2" />
 
       <p className="text-center text-sm text-zinc-500 mt-5">
         {t("auth.footer.ownerPrompt", "Gym 老闆？")}{" "}

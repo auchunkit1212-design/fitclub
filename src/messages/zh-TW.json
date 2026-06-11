@@ -679,5 +679,28 @@
         "body": "如果你有教練邀請碼，註冊時輸入即可綁定教練與分店。\n\n綁定後教練可以設定你的營養目標、查看你的打卡紀錄，並發送廣播提醒。"
       }
     }
+  },
+  "legal": {
+    "privacy": "隱私權政策",
+    "terms": "使用條款",
+    "deleteAccount": "刪除帳戶",
+    "footerNav": "法律與帳戶",
+    "sectionTitle": "法律與帳戶",
+    "lastUpdated": "最後更新：{date}",
+    "contactTitle": "聯絡我們",
+    "contactBody": "如有隱私或帳戶問題，請寄信至：",
+    "registerConsent": "註冊或登入即表示你同意",
+    "and": "與",
+    "deleteTitle": "永久刪除帳戶",
+    "deleteWarning": "刪除後將移除你的帳戶、飲食記錄、身體檔案、推播訂閱與相關資料，且無法復原。",
+    "deleteCoachWarning": "教練帳戶刪除後，學員將無法再透過你的邀請碼綁定；已綁定學員資料不會一併刪除。",
+    "deleteTypeEmail": "輸入你的電郵以確認：{email}",
+    "deleteButton": "永久刪除我的帳戶",
+    "deleteConfirmDialog": "此操作無法復原。確定永久刪除帳戶及所有飲食記錄？",
+    "deleteSuccess": "帳戶已永久刪除。",
+    "deleteFailed": "刪除失敗",
+    "deleting": "刪除中...",
+    "deleteLoginRequired": "請先登入再刪除帳戶。",
+    "goLogin": "前往登入"
   }
 }

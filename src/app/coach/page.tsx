@@ -18,6 +18,7 @@ import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import { IconLabel } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
@@ -317,6 +318,8 @@ export default function CoachPage() {
             </button>
           </section>
         )}
+
+        <LegalFooterLinks className="py-2" />
 
       </main>
 

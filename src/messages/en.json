@@ -679,5 +679,28 @@
         "body": "If you have a coach invite code, enter it at registration to link your coach and gym.\n\nYour coach can then set nutrition targets, review your logs, and send broadcasts."
       }
     }
+  },
+  "legal": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "deleteAccount": "Delete account",
+    "footerNav": "Legal & account",
+    "sectionTitle": "Legal & account",
+    "lastUpdated": "Last updated: {date}",
+    "contactTitle": "Contact us",
+    "contactBody": "For privacy or account requests, email:",
+    "registerConsent": "By signing up or logging in you agree to our",
+    "and": " and ",
+    "deleteTitle": "Permanently delete account",
+    "deleteWarning": "This removes your account, meal logs, body profile, push subscriptions, and related data. This cannot be undone.",
+    "deleteCoachWarning": "After a coach account is deleted, new students cannot bind via your invite code; existing student data is not deleted.",
+    "deleteTypeEmail": "Type your email to confirm: {email}",
+    "deleteButton": "Permanently delete my account",
+    "deleteConfirmDialog": "This cannot be undone. Delete your account and all meal logs?",
+    "deleteSuccess": "Your account has been permanently deleted.",
+    "deleteFailed": "Deletion failed",
+    "deleting": "Deleting...",
+    "deleteLoginRequired": "Please log in before deleting your account.",
+    "goLogin": "Go to login"
   }
 }

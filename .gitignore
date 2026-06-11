@@ -29,3 +29,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 .vercel
+
+# capacitor generated (re-run cap sync after clone)
+/ios/App/App/public
+/android/app/src/main/assets/public
