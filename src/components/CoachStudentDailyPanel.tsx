@@ -109,6 +109,7 @@ type Props = {
   logs: MealLog[];
   students: RegistryUser[];
   onLogUpdated?: (log: MealLog) => void;
+  onLogDeleted?: (id: string) => void;
   onToast?: (message: string) => void;
 };
 
@@ -116,6 +117,7 @@ export function CoachStudentDailyPanel({
   logs,
   students,
   onLogUpdated,
+  onLogDeleted,
   onToast,
 }: Props) {
   const [targetsMap, setTargetsMap] = useState<
@@ -441,6 +443,7 @@ export function CoachStudentDailyPanel({
           logs={logs}
           onClose={() => setMealsStudent(null)}
           onLogUpdated={onLogUpdated}
+          onLogDeleted={onLogDeleted}
           onToast={onToast}
         />
       )}

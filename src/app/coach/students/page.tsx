@@ -161,6 +161,9 @@ export default function CoachStudentsPage() {
                       prev.map((l) => (l.id === updated.id ? updated : l))
                     )
                   }
+                  onLogDeleted={(id) =>
+                    setLogs((prev) => prev.filter((l) => l.id !== id))
+                  }
                   onToast={showToast}
                 />
 
@@ -173,6 +176,9 @@ export default function CoachStudentsPage() {
                       setLogs((prev) =>
                         prev.map((l) => (l.id === updated.id ? updated : l))
                       )
+                    }
+                    onLogDeleted={(id) =>
+                      setLogs((prev) => prev.filter((l) => l.id !== id))
                     }
                   />
                 )}

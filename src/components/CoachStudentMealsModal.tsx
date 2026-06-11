@@ -55,6 +55,7 @@ type Props = {
   logs: MealLog[];
   onClose: () => void;
   onLogUpdated?: (log: MealLog) => void;
+  onLogDeleted?: (id: string) => void;
   onToast?: (message: string) => void;
 };
 
@@ -63,6 +64,7 @@ export function CoachStudentMealsModal({
   logs,
   onClose,
   onLogUpdated,
+  onLogDeleted,
   onToast,
 }: Props) {
   const [period, setPeriod] = useState<Period>("today");
@@ -204,6 +206,11 @@ export function CoachStudentMealsModal({
           onCoachFeedbackSent={() =>
             onToast?.("已送出評語，學員會收到 App 通知")
           }
+          onDeleted={(id) => {
+            setSelectedLog(null);
+            onLogDeleted?.(id);
+            onToast?.("已刪除學員飲食記錄");
+          }}
         />
       )}
     </>

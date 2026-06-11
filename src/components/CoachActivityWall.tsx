@@ -99,6 +99,7 @@ interface CoachActivityWallProps {
   students: RegistryUser[];
   onToast: (msg: string) => void;
   onLogUpdated?: (log: MealLog) => void;
+  onLogDeleted?: (id: string) => void;
 }
 
 export function CoachActivityWall({
@@ -106,6 +107,7 @@ export function CoachActivityWall({
   students,
   onToast,
   onLogUpdated,
+  onLogDeleted,
 }: CoachActivityWallProps) {
   const [targetStudent, setTargetStudent] = useState(students[0]?.email ?? "");
   const [targets, setTargets] = useState<TargetFormState>(DEFAULT_TARGETS);
@@ -400,7 +402,9 @@ export function CoachActivityWall({
             動態牆 · 即時批閱
           </IconLabel>
         </h2>
-        <p className="text-xs text-zinc-400 mb-2">撳卡片查看大圖同完整 Macros</p>
+        <p className="text-xs text-zinc-400 mb-2">
+          撳卡片查看大圖、修正營養或刪除記錄
+        </p>
         <ul className="space-y-3 max-h-[480px] overflow-y-auto">
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
@@ -474,6 +478,11 @@ export function CoachActivityWall({
           onCoachFeedbackSent={() =>
             onToast("已送出評語，學員會收到 App 通知")
           }
+          onDeleted={(id) => {
+            setSelectedLog(null);
+            onLogDeleted?.(id);
+            onToast("已刪除學員飲食記錄");
+          }}
         />
       )}
 

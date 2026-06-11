@@ -140,10 +140,15 @@ export function MealDetailModal({
     }
   };
 
+  const canDelete = Boolean(onDeleted) && (canEdit || coachReviewMode);
+
   const handleDelete = async () => {
-    if (!canEdit || !onDeleted) return;
+    if (!canDelete) return;
+    const who = coachReviewMode
+      ? `學員「${studentName ?? log.email}」`
+      : "呢餐";
     const confirmed = window.confirm(
-      `確定刪除呢餐記錄？\n\n${log.mealType} · ${description.trim() || log.description}\n\n刪除後無法復原。`
+      `確定刪除${who}嘅飲食記錄？\n\n${log.mealType} · ${description.trim() || log.description}\n\n刪除後無法復原。`
     );
     if (!confirmed) return;
 
@@ -157,7 +162,7 @@ export function MealDetailModal({
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "刪除失敗");
-      onDeleted(log.id);
+      onDeleted?.(log.id);
       onClose();
     } catch (e) {
       setError(errorMessage(e, "刪除失敗"));
@@ -378,7 +383,7 @@ export function MealDetailModal({
                   「套用並儲存」會依上方描述用 AI／本地規則重算並寫入雲端；若你已手動改數字，可先按「AI
                   預覽」對照再決定是否套用。
                 </p>
-                {onDeleted && (
+                {canDelete && !coachReviewMode && (
                   <button
                     type="button"
                     disabled={deleting || saving || aiBusy}
@@ -396,7 +401,18 @@ export function MealDetailModal({
           )}
 
           {coachReviewMode && (
-            <div className="pt-2 border-t border-zinc-100">
+            <div className="pt-2 border-t border-zinc-100 space-y-3">
+              {canDelete && (
+                <button
+                  type="button"
+                  disabled={deleting || saving || aiBusy}
+                  onClick={handleDelete}
+                  className={`w-full py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold text-sm inline-flex items-center justify-center gap-2 ${btnClass}`}
+                >
+                  <Trash2 size={16} aria-hidden />
+                  {deleting ? "刪除中…" : "刪除學員此餐記錄"}
+                </button>
+              )}
               <p className="text-sm font-semibold text-zinc-800 mb-2">
                 批閱學員 · 貼紙同評語
               </p>
