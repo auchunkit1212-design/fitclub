@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSiteUrl } from "@/lib/legal-config";
+import { fetchStripeCustomerId } from "@/lib/stripe-billing";
 import {
-  fetchStripeCustomerId,
-  setUserBillingPlan,
-} from "@/lib/stripe-billing";
-import { getStripe, getStripePriceLookupKey, resolveStripePriceId } from "@/lib/stripe";
+  assertPlanAllowedForRole,
+  resolveCheckoutPriceId,
+  type BillingPlanKey,
+} from "@/lib/stripe-plans";
+import { getStripe } from "@/lib/stripe";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -25,15 +27,28 @@ export async function POST(request: Request) {
     const origin = getSiteUrl(new URL(request.url).origin);
     const email = session.email.trim().toLowerCase();
 
-    let body: { lookup_key?: string } = {};
+    let body: {
+      priceId?: string;
+      plan?: BillingPlanKey;
+      lookup_key?: string;
+    } = {};
     try {
-      body = (await request.json()) as { lookup_key?: string };
+      body = (await request.json()) as typeof body;
     } catch {
       // empty body ok
     }
 
-    const lookupKey = body.lookup_key?.trim() || getStripePriceLookupKey();
-    const priceId = await resolveStripePriceId(lookupKey);
+    const defaultPlan: BillingPlanKey =
+      session.role === "coach" ? "coach_pro" : "solo";
+
+    const { priceId, planKey } = resolveCheckoutPriceId({
+      priceId: body.priceId,
+      plan: body.plan ?? defaultPlan,
+      lookupKey: body.lookup_key,
+    });
+
+    assertPlanAllowedForRole(planKey, session.role);
+
     const existingCustomerId = await fetchStripeCustomerId(email);
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -49,6 +64,7 @@ export async function POST(request: Request) {
       metadata: {
         email,
         role: session.role,
+        plan_key: planKey ?? "",
       },
     });
 

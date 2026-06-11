@@ -2,6 +2,8 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { Sparkles } from "@/components/icons";
+import { getSession } from "@/lib/session";
+import { plansForSessionRole } from "@/lib/stripe-plans";
 import { ProCheckoutButton } from "@/components/ProCheckoutButton";
 
 type Props = {
@@ -11,6 +13,8 @@ type Props = {
 
 export function ProUpgradePrompt({ feature, className = "" }: Props) {
   const { t } = useI18n();
+  const session = getSession();
+  const plan = plansForSessionRole(session?.role)[0];
   const label =
     feature ??
     t("profile.proFeatureDefault", "此進階功能");
@@ -36,7 +40,22 @@ export function ProUpgradePrompt({ feature, className = "" }: Props) {
           "教練升 Pro：無限學員 + 旗下學員享有微營養分析同 AI 推薦菜單。"
         )}
       </p>
-      <ProCheckoutButton />
+      {plan ? (
+        <ProCheckoutButton
+          plan={plan.key}
+          priceId={plan.priceId}
+          label={t(
+            plan.key === "solo"
+              ? "billing.upgradeSolo"
+              : "billing.upgradeCoachPro",
+            plan.key === "solo"
+              ? "升級 Solo 版（HK$68/月）"
+              : "升級 Pro 教練版（HK$399/月）"
+          )}
+        />
+      ) : (
+        <ProCheckoutButton />
+      )}
     </div>
   );
 }

@@ -704,10 +704,13 @@
     "goLogin": "Go to login"
   },
   "billing": {
-    "sectionTitle": "Pro subscription",
+    "sectionTitle": "Subscription plans",
     "sectionSubtitle": "Pro unlocks advanced nutrition, AI meal suggestions, and unlimited coach students. HK$20/month.",
+    "sectionSubtitleDual": "Choose the plan that fits you. Secure checkout via Stripe.",
     "currentPro": "You are a Pro member",
-    "upgradePro": "Upgrade to Pro (HK$20/mo)",
+    "upgradePro": "Upgrade to Pro",
+    "upgradeSolo": "Upgrade Solo (HK$68/mo)",
+    "upgradeCoachPro": "Upgrade Pro Coach (HK$399/mo)",
     "manageBilling": "Manage subscription / payment",
     "openingCheckout": "Opening Stripe...",
     "openingPortal": "Opening...",

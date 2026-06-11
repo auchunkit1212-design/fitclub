@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coach! What to eat? — 訂閱方案</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 420px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      .card {
+        border: 1px solid #e4e4e7;
+        border-radius: 1rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      button {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .solo {
+        background: #059669;
+        color: #fff;
+      }
+      .pro {
+        background: #18181b;
+        color: #fff;
+      }
+      .price {
+        color: #059669;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Coach! What to eat? — Pricing</h1>
+    <p>選擇方案後會跳轉至 Stripe Checkout 安全付款。</p>
+
+    <div class="card">
+      <h2>Solo AI 散客版</h2>
+      <p class="price">HK$68 / 月</p>
+      <p>微營養、AI 配餐、AI 大猩猩私教</p>
+      <button
+        type="button"
+        class="solo"
+        data-price-id="price_solo_placeholder"
+        onclick="startCheckout(this.dataset.priceId)"
+      >
+        升級 Solo 版（$68）
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>Pro 專業教練版</h2>
+      <p class="price">HK$399 / 月</p>
+      <p>無限學員、旗下學員 Pro 功能</p>
+      <button
+        type="button"
+        class="pro"
+        data-price-id="price_pro_placeholder"
+        onclick="startCheckout(this.dataset.priceId)"
+      >
+        升級 Pro 教練版（$399）
+      </button>
+    </div>
+
+    <script>
+      async function startCheckout(priceId) {
+        try {
+          const res = await fetch("/create-checkout-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ priceId }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.url) {
+            throw new Error(data.error || "無法建立 Checkout");
+          }
+          window.location.href = data.url;
+        } catch (err) {
+          alert(err.message || "付款頁面開啟失敗");
+        }
+      }
+    </script>
+  </body>
+</html>

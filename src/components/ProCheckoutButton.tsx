@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { ShoppingCart, IconLabel } from "@/components/icons";
+import type { BillingPlanKey } from "@/lib/stripe-plans";
 import { getSessionRequestHeaders } from "@/lib/session";
 
 const btnClass =
@@ -11,13 +12,19 @@ const btnClass =
 type ProCheckoutButtonProps = {
   variant?: "primary" | "secondary";
   className?: string;
-  lookupKey?: string;
+  /** 直接傳 Stripe Price ID（例如 price_solo_placeholder） */
+  priceId?: string;
+  /** 或傳方案 key，由後端從 env 解析 Price ID */
+  plan?: BillingPlanKey;
+  label?: string;
 };
 
 export function ProCheckoutButton({
   variant = "primary",
   className = "",
-  lookupKey,
+  priceId,
+  plan,
+  label,
 }: ProCheckoutButtonProps) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
@@ -26,6 +33,10 @@ export function ProCheckoutButton({
     if (loading) return;
     setLoading(true);
     try {
+      const payload: { priceId?: string; plan?: BillingPlanKey } = {};
+      if (priceId) payload.priceId = priceId;
+      else if (plan) payload.plan = plan;
+
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         credentials: "include",
@@ -33,9 +44,7 @@ export function ProCheckoutButton({
           "Content-Type": "application/json",
           ...getSessionRequestHeaders(),
         },
-        body: JSON.stringify(
-          lookupKey ? { lookup_key: lookupKey } : {}
-        ),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) {
@@ -58,6 +67,14 @@ export function ProCheckoutButton({
       ? "bg-emerald-600 hover:bg-emerald-700 text-white"
       : "border border-emerald-200 bg-emerald-50 text-emerald-800";
 
+  const buttonLabel =
+    label ??
+    (plan === "solo"
+      ? t("billing.upgradeSolo", "升級 Solo 版（HK$68/月）")
+      : plan === "coach_pro"
+        ? t("billing.upgradeCoachPro", "升級 Pro 教練版（HK$399/月）")
+        : t("billing.upgradePro", "升級 Pro"));
+
   return (
     <button
       type="button"
@@ -70,9 +87,7 @@ export function ProCheckoutButton({
         className="justify-center"
         iconClassName={variant === "primary" ? "text-white" : "text-emerald-700"}
       >
-        {loading
-          ? t("billing.openingCheckout", "正在前往 Stripe...")
-          : t("billing.upgradePro", "升級 Pro（HK$20/月）")}
+        {loading ? t("billing.openingCheckout", "正在前往 Stripe...") : buttonLabel}
       </IconLabel>
     </button>
   );
