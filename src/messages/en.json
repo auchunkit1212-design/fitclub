@@ -702,5 +702,21 @@
     "deleting": "Deleting...",
     "deleteLoginRequired": "Please log in before deleting your account.",
     "goLogin": "Go to login"
+  },
+  "billing": {
+    "sectionTitle": "Pro subscription",
+    "sectionSubtitle": "Pro unlocks advanced nutrition, AI meal suggestions, and unlimited coach students. HK$20/month.",
+    "currentPro": "You are a Pro member",
+    "upgradePro": "Upgrade to Pro (HK$20/mo)",
+    "manageBilling": "Manage subscription / payment",
+    "openingCheckout": "Opening Stripe...",
+    "openingPortal": "Opening...",
+    "checkoutFailed": "Could not start checkout",
+    "portalFailed": "Could not open billing portal",
+    "successTitle": "Subscription successful",
+    "successHeadline": "Welcome to Pro!",
+    "successBody": "Payment complete. Pro features are unlocked. Returning home...",
+    "cancelTitle": "Payment not completed",
+    "cancelBody": "You cancelled Stripe Checkout. You can upgrade anytime."
   }
 }

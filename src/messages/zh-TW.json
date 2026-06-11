@@ -702,5 +702,21 @@
     "deleting": "刪除中...",
     "deleteLoginRequired": "請先登入再刪除帳戶。",
     "goLogin": "前往登入"
+  },
+  "billing": {
+    "sectionTitle": "Pro 訂閱",
+    "sectionSubtitle": "Pro 解鎖進階營養分析、AI 配餐、教練無限學員等功能。HK$20/月。",
+    "currentPro": "你已是 Pro 會員",
+    "upgradePro": "升級 Pro（HK$20/月）",
+    "manageBilling": "管理訂閱 / 付款方式",
+    "openingCheckout": "正在前往 Stripe...",
+    "openingPortal": "正在開啟...",
+    "checkoutFailed": "無法開始付款",
+    "portalFailed": "無法開啟帳單管理",
+    "successTitle": "訂閱成功",
+    "successHeadline": "歡迎加入 Pro！",
+    "successBody": "付款已完成，Pro 功能已解鎖。正在返回主頁...",
+    "cancelTitle": "未完成付款",
+    "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
   }
 }

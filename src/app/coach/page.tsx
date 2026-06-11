@@ -19,6 +19,7 @@ import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
+import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { IconLabel } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
@@ -220,6 +221,10 @@ export default function CoachPage() {
 
         {(session?.role === "coach" || session?.role === "admin") && (
           <CoachSelfMealPanel logs={ownMealLogs} />
+        )}
+
+        {(session?.role === "coach" || session?.role === "admin") && (
+          <ProBillingPanel />
         )}
 
         {session && (
