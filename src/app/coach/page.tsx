@@ -2,13 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchAiCoachReport } from "@/lib/ai-feedback-client";
+import { CoachAiReportPanel } from "@/components/CoachAiReportPanel";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
-  fetchMealLogsForSession,
   fetchOwnMealLogsForSession,
   fetchUsersForSession,
   resolveBranding,
@@ -19,11 +18,12 @@ import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
-import { BarChart2, Bot, IconLabel, Loader2 } from "@/components/icons";
+import { IconLabel } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import type {
   CoachBranding,
   MealLog,
+  RegistryUser,
   ThemeColor,
   UserSession,
 } from "@/lib/types";
@@ -47,8 +47,7 @@ export default function CoachPage() {
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
   const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
-  const [aiReport, setAiReport] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [registry, setRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
@@ -72,11 +71,12 @@ export default function CoachPage() {
       setSession(current);
 
       try {
-        const registry = await fetchUsersForSession(current);
+        const userRegistry = await fetchUsersForSession(current);
+        setRegistry(userRegistry);
 
         if (current.role === "coach") {
-          const brandResolved = await resolveBrandForUser(current, registry);
-          const resolved = await resolveBranding(current, registry);
+          const brandResolved = await resolveBrandForUser(current, userRegistry);
+          const resolved = await resolveBranding(current, userRegistry);
           setInviteCode(
             brandResolved.tenantSlug ??
               current.tenantSlug ??
@@ -185,25 +185,6 @@ export default function CoachPage() {
     e.target.value = "";
   };
 
-  const generateAIReport = async () => {
-    if (!session) return;
-    setIsGenerating(true);
-    setAiReport(null);
-    try {
-      const registry = await fetchUsersForSession(session);
-      const freshLogs = await fetchMealLogsForSession(session, registry);
-      const report = await fetchAiCoachReport({
-        logs: freshLogs,
-        gymName: appTitle.trim() || brand.gymName,
-      });
-      setAiReport(report);
-    } catch {
-      alert("無法從 Supabase 拉取學員飲食記錄。");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
@@ -240,34 +221,15 @@ export default function CoachPage() {
           <CoachSelfMealPanel logs={ownMealLogs} />
         )}
 
-        <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
-          <h2 className="text-sm font-bold text-emerald-700">
-            <IconLabel icon={Bot} iconClassName="text-emerald-600">
-              AI 數據智能整合中心
-            </IconLabel>
-          </h2>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={generateAIReport}
-            className={`w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
-          >
-            {isGenerating ? (
-              <IconLabel icon={Loader2} size="md" className="justify-center animate-spin" iconClassName="text-white">
-                從 Supabase 整合緊...
-              </IconLabel>
-            ) : (
-              <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
-                一鍵 AI 整合學員飲食記錄
-              </IconLabel>
-            )}
-          </button>
-          {aiReport && (
-            <pre className="bg-white/10 p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap border border-white/10">
-              {aiReport}
-            </pre>
-          )}
-        </section>
+        {session && (
+          <CoachAiReportPanel
+            session={session}
+            registry={registry}
+            gymName={appTitle.trim() || brand.gymName}
+            onToast={showToast}
+            variant="light"
+          />
+        )}
 
         {session?.role === "coach" && (
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">

@@ -177,21 +177,31 @@ export async function generateAiCoachReport(input: {
   logs: MealLog[];
   lang?: AppLanguage;
   gymName?: string;
+  studentName?: string;
 }): Promise<{ text: string; source: "openrouter" | "fallback" }> {
   const lang = input.lang ?? "zh-HK";
+  const studentLabel = input.studentName?.trim();
 
   if (input.logs.length === 0) {
     return {
-      text: generateCoachReport(input.logs),
+      text: generateCoachReport(input.logs, studentLabel),
       source: "fallback",
     };
   }
 
   if (!isOpenRouterConfigured()) {
-    return { text: generateCoachReport(input.logs), source: "fallback" };
+    return {
+      text: generateCoachReport(input.logs, studentLabel),
+      source: "fallback",
+    };
   }
 
+  const scopeLine = studentLabel
+    ? `整合範圍：單一學員「${studentLabel}」`
+    : "整合範圍：全部旗下學員";
+
   const userPrompt = `分店：${input.gymName?.trim() || "未指定"}
+${scopeLine}
 打卡總數：${input.logs.length} 餐
 
 學員實際飲食記錄：
@@ -209,7 +219,10 @@ ${getLanguageInstruction(lang)}
     return { text: aiText, source: "openrouter" };
   }
 
-  return { text: generateCoachReport(input.logs), source: "fallback" };
+  return {
+    text: generateCoachReport(input.logs, studentLabel),
+    source: "fallback",
+  };
 }
 
 export async function generateAiMealComment(

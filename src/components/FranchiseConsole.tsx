@@ -1,25 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import {
-  BarChart2,
-  Brain,
-  IconLabel,
-  Loader2,
-  Palette,
-  Rocket,
-  Wrench,
-} from "@/components/icons";
-import { fetchAiCoachReport } from "@/lib/ai-feedback-client";
-import {
-  emailExists,
-  fetchAllUsers,
-  fetchMealLogsForSession,
-} from "@/lib/db";
+import { IconLabel, Palette, Rocket, Wrench } from "@/components/icons";
+import { emailExists, fetchAllUsers } from "@/lib/db";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { AdminAccountsConsole } from "@/components/AdminAccountsConsole";
 import { AdminTenantsConsole } from "@/components/AdminTenantsConsole";
-import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
+import { CoachAiReportPanel } from "@/components/CoachAiReportPanel";
+import type { RegistryUser, UserSession } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -42,8 +30,6 @@ export function FranchiseConsole({
   const [newStaffEmail, setNewStaffEmail] = useState("");
   const [newStaffName, setNewStaffName] = useState("");
   const [newBrandName, setNewBrandName] = useState("");
-  const [aiReport, setAiReport] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleAddStaff = async (e: React.FormEvent) => {
@@ -101,55 +87,16 @@ export function FranchiseConsole({
     }
   };
 
-  const handleGenerateReport = async () => {
-    setIsGenerating(true);
-    setAiReport(null);
-    try {
-      const logs: MealLog[] = await fetchMealLogsForSession(session, registry);
-      const report = await fetchAiCoachReport({
-        logs,
-        gymName: session.gym,
-      });
-      setAiReport(report);
-      onToast("已從 Supabase 拉取最新數據並生成報告！");
-    } catch {
-      onToast("無法從雲端讀取飲食記錄。");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {(session.role === "admin" || session.role === "coach") && (
-        <section className="bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
-          <h2 className="text-sm font-bold text-indigo-300">
-            <IconLabel icon={BarChart2} iconClassName="text-indigo-300">
-              一鍵 AI 智能整合（Supabase 實時）
-            </IconLabel>
-          </h2>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={handleGenerateReport}
-            className={`w-full py-3 bg-indigo-600 font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
-          >
-            {isGenerating ? (
-              <IconLabel icon={Loader2} size="md" className="justify-center animate-spin" iconClassName="text-white">
-                從雲端整合緊...
-              </IconLabel>
-            ) : (
-              <IconLabel icon={Brain} size="md" className="justify-center" iconClassName="text-white">
-                整合旗下學員飲食記錄
-              </IconLabel>
-            )}
-          </button>
-          {aiReport && (
-            <pre className="bg-white/10 p-3 rounded-xl text-xs whitespace-pre-wrap border border-white/10">
-              {aiReport}
-            </pre>
-          )}
-        </section>
+        <CoachAiReportPanel
+          session={session}
+          registry={registry}
+          gymName={session.gym}
+          onToast={onToast}
+          variant="dark"
+        />
       )}
 
       {session.role === "admin" && (

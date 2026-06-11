@@ -56,8 +56,9 @@ export async function fetchAiCoachReport(input: {
   logs: MealLog[];
   lang?: AppLanguage;
   gymName?: string;
+  studentName?: string;
 }): Promise<string> {
-  const fallback = generateCoachReport(input.logs);
+  const fallback = generateCoachReport(input.logs, input.studentName);
 
   try {
     const res = await fetch("/api/ai/coach-report", {
@@ -71,6 +72,7 @@ export async function fetchAiCoachReport(input: {
         logs: input.logs,
         lang: input.lang,
         gymName: input.gymName,
+        studentName: input.studentName,
       }),
     });
     const { data } = await readApiJson<{ report?: string }>(res);

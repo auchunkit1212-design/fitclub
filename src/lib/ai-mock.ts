@@ -596,8 +596,14 @@ export function getMealAiComment(log: MealLog): string {
   return `「${name}」整體尚可，建議控制醬料同飲品糖分。`;
 }
 
-export function generateCoachReport(logs: MealLog[]): string {
+export function generateCoachReport(
+  logs: MealLog[],
+  studentName?: string
+): string {
   if (logs.length === 0) {
+    if (studentName?.trim()) {
+      return `「${studentName.trim()}」暫時未有飲食打卡。等佢記低第一餐，AI 先可以出整合報告。`;
+    }
     return "暫時未有學員飲食打卡。等學員記低第一餐，AI 先可以出整合報告。";
   }
 
@@ -628,7 +634,11 @@ export function generateCoachReport(logs: MealLog[]): string {
           .join("\n")
       : "- 暫時未見明顯優秀餐單，建議提醒學員增加優質蛋白。";
 
-  return `【AI 學員整合報告】
+  const title = studentName?.trim()
+    ? `【AI 學員整合報告 · ${studentName.trim()}】`
+    : "【AI 學員整合報告】";
+
+  return `${title}
 
 數據概覽：
 - 打卡總數：${logs.length} 餐

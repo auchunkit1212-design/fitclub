@@ -51,10 +51,13 @@ export async function POST(request: Request) {
     logs?: unknown;
     lang?: string;
     gymName?: string;
+    studentName?: string;
   };
 
   const logs = parseLogs(body.logs);
   const lang = normalizeLanguage(body.lang);
+  const studentName =
+    typeof body.studentName === "string" ? body.studentName.trim() : undefined;
 
   try {
     const result = await generateAiCoachReport({
@@ -64,6 +67,7 @@ export async function POST(request: Request) {
         typeof body.gymName === "string"
           ? body.gymName.trim()
           : session.gym,
+      studentName: studentName || undefined,
     });
 
     return NextResponse.json({
