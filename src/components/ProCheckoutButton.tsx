@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { ShoppingCart, IconLabel } from "@/components/icons";
 import { getSessionRequestHeaders } from "@/lib/session";
+import type { StripePlanTier } from "@/lib/stripe-prices";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -11,19 +12,33 @@ const btnClass =
 type ProCheckoutButtonProps = {
   variant?: "primary" | "secondary";
   className?: string;
-  lookupKey?: string;
+  /** 直接傳 Stripe Price ID（例如 price_xxx） */
+  priceId?: string;
+  /** 或傳 tier，後端會解析對應 Price ID */
+  tier?: StripePlanTier;
+  label?: string;
 };
 
 export function ProCheckoutButton({
   variant = "primary",
   className = "",
-  lookupKey,
+  priceId,
+  tier,
+  label,
 }: ProCheckoutButtonProps) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
 
+  const defaultLabel =
+    tier === "solo"
+      ? t("billing.upgradeSolo", "升級 Solo 版（HK$68/月）")
+      : tier === "coach_pro"
+        ? t("billing.upgradeCoachPro", "升級 Pro 教練版（HK$399/月）")
+        : t("billing.upgradePro", "升級 Pro");
+
   const startCheckout = async () => {
     if (loading) return;
+    if (!priceId && !tier) return;
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/create-checkout-session", {
@@ -33,9 +48,7 @@ export function ProCheckoutButton({
           "Content-Type": "application/json",
           ...getSessionRequestHeaders(),
         },
-        body: JSON.stringify(
-          lookupKey ? { lookup_key: lookupKey } : {}
-        ),
+        body: JSON.stringify(priceId ? { priceId } : { tier }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) {
@@ -72,7 +85,7 @@ export function ProCheckoutButton({
       >
         {loading
           ? t("billing.openingCheckout", "正在前往 Stripe...")
-          : t("billing.upgradePro", "升級 Pro（HK$20/月）")}
+          : label ?? defaultLabel}
       </IconLabel>
     </button>
   );

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSiteUrl } from "@/lib/legal-config";
-import {
-  fetchStripeCustomerId,
-  setUserBillingPlan,
-} from "@/lib/stripe-billing";
-import { getStripe, getStripePriceLookupKey, resolveStripePriceId } from "@/lib/stripe";
+import { fetchStripeCustomerId } from "@/lib/stripe-billing";
+import { getStripe } from "@/lib/stripe";
+import { resolveCheckoutPriceId } from "@/lib/stripe-prices";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -25,15 +23,28 @@ export async function POST(request: Request) {
     const origin = getSiteUrl(new URL(request.url).origin);
     const email = session.email.trim().toLowerCase();
 
-    let body: { lookup_key?: string } = {};
+    let body: { priceId?: string; tier?: string; lookup_key?: string } = {};
     try {
-      body = (await request.json()) as { lookup_key?: string };
+      body = (await request.json()) as typeof body;
     } catch {
-      // empty body ok
+      // empty body
     }
 
-    const lookupKey = body.lookup_key?.trim() || getStripePriceLookupKey();
-    const priceId = await resolveStripePriceId(lookupKey);
+    const { priceId, tier } = resolveCheckoutPriceId(body);
+
+    if (tier === "solo" && session.role === "coach") {
+      return NextResponse.json(
+        { error: "教練請選擇 Pro 專業教練版方案" },
+        { status: 400 }
+      );
+    }
+    if (tier === "coach_pro" && session.role === "student") {
+      return NextResponse.json(
+        { error: "學員請選擇 Solo AI 散客版方案" },
+        { status: 400 }
+      );
+    }
+
     const existingCustomerId = await fetchStripeCustomerId(email);
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -49,6 +60,8 @@ export async function POST(request: Request) {
       metadata: {
         email,
         role: session.role,
+        plan_tier: tier ?? "unknown",
+        price_id: priceId,
       },
     });
 

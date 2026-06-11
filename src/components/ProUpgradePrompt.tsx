@@ -3,6 +3,7 @@
 import { useI18n } from "@/components/I18nProvider";
 import { Sparkles } from "@/components/icons";
 import { ProCheckoutButton } from "@/components/ProCheckoutButton";
+import { getSession } from "@/lib/session";
 
 type Props = {
   feature?: string;
@@ -11,6 +12,8 @@ type Props = {
 
 export function ProUpgradePrompt({ feature, className = "" }: Props) {
   const { t } = useI18n();
+  const session = getSession();
+  const tier = session?.role === "coach" ? "coach_pro" : "solo";
   const label =
     feature ??
     t("profile.proFeatureDefault", "此進階功能");
@@ -36,7 +39,7 @@ export function ProUpgradePrompt({ feature, className = "" }: Props) {
           "教練升 Pro：無限學員 + 旗下學員享有微營養分析同 AI 推薦菜單。"
         )}
       </p>
-      <ProCheckoutButton />
+      <ProCheckoutButton tier={tier} />
     </div>
   );
 }
