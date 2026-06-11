@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Bot, IconLabel, Plus } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { getMealAiComment } from "@/lib/ai-mock";
-import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import type { MealLog } from "@/lib/types";
 
 const btnClass =
@@ -85,7 +84,6 @@ export function CoachSelfMealPanel({ logs }: CoachSelfMealPanelProps) {
       ) : (
         <ul className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
           {filteredLogs.map((log) => {
-            const status = getMealStatus(log);
             return (
               <li
                 key={log.id}
@@ -102,11 +100,6 @@ export function CoachSelfMealPanel({ logs }: CoachSelfMealPanelProps) {
                       kcal · {t("coach.proteinG", "蛋白")} {log.protein}g
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 h-fit px-2 py-0.5 rounded text-[10px] font-bold ${mealStatusStyles(status)}`}
-                  >
-                    {status}
-                  </span>
                 </div>
                 <p className="mt-2 text-xs text-indigo-800 bg-indigo-50 rounded-lg px-2 py-1.5 leading-relaxed">
                   <IconLabel icon={Bot} size="sm" iconClassName="text-indigo-700" gapClass="gap-1.5">

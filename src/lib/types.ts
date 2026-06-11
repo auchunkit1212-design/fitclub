@@ -93,6 +93,8 @@ export interface UserSession {
   plan?: UserPlan;
   /** 已解析的 Pro 權限（登入／sync 時寫入 session） */
   isPro?: boolean;
+  /** Stripe 訂閱試用期中（trialing） */
+  isProTrial?: boolean;
   isLoggedIn: boolean;
 }
 
@@ -139,6 +141,14 @@ export interface MealLogFeedback {
   presetKey: string;
   messageText: string;
   sticker?: string;
+  createdAt: string;
+}
+
+export interface MealLogRating {
+  id: string;
+  mealLogId: string;
+  coachEmail: string;
+  rating: "good" | "caution" | "danger";
   createdAt: string;
 }
 

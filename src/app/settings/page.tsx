@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
+import { ShareAppButton } from "@/components/ShareAppButton";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { resetAppGuide } from "@/lib/app-guide";
@@ -72,6 +73,12 @@ export default function SettingsPage() {
 
       <main className="px-4 py-5 min-w-0 space-y-4">
         <ProBillingPanel />
+        <ShareAppButton
+          onToast={(msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(""), 3000);
+          }}
+        />
         <StudentAppSettingsPanel
           settings={settings}
           onSettingsChange={setSettings}

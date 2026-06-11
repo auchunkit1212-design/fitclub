@@ -4,6 +4,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { Cpu, GraduationCap, Sparkles, IconLabel } from "@/components/icons";
 import { useSyncedSession } from "@/hooks/use-synced-session";
 import { hasProAccessFromSession } from "@/lib/plan-access";
+import { FreeTrialBadge } from "@/components/FreeTrialBadge";
 import {
   ProCheckoutButton,
   ProManageBillingButton,
@@ -29,8 +30,11 @@ export function ProBillingPanel() {
       {isPro ? (
         <div className="space-y-3">
           <p className="text-sm text-emerald-700 font-medium">
-            {t("billing.currentPro", "你已是 Pro 會員")}
+            {session.isProTrial
+              ? t("billing.currentProTrial", "你正在 Pro 免費試用期")
+              : t("billing.currentPro", "你已是 Pro 會員")}
           </p>
+          {session.isProTrial ? <FreeTrialBadge /> : null}
           <ProManageBillingButton />
         </div>
       ) : (

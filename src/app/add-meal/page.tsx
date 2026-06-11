@@ -61,13 +61,15 @@ const btnClass =
 
 function buildMealDescriptionWithPortions(
   description: string,
-  carbsPortionKey: CarbsPortionKey,
-  proteinPortionKey: ProteinPortionKey,
-  hasVeggies: boolean,
+  carbsPortionKey: CarbsPortionKey | null,
+  proteinPortionKey: ProteinPortionKey | null,
+  veggiesChoice: "yes" | "none" | null,
   t: (key: string, fallback?: string) => string
 ): string {
   const base = description.trim();
-  if (!base) return base;
+  if (!base || !carbsPortionKey || !proteinPortionKey || !veggiesChoice) {
+    return base;
+  }
 
   const hints: string[] = [];
   if (carbsPortionKey !== "none") {
@@ -80,9 +82,15 @@ function buildMealDescriptionWithPortions(
       `蛋白${t(`addMeal.portions.${proteinPortionKey}`, proteinPortionKey)}`
     );
   }
-  hints.push(hasVeggies ? "有蔬菜" : "無蔬菜");
+  hints.push(veggiesChoice === "yes" ? "有蔬菜" : "無蔬菜");
 
   return `${base}（${hints.join("；")}）`;
+}
+
+function portionChipClass(selected: boolean, showError: boolean): string {
+  if (selected) return "bg-emerald-600 text-white border-emerald-600";
+  if (showError) return "bg-white text-zinc-800 border-red-500";
+  return "bg-white text-zinc-700 border-zinc-200 hover:border-emerald-300";
 }
 
 function AddMealPageContent() {
@@ -95,10 +103,15 @@ function AddMealPageContent() {
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
   const [description, setDescription] = useState("");
   const [imageBase64, setImageBase64] = useState<string | undefined>();
-  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("carbsMedium");
+  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey | null>(
+    null
+  );
   const [proteinPortionKey, setProteinPortionKey] =
-    useState<ProteinPortionKey>("proteinMedium");
-  const [hasVeggies, setHasVeggies] = useState(true);
+    useState<ProteinPortionKey | null>(null);
+  const [veggiesChoice, setVeggiesChoice] = useState<"yes" | "none" | null>(
+    null
+  );
+  const [portionErrors, setPortionErrors] = useState(false);
   const [calories, setCalories] = useState(0);
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
@@ -292,13 +305,22 @@ function AddMealPageContent() {
     })();
   }, [router, fromCoach]);
 
+  const needsPortionSelection = !multiFoodMode;
+  const portionsComplete =
+    carbsPortionKey !== null &&
+    proteinPortionKey !== null &&
+    veggiesChoice !== null;
+  const canPublish =
+    !saveLoading && !imageCompressing && (!needsPortionSelection || portionsComplete);
+
   useEffect(() => {
     if (
       multiFoodMode ||
       macrosLockedFromPicker ||
       ocrPortionBase ||
       !description.trim() ||
-      description.trim().length < 2
+      description.trim().length < 2 ||
+      !portionsComplete
     ) {
       return;
     }
@@ -313,7 +335,7 @@ function AddMealPageContent() {
             description,
             carbsPortionKey,
             proteinPortionKey,
-            hasVeggies,
+            veggiesChoice,
             t
           );
           const result = await estimateMealNutritionClient({
@@ -352,7 +374,8 @@ function AddMealPageContent() {
     description,
     carbsPortionKey,
     proteinPortionKey,
-    hasVeggies,
+    veggiesChoice,
+    portionsComplete,
     imageBase64,
     multiFoodMode,
     macrosLockedFromPicker,
@@ -413,6 +436,10 @@ function AddMealPageContent() {
       alert(t("addMeal.errors.descriptionRequired", "請填寫食物描述！"));
       return;
     }
+    if (needsPortionSelection && !portionsComplete) {
+      setPortionErrors(true);
+      return;
+    }
     if (saveLoading) return;
 
     const email = readSessionEmail();
@@ -434,7 +461,7 @@ function AddMealPageContent() {
           descTrim,
           carbsPortionKey,
           proteinPortionKey,
-          hasVeggies,
+          veggiesChoice,
           t
         );
 
@@ -799,55 +826,116 @@ function AddMealPageContent() {
           {aiEstimateError ? (
             <p className="text-xs text-amber-700">{aiEstimateError}</p>
           ) : null}
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs text-zinc-500">
+          <div className="grid grid-cols-1 gap-4">
+            <div
+              className={`rounded-xl p-2.5 border-2 transition-colors ${
+                portionErrors && carbsPortionKey === null
+                  ? "border-red-500 bg-red-50/40"
+                  : "border-transparent"
+              }`}
+            >
+              <label className="text-xs font-semibold text-zinc-600">
                 {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
+                <span className="text-red-500 ml-0.5">*</span>
               </label>
-              <select
-                value={carbsPortionKey}
-                onChange={(e) => setCarbsPortionKey(e.target.value as CarbsPortionKey)}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
+              <div className="flex flex-wrap gap-2 mt-2">
                 {CARBS_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setCarbsPortionKey(key);
+                      setPortionErrors(false);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${portionChipClass(
+                      carbsPortionKey === key,
+                      portionErrors && carbsPortionKey === null
+                    )}`}
+                  >
                     {t(`addMeal.portions.${key}`, key)}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-zinc-500">
+            <div
+              className={`rounded-xl p-2.5 border-2 transition-colors ${
+                portionErrors && proteinPortionKey === null
+                  ? "border-red-500 bg-red-50/40"
+                  : "border-transparent"
+              }`}
+            >
+              <label className="text-xs font-semibold text-zinc-600">
                 {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
+                <span className="text-red-500 ml-0.5">*</span>
               </label>
-              <select
-                value={proteinPortionKey}
-                onChange={(e) =>
-                  setProteinPortionKey(e.target.value as ProteinPortionKey)
-                }
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
+              <div className="flex flex-wrap gap-2 mt-2">
                 {PROTEIN_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setProteinPortionKey(key);
+                      setPortionErrors(false);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${portionChipClass(
+                      proteinPortionKey === key,
+                      portionErrors && proteinPortionKey === null
+                    )}`}
+                  >
                     {t(`addMeal.portions.${key}`, key)}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-zinc-500">
+            <div
+              className={`rounded-xl p-2.5 border-2 transition-colors ${
+                portionErrors && veggiesChoice === null
+                  ? "border-red-500 bg-red-50/40"
+                  : "border-transparent"
+              }`}
+            >
+              <label className="text-xs font-semibold text-zinc-600">
                 {t("addMeal.veggies", "蔬菜")}
+                <span className="text-red-500 ml-0.5">*</span>
               </label>
-              <select
-                value={hasVeggies ? "yes" : "none"}
-                onChange={(e) => setHasVeggies(e.target.value === "yes")}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                <option value="none">{t("addMeal.portions.none", "無 / 冇食 (0)")}</option>
-                <option value="yes">{t("common.yes", "有")}</option>
-              </select>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVeggiesChoice("yes");
+                    setPortionErrors(false);
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${portionChipClass(
+                    veggiesChoice === "yes",
+                    portionErrors && veggiesChoice === null
+                  )}`}
+                >
+                  {t("common.yes", "有")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVeggiesChoice("none");
+                    setPortionErrors(false);
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${portionChipClass(
+                    veggiesChoice === "none",
+                    portionErrors && veggiesChoice === null
+                  )}`}
+                >
+                  {t("addMeal.portions.none", "無 / 冇食 (0)")}
+                </button>
+              </div>
             </div>
           </div>
+          {portionErrors && !portionsComplete ? (
+            <p className="text-xs text-red-600 font-medium">
+              {t(
+                "addMeal.portionRequired",
+                "請先選擇澱粉、蛋白質同蔬菜份量，先可以發布記錄。"
+              )}
+            </p>
+          ) : null}
 
           <p className="text-xs text-zinc-500">
             {t(
@@ -979,9 +1067,17 @@ function AddMealPageContent() {
 
         <button
           type="button"
-          onClick={handleSave}
+          onClick={() => {
+            if (needsPortionSelection && !portionsComplete) {
+              setPortionErrors(true);
+              return;
+            }
+            void handleSave();
+          }}
           disabled={saveLoading || imageCompressing}
-          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
+          className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${
+            !canPublish ? "opacity-50" : ""
+          } ${btnClass}`}
         >
           {saveLoading
             ? t("addMeal.aiVerifying", "AI 正在覆核營養...")

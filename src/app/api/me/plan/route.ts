@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchUserByEmailForAuth } from "@/lib/db";
+import { fetchStripeSubscriptionStatus } from "@/lib/stripe-billing";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import {
   applyEffectivePlanToSession,
@@ -17,16 +18,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (session.role === "admin") {
-    return NextResponse.json({ plan: "pro", isPro: true });
+    return NextResponse.json({ plan: "pro", isPro: true, isProTrial: false });
   }
 
   try {
     const user = await fetchUserByEmailForAuth(session.email);
     const enriched = await applyEffectivePlanToSession(session, user ?? undefined);
+    const subscriptionStatus = await fetchStripeSubscriptionStatus(session.email);
+    const isProTrial = subscriptionStatus === "trialing";
     return NextResponse.json(
       {
         plan: enriched.plan ?? "free",
         isPro: enriched.isPro === true,
+        isProTrial,
       },
       {
         headers: {
@@ -40,6 +44,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       plan: normalizeUserPlan(session.plan),
       isPro,
+      isProTrial: false,
     });
   }
 }

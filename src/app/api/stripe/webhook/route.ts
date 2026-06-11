@@ -49,6 +49,7 @@ async function syncSubscription(
     plan: subscriptionGrantsPro(subscription.status) ? "pro" : "free",
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscription.id,
+    stripeSubscriptionStatus: subscription.status,
   });
 }
 
@@ -93,10 +94,16 @@ export async function POST(request: Request) {
             : checkout.subscription?.id ?? null;
 
         if (email) {
+          let subscriptionStatus: string | null = null;
+          if (subscriptionId) {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            subscriptionStatus = sub.status;
+          }
           await setUserBillingPlan(email, {
-            plan: "pro",
+            plan: subscriptionGrantsPro(subscriptionStatus) ? "pro" : "free",
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
+            stripeSubscriptionStatus: subscriptionStatus,
           });
         }
         break;

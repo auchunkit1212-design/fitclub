@@ -28,6 +28,13 @@ export function getStripeWebhookSecret(): string | null {
   return process.env.STRIPE_WEBHOOK_SECRET?.trim() || null;
 }
 
+/** 新訂閱免費試用天數（Checkout subscription_data.trial_period_days） */
+export function getStripeTrialPeriodDays(): number {
+  const raw = process.env.STRIPE_TRIAL_DAYS?.trim();
+  const n = raw ? Number.parseInt(raw, 10) : 3;
+  return Number.isFinite(n) && n > 0 ? n : 3;
+}
+
 export async function resolveStripePriceId(
   lookupKey = getStripePriceLookupKey()
 ): Promise<string> {

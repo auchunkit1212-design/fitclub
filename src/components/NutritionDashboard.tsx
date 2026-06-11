@@ -13,6 +13,8 @@ import {
 import { MicronutrientGuideSection } from "@/components/NutritionMicroBars";
 import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { useI18n } from "@/components/I18nProvider";
+import { markHasUsedMealPlan } from "@/lib/onboarding-flags";
+import { getSession } from "@/lib/session";
 import { IconLabel, Lightbulb } from "@/components/icons";
 import { groupLogsByBucket, type MealBucket } from "@/lib/meal-buckets";
 import type { MealLog } from "@/lib/types";
@@ -87,7 +89,13 @@ export function NutritionDashboard({
         const data = (await res.json()) as {
           recommendations?: MealRecommendation[];
         };
-        if (!cancelled) setRecommendations(data.recommendations ?? []);
+        if (!cancelled) {
+          setRecommendations(data.recommendations ?? []);
+          if ((data.recommendations?.length ?? 0) > 0) {
+            const email = getSession()?.email;
+            if (email) markHasUsedMealPlan(email);
+          }
+        }
       } finally {
         if (!cancelled) setLoadingRec(false);
       }

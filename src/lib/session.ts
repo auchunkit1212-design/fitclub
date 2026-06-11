@@ -55,6 +55,7 @@ export function getSessionRequestHeaders(): Record<string, string> {
     addedBy: session.addedBy,
     plan: session.plan,
     isPro: session.isPro,
+    isProTrial: session.isProTrial,
     isLoggedIn: true as const,
   };
   return {

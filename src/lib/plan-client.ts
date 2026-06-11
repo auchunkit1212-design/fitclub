@@ -13,16 +13,22 @@ export async function syncSessionPlan(): Promise<UserSession | null> {
       headers: getSessionRequestHeaders(),
     });
     if (!res.ok) return session;
-    const data = (await res.json()) as { plan?: UserPlan; isPro?: boolean };
+    const data = (await res.json()) as {
+      plan?: UserPlan;
+      isPro?: boolean;
+      isProTrial?: boolean;
+    };
     const next = {
       ...session,
       plan: data.plan ?? session.plan,
       isPro: data.isPro === true,
+      isProTrial: data.isProTrial === true,
     };
     saveSession(next);
     if (
       next.plan !== session.plan ||
-      next.isPro !== session.isPro
+      next.isPro !== session.isPro ||
+      next.isProTrial !== session.isProTrial
     ) {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("fitclub:plan-synced"));

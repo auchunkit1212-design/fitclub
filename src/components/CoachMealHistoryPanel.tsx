@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Bot, Download, IconLabel } from "@/components/icons";
-import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
+import { useMealRatings } from "@/hooks/use-meal-ratings";
+import { mealRatingBadgeStyle, mealRatingLabel } from "@/lib/meal-rating";
 import {
   buildMealExportRows,
   downloadMealsExcel,
@@ -45,6 +46,8 @@ export function CoachMealHistoryPanel({
       return true;
     });
   }, [logs, fromDate, toDate, selectedEmail]);
+
+  const { ratingByMealId } = useMealRatings(filteredLogs.map((log) => log.id));
 
   const handleExport = () => {
     if (filteredLogs.length === 0) {
@@ -119,7 +122,7 @@ export function CoachMealHistoryPanel({
       ) : (
         <ul className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
           {filteredLogs.map((log) => {
-            const status = getMealStatus(log);
+            const coachRating = ratingByMealId.get(log.id) ?? null;
             const student = students.find((s) => s.email === log.email);
             return (
               <li
@@ -140,9 +143,9 @@ export function CoachMealHistoryPanel({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 h-fit px-2 py-0.5 rounded text-[10px] font-bold ${mealStatusStyles(status)}`}
+                    className={`shrink-0 h-fit px-2 py-0.5 rounded text-[10px] font-bold ${mealRatingBadgeStyle(coachRating)}`}
                   >
-                    {status}
+                    {mealRatingLabel(coachRating)}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-indigo-800 bg-indigo-50 rounded-lg px-2 py-1.5 leading-relaxed">

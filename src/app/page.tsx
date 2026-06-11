@@ -28,6 +28,7 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { ProFeatureGate } from "@/components/ProFeatureGate";
+import { ProTrialMealPlanBanner } from "@/components/ProTrialMealPlanBanner";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
@@ -45,6 +46,7 @@ import {
   hasCompletedAppGuide,
   resetAppGuide,
 } from "@/lib/app-guide";
+import { hasUsedMealPlan } from "@/lib/onboarding-flags";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
@@ -66,6 +68,7 @@ import type {
   CoachBranding,
   MealLog,
   MealLogFeedback,
+  MealLogRating,
   MealLogReaction,
   RegistryUser,
   StudentBodyProfile,
@@ -226,6 +229,7 @@ export default function StudentDashboard() {
   );
   const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
   const [coachFeedback, setCoachFeedback] = useState<MealLogFeedback[]>([]);
+  const [coachRatings, setCoachRatings] = useState<MealLogRating[]>([]);
   const [mealSearchOpen, setMealSearchOpen] = useState(false);
   const [quickMealSaving, setQuickMealSaving] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -235,6 +239,7 @@ export default function StudentDashboard() {
   const [roast, setRoast] = useState("");
   const [roastLoading, setRoastLoading] = useState(false);
   const [showAppGuide, setShowAppGuide] = useState(false);
+  const [hideProTrialBanner, setHideProTrialBanner] = useState(false);
 
   const applyStreakApiPayload = (payload?: {
     currentStreak?: number;
@@ -423,6 +428,11 @@ export default function StudentDashboard() {
   }, [router, t, lang]);
 
   const isStudent = session?.role === "student";
+  const showProTrialMealPlanBanner =
+    isStudent &&
+    session?.isProTrial === true &&
+    !hideProTrialBanner &&
+    !hasUsedMealPlan(session.email);
 
   const todayLogs = useMemo(
     () => logs.filter((l) => isToday(l.date)),
@@ -434,12 +444,16 @@ export default function StudentDashboard() {
     const poll = async () => {
       const ids = todayLogs.map((l) => l.id).join(",");
       const headers = getSessionRequestHeaders();
-      const [reactionRes, feedbackRes] = await Promise.all([
+      const [reactionRes, feedbackRes, ratingRes] = await Promise.all([
         fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
           credentials: "include",
           headers,
         }),
         fetch(`/api/coach/meal-feedback?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+        fetch(`/api/coach/meal-rating?mealLogIds=${ids}`, {
           credentials: "include",
           headers,
         }),
@@ -450,8 +464,12 @@ export default function StudentDashboard() {
       const feedbackData = (await feedbackRes.json()) as {
         feedback?: MealLogFeedback[];
       };
+      const ratingData = (await ratingRes.json()) as {
+        ratings?: MealLogRating[];
+      };
       setCoachReactions(reactionData.reactions ?? []);
       setCoachFeedback(feedbackData.feedback ?? []);
+      setCoachRatings(ratingData.ratings ?? []);
     };
     poll();
     const timer = setInterval(poll, 30_000);
@@ -856,6 +874,13 @@ export default function StudentDashboard() {
             </p>
         </section>
 
+        {showProTrialMealPlanBanner && session && (
+          <ProTrialMealPlanBanner
+            session={session}
+            onDismiss={() => setHideProTrialBanner(true)}
+          />
+        )}
+
         {(session.role === "admin" || session.role === "coach") && (
           <>
             <button
@@ -908,17 +933,21 @@ export default function StudentDashboard() {
         )}
 
         {isStudent &&
-          (coachReactions.length > 0 || coachFeedback.length > 0) && (
+          (coachReactions.length > 0 ||
+            coachFeedback.length > 0 ||
+            coachRatings.length > 0) && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800 space-y-2`}>
             {todayLogs.slice(0, 3).map((log) => {
               const reaction = coachReactions.find((r) => r.mealLogId === log.id);
               const feedback = coachFeedback.find((f) => f.mealLogId === log.id);
-              if (!reaction && !feedback) return null;
+              const rating = coachRatings.find((r) => r.mealLogId === log.id)?.rating;
+              if (!reaction && !feedback && !rating) return null;
               return (
                 <CoachFeedbackDisplay
                   key={log.id}
                   reaction={reaction}
                   feedback={feedback}
+                  rating={rating}
                 />
               );
             })}

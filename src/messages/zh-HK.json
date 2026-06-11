@@ -714,6 +714,8 @@
     "soloPlanDesc": "HK$68/月 · 大猩猩 AI 私教、微營養分析、AI 配餐推薦。",
     "coachProPlanTitle": "Pro 專業教練版",
     "coachProPlanDesc": "HK$399/月 · 無限學員、白標品牌、AI 週報、旗下學員享有 Pro 功能。",
+    "freeTrialBadge": "首 3 日免費試用",
+    "currentProTrial": "你正在 Pro 免費試用期",
     "manageBilling": "管理訂閱 / 付款方式",
     "openingCheckout": "正在前往 Stripe...",
     "openingPortal": "正在開啟...",
@@ -724,5 +726,15 @@
     "successBody": "付款已完成，Pro 功能已解鎖。正在返回主頁...",
     "cancelTitle": "未完成付款",
     "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
+  },
+  "onboarding": {
+    "proTrialMealPlan": "🔥 你的 Pro 試用期正在進行中！立即解鎖專屬 AI 餐單功能，教練會根據你的目標為你度身訂造飲食！",
+    "goSettings": "👉 前往設定"
+  },
+  "share": {
+    "inviteFriends": "分享給朋友試用",
+    "sharing": "準備分享中...",
+    "copied": "連結已複製到剪貼簿，快啲分享俾朋友！",
+    "failed": "無法分享，請稍後再試"
   }
 }

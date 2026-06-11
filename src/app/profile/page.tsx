@@ -7,6 +7,7 @@ import {
 } from "@/components/BodyProfileFields";
 import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
+import { ShareAppButton } from "@/components/ShareAppButton";
 import { StudentProfilePanel } from "@/components/StudentProfilePanel";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
 import { Calendar, CircleUser, IconLabel } from "@/components/icons";
@@ -242,6 +243,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="px-4 py-5 min-w-0 space-y-6">
+        <ShareAppButton onToast={showToast} />
         <section>
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-bold text-gray-900">

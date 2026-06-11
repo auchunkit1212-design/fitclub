@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useMealRatings } from "@/hooks/use-meal-ratings";
 import {
   Bell,
   ClipboardList,
@@ -14,7 +15,7 @@ import {
 import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
-import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
+import { mealRatingBadgeStyle, mealRatingLabel } from "@/lib/meal-rating";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
 
@@ -118,6 +119,9 @@ export function CoachActivityWall({
   const [bulkNudgeSending, setBulkNudgeSending] = useState(false);
 
   const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
+  const { ratingByMealId, applyRating } = useMealRatings(
+    recentLogs.map((log) => log.id)
+  );
 
   const todayMealCountByEmail = useMemo(() => {
     const today = todayIso();
@@ -408,7 +412,7 @@ export function CoachActivityWall({
         <ul className="space-y-3 max-h-[480px] overflow-y-auto">
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
-            const status = getMealStatus(log);
+            const coachRating = ratingByMealId.get(log.id) ?? null;
             const calories = Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0;
             const protein = Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0;
             const carbs = Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0;
@@ -434,9 +438,9 @@ export function CoachActivityWall({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealStatusStyles(status)}`}
+                    className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealRatingBadgeStyle(coachRating)}`}
                   >
-                    {status}
+                    {mealRatingLabel(coachRating)}
                   </span>
                 </div>
                 <div
@@ -445,12 +449,16 @@ export function CoachActivityWall({
                 >
                   <CoachMealReviewActions
                     log={log}
+                    currentRating={coachRating}
                     compact
+                    onRated={applyRating}
                     onSent={(kind) =>
                       onToast(
                         kind === "feedback"
                           ? "已送出評語，學員會收到 App 通知"
-                          : "已送出貼紙"
+                          : kind === "rating"
+                            ? "已更新評價標籤"
+                            : "已送出貼紙"
                       )
                     }
                     onError={(msg) => onToast(msg)}

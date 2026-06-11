@@ -714,6 +714,8 @@
     "soloPlanDesc": "HK$68/mo · AI coach, micronutrient analysis, meal suggestions.",
     "coachProPlanTitle": "Coach Pro",
     "coachProPlanDesc": "HK$399/mo · Unlimited students, white-label, AI reports, student Pro access.",
+    "freeTrialBadge": "3-day free trial",
+    "currentProTrial": "You're on a Pro free trial",
     "manageBilling": "Manage subscription / payment",
     "openingCheckout": "Opening Stripe...",
     "openingPortal": "Opening...",
@@ -724,5 +726,15 @@
     "successBody": "Payment complete. Pro features are unlocked. Returning home...",
     "cancelTitle": "Payment not completed",
     "cancelBody": "You cancelled Stripe Checkout. You can upgrade anytime."
+  },
+  "onboarding": {
+    "proTrialMealPlan": "🔥 Your Pro trial is active! Unlock AI meal plans tailored to your goals.",
+    "goSettings": "👉 Go to Settings"
+  },
+  "share": {
+    "inviteFriends": "Share with friends",
+    "sharing": "Preparing share...",
+    "copied": "Link copied to clipboard — share it with friends!",
+    "failed": "Could not share. Please try again."
   }
 }

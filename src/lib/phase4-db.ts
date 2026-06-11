@@ -3,10 +3,12 @@ import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { fetchAllUsers, fetchUserByEmail } from "@/lib/db";
 import { fetchTenantById } from "@/lib/tenant";
+import { isValidCoachMealRating } from "@/lib/meal-rating";
 import type {
   FavoriteFood,
   MealLog,
   MealLogFeedback,
+  MealLogRating,
   MealLogReaction,
   RegistryUser,
   StudentNutritionTargets,
@@ -281,6 +283,67 @@ function mapFeedback(row: Record<string, unknown>): MealLogFeedback {
     presetKey: String(row.preset_key),
     messageText: String(row.message_text),
     sticker: row.sticker ? String(row.sticker) : undefined,
+    createdAt: String(row.created_at),
+  };
+}
+
+export async function insertMealRating(
+  input: {
+    mealLogId: string;
+    coachEmail: string;
+    rating: "good" | "caution" | "danger";
+  },
+  options?: { useServiceRole?: boolean }
+): Promise<MealLogRating> {
+  if (!isValidCoachMealRating(input.rating)) {
+    throw new Error("無效評價");
+  }
+
+  const client = options?.useServiceRole ? getSupabaseAdmin() : supabase;
+  const row = {
+    meal_log_id: input.mealLogId,
+    coach_email: input.coachEmail.trim().toLowerCase(),
+    rating: input.rating,
+  };
+
+  const { data, error } = await client
+    .from("meal_log_ratings")
+    .upsert(row, { onConflict: "meal_log_id,coach_email" })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw toReadableError(
+      error,
+      "meal_log_ratings 寫入失敗（請執行 supabase/meal-log-ratings.sql）"
+    );
+  }
+  return mapMealRating(data);
+}
+
+export async function fetchRatingsForMealIds(
+  mealLogIds: string[]
+): Promise<MealLogRating[]> {
+  if (mealLogIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("meal_log_ratings")
+    .select("*")
+    .in("meal_log_id", mealLogIds);
+
+  if (error) return [];
+  return (data ?? []).map(mapMealRating);
+}
+
+function mapMealRating(row: Record<string, unknown>): MealLogRating {
+  const rating = String(row.rating);
+  if (!isValidCoachMealRating(rating)) {
+    throw new Error("資料庫評價格式錯誤");
+  }
+  return {
+    id: String(row.id),
+    mealLogId: String(row.meal_log_id),
+    coachEmail: String(row.coach_email),
+    rating,
     createdAt: String(row.created_at),
   };
 }

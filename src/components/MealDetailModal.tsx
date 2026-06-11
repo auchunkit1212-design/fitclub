@@ -5,7 +5,8 @@ import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { IconLabel, Sparkles, Trash2 } from "@/components/icons";
 import { errorMessage } from "@/lib/errors";
 import { getMealImageSrc } from "@/lib/meal-display";
-import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
+import { useMealRatings } from "@/hooks/use-meal-ratings";
+import { mealRatingBadgeStyle, mealRatingLabel } from "@/lib/meal-rating";
 import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { MealLog } from "@/lib/types";
@@ -35,7 +36,8 @@ export function MealDetailModal({
   onCoachFeedbackSent,
 }: MealDetailModalProps) {
   const imageSrc = getMealImageSrc(log);
-  const status = getMealStatus(log);
+  const { ratingByMealId, applyRating } = useMealRatings([log.id]);
+  const coachRating = ratingByMealId.get(log.id) ?? null;
 
   const [description, setDescription] = useState(log.description);
   const [calories, setCalories] = useState(String(log.calories ?? 0));
@@ -283,9 +285,9 @@ export function MealDetailModal({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
             <span
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold ${mealStatusStyles(status)}`}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold ${mealRatingBadgeStyle(coachRating)}`}
             >
-              {status}
+              {mealRatingLabel(coachRating)}
             </span>
             {!canEdit && (
               <span className="text-2xl font-bold text-zinc-900">
@@ -418,8 +420,12 @@ export function MealDetailModal({
               </p>
               <CoachMealReviewActions
                 log={log}
+                currentRating={coachRating}
+                onRated={applyRating}
                 onSent={(kind) => {
-                  if (kind === "feedback") onCoachFeedbackSent?.();
+                  if (kind === "feedback" || kind === "rating") {
+                    onCoachFeedbackSent?.();
+                  }
                 }}
                 onError={(msg) => setError(msg)}
               />
