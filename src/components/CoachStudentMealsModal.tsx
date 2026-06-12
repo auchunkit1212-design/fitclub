@@ -57,6 +57,7 @@ type Props = {
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
   onToast?: (message: string) => void;
+  onReviewChange?: (mealLogId?: string) => void;
 };
 
 export function CoachStudentMealsModal({
@@ -66,6 +67,7 @@ export function CoachStudentMealsModal({
   onLogUpdated,
   onLogDeleted,
   onToast,
+  onReviewChange,
 }: Props) {
   const [period, setPeriod] = useState<Period>("today");
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
@@ -173,13 +175,14 @@ export function CoachStudentMealsModal({
                         <CoachMealReviewActions
                           log={log}
                           compact
-                          onSent={(kind) =>
+                          onSent={(kind) => {
+                            onReviewChange?.(log.id);
                             onToast?.(
                               kind === "feedback"
                                 ? "已送出評語，學員會收到 App 通知"
                                 : "已送出貼紙"
-                            )
-                          }
+                            );
+                          }}
                           onError={(msg) => onToast?.(msg)}
                         />
                       </div>
@@ -203,9 +206,10 @@ export function CoachStudentMealsModal({
             onLogUpdated?.(updated);
             onToast?.("飲食記錄已更新");
           }}
-          onCoachFeedbackSent={() =>
-            onToast?.("已送出評語，學員會收到 App 通知")
-          }
+          onCoachFeedbackSent={() => {
+            onReviewChange?.(selectedLog.id);
+            onToast?.("已送出評語，學員會收到 App 通知");
+          }}
           onDeleted={(id) => {
             setSelectedLog(null);
             onLogDeleted?.(id);

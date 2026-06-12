@@ -111,6 +111,7 @@ type Props = {
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
   onToast?: (message: string) => void;
+  onReviewChange?: (mealLogId?: string) => void;
 };
 
 export function CoachStudentDailyPanel({
@@ -119,6 +120,7 @@ export function CoachStudentDailyPanel({
   onLogUpdated,
   onLogDeleted,
   onToast,
+  onReviewChange,
 }: Props) {
   const [targetsMap, setTargetsMap] = useState<
     Record<string, StudentNutritionTargets | null>
@@ -445,6 +447,7 @@ export function CoachStudentDailyPanel({
           onLogUpdated={onLogUpdated}
           onLogDeleted={onLogDeleted}
           onToast={onToast}
+          onReviewChange={onReviewChange}
         />
       )}
     </section>

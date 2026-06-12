@@ -19,10 +19,12 @@ async function fetchReviewChunk(mealLogIds: string[]): Promise<{
   const [reactionRes, feedbackRes] = await Promise.all([
     fetch(`/api/coach/reactions?mealLogIds=${qs}`, {
       credentials: "include",
+      cache: "no-store",
       headers,
     }),
     fetch(`/api/coach/meal-feedback?mealLogIds=${qs}`, {
       credentials: "include",
+      cache: "no-store",
       headers,
     }),
   ]);
@@ -78,9 +80,40 @@ export function useCoachMealReviewIndex(
     }
   }, [coachEmail, logs]);
 
+  const markMealReviewed = useCallback(
+    (mealLogId: string) => {
+      if (!coachEmail) return;
+      const coach = coachEmail.trim().toLowerCase();
+
+      setFeedback((prev) => {
+        if (
+          prev.some(
+            (f) =>
+              f.mealLogId === mealLogId &&
+              f.coachEmail.trim().toLowerCase() === coach
+          )
+        ) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            id: `local-${mealLogId}-${coach}`,
+            mealLogId,
+            coachEmail,
+            presetKey: "local",
+            messageText: "",
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      });
+    },
+    [coachEmail]
+  );
+
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  return { reactions, feedback, loading, reload };
+  return { reactions, feedback, loading, reload, markMealReviewed };
 }

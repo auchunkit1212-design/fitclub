@@ -1,23 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
 import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
 import { CoachStudentManagementPanel } from "@/components/CoachStudentManagementPanel";
 import { CoachUnreviewedMealsPanel } from "@/components/CoachUnreviewedMealsPanel";
-import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
+import {
+  COACH_STUDENTS_SECTION_LABELS,
+  CoachStudentsSectionPicker,
+  type CoachStudentsSection,
+} from "@/components/CoachStudentsSectionPicker";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
+import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
 import {
   fetchAllUsers,
   fetchMealLogsForSession,
   fetchUsersForSession,
   filterStudentsForSession,
 } from "@/lib/db";
+import { filterUnreviewedMeals } from "@/lib/meal-review-status";
 import { errorMessage } from "@/lib/errors";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession } from "@/lib/session";
@@ -39,12 +45,50 @@ export default function CoachStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const [section, setSection] = useState<CoachStudentsSection>("daily");
+  const sectionInitialized = useRef(false);
 
-  const coachCanReview =
+  const canReviewMeals =
     session?.role === "coach" || session?.role === "admin";
   const reviewIndex = useCoachMealReviewIndex(
     logs,
-    coachCanReview ? session?.email : null
+    canReviewMeals ? session?.email : null
+  );
+
+  const unreviewedCount = useMemo(() => {
+    if (!session?.email || !canReviewMeals) return 0;
+    return filterUnreviewedMeals(
+      logs,
+      session.email,
+      reviewIndex.reactions,
+      reviewIndex.feedback
+    ).length;
+  }, [
+    logs,
+    session?.email,
+    canReviewMeals,
+    reviewIndex.reactions,
+    reviewIndex.feedback,
+  ]);
+
+  useEffect(() => {
+    if (loading || reviewIndex.loading || sectionInitialized.current) return;
+    sectionInitialized.current = true;
+    if (canReviewMeals && unreviewedCount > 0) {
+      setSection("review");
+    } else {
+      setSection("daily");
+    }
+  }, [loading, reviewIndex.loading, canReviewMeals, unreviewedCount]);
+
+  const handleReviewChange = useCallback(
+    (mealLogId?: string) => {
+      if (mealLogId) {
+        reviewIndex.markMealReviewed(mealLogId);
+      }
+      void reviewIndex.reload();
+    },
+    [reviewIndex]
   );
 
   const showToast = (message: string) => {
@@ -105,6 +149,16 @@ export default function CoachStudentsPage() {
     }
   };
 
+  const handleLogUpdated = (updated: MealLog) => {
+    setLogs((prev) =>
+      prev.map((l) => (l.id === updated.id ? updated : l))
+    );
+  };
+
+  const handleLogDeleted = (id: string) => {
+    setLogs((prev) => prev.filter((l) => l.id !== id));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-500">
@@ -113,17 +167,28 @@ export default function CoachStudentsPage() {
     );
   }
 
+  const hasStudents = students.length > 0;
+  const showEmptyStudents =
+    !loadError && section !== "roster" && !hasStudents;
+
   return (
     <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
       <PageHeader
         title="學員"
-        subtitle={brand.gymName}
+        subtitle={`${brand.gymName} · ${COACH_STUDENTS_SECTION_LABELS[section]}`}
         variant="dark"
-        backLabel="← 返回主頁"
-        onBack={() => router.push("/")}
+        leftSlot={
+          <CoachStudentsSectionPicker
+            activeSection={section}
+            onSectionChange={setSection}
+            unreviewedCount={unreviewedCount}
+            isCoach={canReviewMeals}
+            onBack={() => router.push("/")}
+          />
+        }
       />
 
-      <main className="px-4 py-4 space-y-4">
+      <main className="px-4 py-4">
         {loadError ? (
           <section className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
             <p className="font-semibold text-red-800">載入失敗</p>
@@ -138,7 +203,7 @@ export default function CoachStudentsPage() {
           </section>
         ) : (
           <>
-            {session && (
+            {section === "roster" && session && (
               <CoachStudentManagementPanel
                 session={session}
                 registry={registry}
@@ -147,7 +212,7 @@ export default function CoachStudentsPage() {
               />
             )}
 
-            {students.length === 0 ? (
+            {showEmptyStudents ? (
               <section className="bg-white rounded-2xl border border-zinc-100 p-8 text-center shadow-sm">
                 <ClipboardList
                   size={48}
@@ -161,74 +226,65 @@ export default function CoachStudentsPage() {
                 </p>
               </section>
             ) : (
-              <>
-                <CoachStudentDailyPanel
-                  logs={logs}
-                  students={students}
-                  onLogUpdated={(updated) =>
-                    setLogs((prev) =>
-                      prev.map((l) => (l.id === updated.id ? updated : l))
-                    )
-                  }
-                  onLogDeleted={(id) =>
-                    setLogs((prev) => prev.filter((l) => l.id !== id))
-                  }
-                  onToast={showToast}
-                />
-
-                {coachCanReview && session && (
-                  <>
-                    <CoachUnreviewedMealsPanel
+              hasStudents && (
+                <>
+                  {section === "daily" && (
+                    <CoachStudentDailyPanel
                       logs={logs}
                       students={students}
-                      coachEmail={session.email}
-                      reactions={reviewIndex.reactions}
-                      feedback={reviewIndex.feedback}
-                      loading={reviewIndex.loading}
-                      onReviewChange={() => void reviewIndex.reload()}
+                      onLogUpdated={handleLogUpdated}
+                      onLogDeleted={handleLogDeleted}
                       onToast={showToast}
-                      onLogUpdated={(updated) =>
-                        setLogs((prev) =>
-                          prev.map((l) => (l.id === updated.id ? updated : l))
-                        )
-                      }
-                      onLogDeleted={(id) =>
-                        setLogs((prev) => prev.filter((l) => l.id !== id))
-                      }
+                      onReviewChange={handleReviewChange}
                     />
+                  )}
 
-                    <CoachActivityWall
+                  {section === "review" && canReviewMeals && session && (
+                    <div className="space-y-4">
+                      <CoachUnreviewedMealsPanel
+                        logs={logs}
+                        students={students}
+                        coachEmail={session.email}
+                        reactions={reviewIndex.reactions}
+                        feedback={reviewIndex.feedback}
+                        loading={reviewIndex.loading}
+                        onReviewChange={handleReviewChange}
+                        onToast={showToast}
+                        onLogUpdated={handleLogUpdated}
+                        onLogDeleted={handleLogDeleted}
+                      />
+                      <CoachActivityWall
+                        logs={logs}
+                        students={students}
+                        coachEmail={session.email}
+                        reactions={reviewIndex.reactions}
+                        feedback={reviewIndex.feedback}
+                        onReviewChange={handleReviewChange}
+                        onToast={showToast}
+                        onLogUpdated={handleLogUpdated}
+                        onLogDeleted={handleLogDeleted}
+                      />
+                    </div>
+                  )}
+
+                  {section === "history" && (
+                    <CoachMealHistoryPanel
                       logs={logs}
                       students={students}
-                      coachEmail={session.email}
-                      reactions={reviewIndex.reactions}
-                      feedback={reviewIndex.feedback}
-                      onReviewChange={() => void reviewIndex.reload()}
-                      onToast={showToast}
-                      onLogUpdated={(updated) =>
-                        setLogs((prev) =>
-                          prev.map((l) => (l.id === updated.id ? updated : l))
-                        )
-                      }
-                      onLogDeleted={(id) =>
-                        setLogs((prev) => prev.filter((l) => l.id !== id))
-                      }
+                      gymName={brand.gymName}
                     />
-                  </>
-                )}
-
-                <CoachMealHistoryPanel
-                  logs={logs}
-                  students={students}
-                  gymName={brand.gymName}
-                />
-              </>
+                  )}
+                </>
+              )
             )}
           </>
         )}
       </main>
 
-      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
+      <BottomNav
+        role={session?.role === "admin" ? "admin" : "coach"}
+        studentsBadgeCount={canReviewMeals ? unreviewedCount : undefined}
+      />
 
       {toast && (
         <div className="fixed bottom-28 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">

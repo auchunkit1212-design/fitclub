@@ -23,7 +23,7 @@ type Props = {
   reactions: MealLogReaction[];
   feedback: MealLogFeedback[];
   loading?: boolean;
-  onReviewChange?: () => void;
+  onReviewChange?: (mealLogId?: string) => void;
   onToast: (message: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
@@ -51,8 +51,8 @@ export function CoachUnreviewedMealsPanel({
 
   const visible = showAll ? unreviewed : unreviewed.slice(0, 8);
 
-  const handleReviewed = () => {
-    onReviewChange?.();
+  const handleReviewed = (mealLogId: string) => {
+    onReviewChange?.(mealLogId);
     onToast("已標記檢閱");
   };
 
@@ -130,7 +130,7 @@ export function CoachUnreviewedMealsPanel({
                       <CoachMealReviewActions
                         log={log}
                         compact
-                        onSent={() => handleReviewed()}
+                        onSent={() => handleReviewed(log.id)}
                         onError={(msg) => onToast(msg)}
                       />
                     </div>
@@ -174,7 +174,7 @@ export function CoachUnreviewedMealsPanel({
             onToast("已刪除學員飲食記錄");
           }}
           onCoachFeedbackSent={() => {
-            onReviewChange?.();
+            onReviewChange?.(selectedLog.id);
             onToast("已送出評語，學員會收到 App 通知");
           }}
         />

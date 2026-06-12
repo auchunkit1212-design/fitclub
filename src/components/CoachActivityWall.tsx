@@ -111,7 +111,7 @@ interface CoachActivityWallProps {
   coachEmail: string;
   reactions?: MealLogReaction[];
   feedback?: MealLogFeedback[];
-  onReviewChange?: () => void;
+  onReviewChange?: (mealLogId?: string) => void;
   onToast: (msg: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
@@ -526,7 +526,7 @@ export function CoachActivityWall({
                     log={log}
                     compact
                     onSent={(kind) => {
-                      onReviewChange?.();
+                      onReviewChange?.(log.id);
                       onToast(
                         kind === "feedback"
                           ? "已送出評語，學員會收到 App 通知"
@@ -556,7 +556,7 @@ export function CoachActivityWall({
             onToast("飲食記錄已更新");
           }}
           onCoachFeedbackSent={() => {
-            onReviewChange?.();
+            onReviewChange?.(selectedLog.id);
             onToast("已送出評語，學員會收到 App 通知");
           }}
           onDeleted={(id) => {

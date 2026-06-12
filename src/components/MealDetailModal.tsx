@@ -418,8 +418,8 @@ export function MealDetailModal({
               </p>
               <CoachMealReviewActions
                 log={log}
-                onSent={(kind) => {
-                  if (kind === "feedback") onCoachFeedbackSent?.();
+                onSent={() => {
+                  onCoachFeedbackSent?.();
                 }}
                 onError={(msg) => setError(msg)}
               />
