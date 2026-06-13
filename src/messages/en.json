@@ -444,7 +444,7 @@
       "badge": "Starter quest · Welcome setup",
       "title": "Build your body profile",
       "subtitleSolo": "Gorilla AI will generate calorie and macro targets from your data.",
-      "subtitleCoach": "Complete this to enter the app so AI can estimate dining-out calories and daily targets."
+      "subtitleCoach": "Choose your weekly weight goal — daily calories adjust across 5 pace tiers."
     },
     "fields": {
       "height": "Height (cm)",
@@ -472,6 +472,7 @@
     },
     "errors": {
       "invalidFields": "Please enter valid height, weight, age, and target weight.",
+      "paceRequired": "Please select a weekly weight goal (gain / maintain / lose).",
       "permission": "Permission check failed — log out and sign in again as a student.",
       "saveFailed": "Save failed. Please try again later."
     },
@@ -491,7 +492,17 @@
     "genderFemale": "Female",
     "genderOther": "Other",
     "targetWeight": "Target weight (kg)",
-    "exerciseCalories": "Today's exercise burn (kcal)"
+    "exerciseCalories": "Today's exercise burn (kcal)",
+    "pace": {
+      "label": "Weekly weight goal",
+      "hint": "Pick how fast you want to gain, lose, or maintain — daily calories update from this.",
+      "required": "Select a weekly weight goal to update calorie targets.",
+      "gain1": "Gain +1 kg / week",
+      "gain05": "Gain +0.5 kg / week",
+      "maintain": "Maintain weight",
+      "lose05": "Lose -0.5 kg / week",
+      "lose1": "Lose -1 kg / week"
+    }
   },
   "push": {
     "title": "Meal & hydration reminders",

@@ -3,6 +3,8 @@ import {
   fetchStudentBodyProfile,
   upsertStudentBodyProfile,
 } from "@/lib/db";
+import { parseWeightChangePace } from "@/lib/body-profile";
+import { syncNutritionTargetsFromBodyProfile } from "@/lib/body-target-sync";
 import { authorizeStudentProfileUpdate } from "@/lib/student-profile-auth";
 import {
   hasSessionCookie,
@@ -41,6 +43,7 @@ export async function PUT(request: Request) {
     age?: number;
     gender?: StudentGender;
     targetWeightKg?: number;
+    weightChangeKgPerWeek?: number;
     exerciseCaloriesDaily?: number;
   };
 
@@ -64,6 +67,7 @@ export async function PUT(request: Request) {
   const weightKg = Number(body.weightKg);
   const age = Number(body.age);
   const targetWeightKg = Number(body.targetWeightKg);
+  const weightChangeKgPerWeek = parseWeightChangePace(body.weightChangeKgPerWeek);
   const gender = body.gender;
 
   if (
@@ -72,9 +76,13 @@ export async function PUT(request: Request) {
     !age ||
     !targetWeightKg ||
     !gender ||
+    weightChangeKgPerWeek === null ||
     !["male", "female", "other"].includes(gender)
   ) {
-    return NextResponse.json({ error: "請填寫完整身體數據" }, { status: 400 });
+    return NextResponse.json(
+      { error: "請填寫完整身體數據同每週體重目標" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -86,11 +94,18 @@ export async function PUT(request: Request) {
         age,
         gender,
         targetWeightKg,
+        weightChangeKgPerWeek,
         exerciseCaloriesDaily: Number(body.exerciseCaloriesDaily) || 0,
         onboardingComplete: true,
       },
       { useServiceRole: true }
     );
+
+    try {
+      await syncNutritionTargetsFromBodyProfile(auth.email, profile);
+    } catch (syncErr) {
+      console.warn("[student/profile] target sync failed:", syncErr);
+    }
 
     const response = NextResponse.json({
       profile,

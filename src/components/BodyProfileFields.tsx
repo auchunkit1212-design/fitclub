@@ -2,7 +2,8 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { IconLabel, Ruler } from "@/components/icons";
-import type { StudentBodyProfile, StudentGender } from "@/lib/types";
+import { WeightChangePaceSelector } from "@/components/WeightChangePaceSelector";
+import type { StudentBodyProfile, StudentGender, WeightChangeKgPerWeek } from "@/lib/types";
 
 interface BodyProfileFieldsProps {
   values: {
@@ -11,6 +12,7 @@ interface BodyProfileFieldsProps {
     age: string;
     gender: StudentGender;
     targetWeightKg: string;
+    weightChangeKgPerWeek: WeightChangeKgPerWeek | null;
     exerciseCaloriesDaily: string;
   };
   onChange: (patch: Partial<BodyProfileFieldsProps["values"]>) => void;
@@ -77,6 +79,13 @@ export function BodyProfileFields({ values, onChange }: BodyProfileFieldsProps) 
             className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
           />
         </div>
+        <div className="col-span-2">
+          <WeightChangePaceSelector
+            value={values.weightChangeKgPerWeek}
+            onChange={(pace) => onChange({ weightChangeKgPerWeek: pace })}
+            compact
+          />
+        </div>
         <div className="space-y-1 col-span-2">
           <label className="text-xs text-zinc-500">
             {t("bodyProfile.exerciseCalories", "今日運動消耗 (kcal)")}
@@ -103,6 +112,7 @@ export function bodyProfileToFormValues(
     age: profile?.age ? String(profile.age) : "",
     gender: profile?.gender ?? "male",
     targetWeightKg: profile?.targetWeightKg ? String(profile.targetWeightKg) : "",
+    weightChangeKgPerWeek: profile?.weightChangeKgPerWeek ?? null,
     exerciseCaloriesDaily: profile?.exerciseCaloriesDaily
       ? String(profile.exerciseCaloriesDaily)
       : "0",

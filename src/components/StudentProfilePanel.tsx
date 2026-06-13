@@ -38,6 +38,7 @@ const TRAINING_LABEL_KEY = {
   cardio: "settings.training.cardio",
   mixed: "settings.training.mixed",
 } as const;
+import { isValidWeightChangePace } from "@/lib/body-profile";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type {
   MealLog,
@@ -139,6 +140,12 @@ export function StudentProfilePanel({
     const w = Number(bodyForm.weightKg);
     const a = Number(bodyForm.age);
     const tw = Number(bodyForm.targetWeightKg);
+    if (!isValidWeightChangePace(bodyForm.weightChangeKgPerWeek)) {
+      onSaved(
+        t("bodyProfile.pace.required", "請選擇每週體重目標，先可以更新卡路里目標。")
+      );
+      return;
+    }
     if (session.email && h && w && a && tw) {
       try {
         const res = await fetch("/api/student/profile", {
@@ -155,6 +162,7 @@ export function StudentProfilePanel({
             age: a,
             gender: bodyForm.gender,
             targetWeightKg: tw,
+            weightChangeKgPerWeek: bodyForm.weightChangeKgPerWeek,
             exerciseCaloriesDaily: Number(bodyForm.exerciseCaloriesDaily) || 0,
           }),
         });

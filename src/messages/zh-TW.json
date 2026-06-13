@@ -444,7 +444,7 @@
       "badge": "新手村 · 歡迎設定",
       "title": "建立你的身體檔案",
       "subtitleSolo": "大猩猩 AI 私教會根據你的數據，自動生成專屬熱量與巨量營養素聖旨。",
-      "subtitleCoach": "填寫以下資料才能進入主頁，AI 才能準確估算外食熱量與每日目標。"
+      "subtitleCoach": "請選擇每週體重目標，系統會依 5 個層次調整每日卡路里。"
     },
     "fields": {
       "height": "身高 (cm)",
@@ -472,6 +472,7 @@
     },
     "errors": {
       "invalidFields": "請填寫有效的身高、體重、年齡與目標體重。",
+      "paceRequired": "請選擇每週體重目標（增重／維持／減重）。",
       "permission": "權限驗證失敗，請登出後以學員帳號重新登入。",
       "saveFailed": "儲存失敗，請稍後再試。"
     },
@@ -491,7 +492,17 @@
     "genderFemale": "女",
     "genderOther": "其他",
     "targetWeight": "目標體重 (kg)",
-    "exerciseCalories": "今日運動消耗 (kcal)"
+    "exerciseCalories": "今日運動消耗 (kcal)",
+    "pace": {
+      "label": "每週體重目標",
+      "hint": "選擇你每週想增重、減重或維持；系統會依此調整每日卡路里目標。",
+      "required": "請選擇每週體重目標，才能更新卡路里目標。",
+      "gain1": "每週增重 +1 kg",
+      "gain05": "每週增重 +0.5 kg",
+      "maintain": "維持體重",
+      "lose05": "每週減重 -0.5 kg",
+      "lose1": "每週減重 -1 kg"
+    }
   },
   "push": {
     "title": "飲水與飲食提醒",

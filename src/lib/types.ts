@@ -2,6 +2,9 @@ export type ThemeColor = "emerald" | "blue" | "black";
 
 export type StudentGender = "male" | "female" | "other";
 
+/** 每週體重變化目標 (kg)：增肌 +1/+0.5、維持 0、減脂 -0.5/-1 */
+export type WeightChangeKgPerWeek = -1 | -0.5 | 0 | 0.5 | 1;
+
 export interface StudentBodyProfile {
   email: string;
   heightCm: number;
@@ -9,6 +12,8 @@ export interface StudentBodyProfile {
   age: number;
   gender: StudentGender;
   targetWeightKg: number;
+  /** 每週目標體重變化；必填後先視為完成 onboarding */
+  weightChangeKgPerWeek?: WeightChangeKgPerWeek | null;
   exerciseCaloriesDaily: number;
   onboardingComplete: boolean;
   updatedAt?: string;

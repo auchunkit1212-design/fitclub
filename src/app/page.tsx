@@ -685,6 +685,7 @@ export default function StudentDashboard() {
                 age: bodyProfile.age,
                 gender: bodyProfile.gender,
                 targetWeightKg: bodyProfile.targetWeightKg,
+                weightChangeKgPerWeek: bodyProfile.weightChangeKgPerWeek,
                 exerciseCaloriesDaily: kcal,
               }),
             });

@@ -1,4 +1,4 @@
-import { computeTargetProfile } from "@/lib/body-profile";
+import { computeTargetProfile, isValidWeightChangePace } from "@/lib/body-profile";
 import { AI_GORILLA_COACH_EMAIL } from "@/lib/registry-constants";
 import type { MealLog, StudentBodyProfile, StudentNutritionTargets } from "@/lib/types";
 
@@ -28,15 +28,31 @@ function macroSplit(calories: number, goal: FitnessGoal) {
   };
 }
 
+function paceToFitnessGoal(profile: StudentBodyProfile): FitnessGoal {
+  const pace = profile.weightChangeKgPerWeek;
+  if (!isValidWeightChangePace(pace)) return "maintain";
+  if (pace < 0) return "cut";
+  if (pace > 0) return "bulk";
+  return "maintain";
+}
+
+function paceLabel(profile: StudentBodyProfile): string {
+  const pace = profile.weightChangeKgPerWeek;
+  if (pace === 1) return "每週增重 1kg";
+  if (pace === 0.5) return "每週增重 0.5kg";
+  if (pace === -0.5) return "每週減重 0.5kg";
+  if (pace === -1) return "每週減重 1kg";
+  return "維持體重";
+}
+
 export async function generateAiNutritionTargets(
   profile: StudentBodyProfile,
-  goal: FitnessGoal,
+  goal?: FitnessGoal,
   tenantId?: string
 ): Promise<StudentNutritionTargets> {
+  const effectiveGoal = goal ?? paceToFitnessGoal(profile);
   const base = computeTargetProfile(profile);
-  let targetCalories = base.targetCalories;
-  if (goal === "cut") targetCalories = Math.max(1200, targetCalories - 150);
-  if (goal === "bulk") targetCalories = targetCalories + 250;
+  const targetCalories = base.targetCalories;
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (apiKey) {
@@ -60,9 +76,7 @@ export async function generateAiNutritionTargets(
             },
             {
               role: "user",
-              content: `身高${profile.heightCm}cm 體重${profile.weightKg}kg 年齡${profile.age} 目標體重${profile.targetWeightKg}kg 目標：${
-                goal === "cut" ? "減脂" : goal === "bulk" ? "增肌" : "維持"
-              }。請給每日卡路里與三大营养素目標。`,
+              content: `身高${profile.heightCm}cm 體重${profile.weightKg}kg 年齡${profile.age} 目標體重${profile.targetWeightKg}kg 每週目標：${paceLabel(profile)}。請給每日卡路里與三大营养素目標。`,
             },
           ],
         }),
@@ -79,8 +93,8 @@ export async function generateAiNutritionTargets(
             studentEmail: profile.email,
             targetCalories: Math.round(parsed.targetCalories),
             targetProtein: Math.round(parsed.targetProtein),
-            targetCarbs: Math.round(parsed.targetCarbs ?? macroSplit(targetCalories, goal).targetCarbs),
-            targetFats: Math.round(parsed.targetFats ?? macroSplit(targetCalories, goal).targetFats),
+            targetCarbs: Math.round(parsed.targetCarbs ?? macroSplit(targetCalories, effectiveGoal).targetCarbs),
+            targetFats: Math.round(parsed.targetFats ?? macroSplit(targetCalories, effectiveGoal).targetFats),
             locked: true,
             setByCoachEmail: AI_GORILLA_COACH_EMAIL,
             tenantId,
@@ -92,7 +106,7 @@ export async function generateAiNutritionTargets(
     }
   }
 
-  const macros = macroSplit(targetCalories, goal);
+  const macros = macroSplit(targetCalories, effectiveGoal);
   return {
     studentEmail: profile.email,
     targetCalories,

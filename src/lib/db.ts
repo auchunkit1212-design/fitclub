@@ -1,3 +1,4 @@
+import { parseWeightChangePace } from "@/lib/body-profile";
 import { resolveBrandForUser } from "@/lib/branding";
 import {
   backfillCoachStudentTenants,
@@ -708,12 +709,23 @@ type BodyProfileRow = {
   age: number;
   gender: string;
   target_weight_kg: number;
+  weight_change_kg_per_week?: number | null;
   exercise_calories_daily: number;
   onboarding_complete: boolean;
   updated_at: string;
 };
 
 function mapBodyProfile(row: BodyProfileRow): StudentBodyProfile {
+  const paceRaw = row.weight_change_kg_per_week;
+  const pace =
+    paceRaw === 1 ||
+    paceRaw === 0.5 ||
+    paceRaw === 0 ||
+    paceRaw === -0.5 ||
+    paceRaw === -1
+      ? (paceRaw as StudentBodyProfile["weightChangeKgPerWeek"])
+      : null;
+
   return {
     email: row.email,
     heightCm: Number(row.height_cm),
@@ -721,6 +733,7 @@ function mapBodyProfile(row: BodyProfileRow): StudentBodyProfile {
     age: row.age,
     gender: row.gender as StudentGender,
     targetWeightKg: Number(row.target_weight_kg),
+    weightChangeKgPerWeek: pace,
     exerciseCaloriesDaily: row.exercise_calories_daily ?? 0,
     onboardingComplete: row.onboarding_complete ?? true,
     updatedAt: row.updated_at,
@@ -779,8 +792,13 @@ export async function upsertStudentBodyProfile(
     age: profile.age,
     gender: profile.gender,
     target_weight_kg: profile.targetWeightKg,
+    weight_change_kg_per_week: parseWeightChangePace(
+      profile.weightChangeKgPerWeek
+    ),
     exercise_calories_daily: profile.exerciseCaloriesDaily ?? 0,
-    onboarding_complete: true,
+    onboarding_complete:
+      profile.onboardingComplete !== false &&
+      parseWeightChangePace(profile.weightChangeKgPerWeek) !== null,
     updated_at: new Date().toISOString(),
   };
 
