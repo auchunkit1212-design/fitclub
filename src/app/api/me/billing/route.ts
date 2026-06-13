@@ -4,6 +4,7 @@ import { parseSessionFromRequest } from "@/lib/session-server";
 import {
   fetchStripeCustomerId,
   resolveStripeCustomerId,
+  syncStripeBillingForUser,
 } from "@/lib/stripe-billing";
 import {
   normalizeUserPlan,
@@ -47,5 +48,29 @@ export async function GET(request: Request) {
     hasStripeCustomer: Boolean(stripeCustomerId),
     canManageBilling: Boolean(stripeCustomerId),
     proSource,
+  });
+}
+
+export async function POST(request: Request) {
+  const session = parseSessionFromRequest(request);
+  if (!session?.email) {
+    return NextResponse.json({ error: "請先登入" }, { status: 401 });
+  }
+
+  const email = session.email.trim().toLowerCase();
+  const result = await syncStripeBillingForUser(email);
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: result.error ?? "同步失敗" },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    hasStripeCustomer: true,
+    canManageBilling: true,
+    proSource: "subscription" as const,
   });
 }

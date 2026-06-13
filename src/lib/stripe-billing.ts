@@ -24,22 +24,76 @@ export async function resolveStripeCustomerId(
   const fromDb = await fetchStripeCustomerId(normalized);
   if (fromDb) return fromDb;
 
+  const customerId = await findStripeCustomerIdByEmail(normalized);
+  if (!customerId) return null;
+
+  if (options?.persistIfFound !== false) {
+    await setUserBillingPlan(normalized, { stripeCustomerId: customerId });
+  }
+  return customerId;
+}
+
+async function findStripeCustomerIdByEmail(email: string): Promise<string | null> {
   try {
     const stripe = getStripe();
-    const customers = await stripe.customers.list({
-      email: normalized,
-      limit: 1,
-    });
-    const customerId = customers.data[0]?.id;
-    if (!customerId) return null;
 
-    if (options?.persistIfFound !== false) {
-      await setUserBillingPlan(normalized, { stripeCustomerId: customerId });
+    const listed = await stripe.customers.list({ email, limit: 3 });
+    if (listed.data[0]?.id) return listed.data[0].id;
+
+    try {
+      const searched = await stripe.customers.search({
+        query: `email:'${email.replace(/'/g, "\\'")}'`,
+        limit: 1,
+      });
+      if (searched.data[0]?.id) return searched.data[0].id;
+    } catch {
+      // search API may be unavailable on older accounts
     }
-    return customerId;
-  } catch (err) {
-    console.warn("[stripe-billing] resolve customer by email failed:", err);
+
     return null;
+  } catch (err) {
+    console.warn("[stripe-billing] find customer by email failed:", err);
+    return null;
+  }
+}
+
+/** 自己付款用戶：從 Stripe 拉回 customer + subscription 寫入 DB */
+export async function syncStripeBillingForUser(
+  email: string
+): Promise<{ ok: boolean; error?: string; customerId?: string }> {
+  const normalized = email.trim().toLowerCase();
+  const customerId = await resolveStripeCustomerId(normalized);
+
+  if (!customerId) {
+    return {
+      ok: false,
+      error:
+        "Stripe 搵唔到此 Email 嘅付款記錄。請確認登入 Email 同付款時一致，以及 Vercel 用緊正確嘅 Test/Live Stripe Key。",
+    };
+  }
+
+  try {
+    const stripe = getStripe();
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 5,
+    });
+
+    const active = subs.data.find((s) => subscriptionGrantsPro(s.status));
+    const latest = subs.data[0];
+
+    await setUserBillingPlan(normalized, {
+      plan: active ? "pro" : latest ? "free" : "pro",
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: active?.id ?? latest?.id ?? null,
+    });
+
+    return { ok: true, customerId };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "同步失敗";
+    console.error("[stripe-billing] sync billing failed:", err);
+    return { ok: false, error: message };
   }
 }
 
