@@ -74,8 +74,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
-    const message =
+    let message =
       error instanceof Error ? error.message : "Stripe Checkout 失敗";
+    if (/No such price/i.test(message)) {
+      message =
+        "Stripe 搵唔到呢個 Price ID。請確認 Vercel 填嘅係 Price ID（price_ 開頭），唔係 Product ID（prod_ 開頭）。";
+    }
     console.error("[stripe/create-checkout-session]", error);
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -23,20 +23,45 @@ function readPriceId(
   );
 }
 
+/** Stripe Checkout 需要 Price ID（price_xxx），唔係 Product ID（prod_xxx） */
+export function assertStripePriceId(priceId: string, envHint?: string): void {
+  const trimmed = priceId.trim();
+  if (!trimmed) {
+    throw new Error("缺少 Stripe Price ID");
+  }
+  if (trimmed.startsWith("prod_")) {
+    throw new Error(
+      `你填咗 Product ID（${trimmed}），請改用 Price ID（以 price_ 開頭）。` +
+        (envHint
+          ? ` 請到 Stripe Dashboard → Products → 點選產品 → Pricing 複製 Price ID，更新 Vercel 環境變數 ${envHint}。`
+          : " 請到 Stripe Dashboard → Products → Pricing 複製 Price ID。")
+    );
+  }
+  if (!trimmed.startsWith("price_")) {
+    throw new Error(
+      `無效的 Stripe Price ID：${trimmed}。Price ID 應以 price_ 開頭。`
+    );
+  }
+}
+
 export function getSoloPriceId(): string {
-  return readPriceId(
+  const priceId = readPriceId(
     process.env.STRIPE_PRICE_SOLO,
     process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO,
     "price_solo_placeholder"
   );
+  assertStripePriceId(priceId, "STRIPE_PRICE_SOLO");
+  return priceId;
 }
 
 export function getCoachProPriceId(): string {
-  return readPriceId(
+  const priceId = readPriceId(
     process.env.STRIPE_PRICE_COACH_PRO,
     process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_PRO,
     "price_pro_placeholder"
   );
+  assertStripePriceId(priceId, "STRIPE_PRICE_COACH_PRO");
+  return priceId;
 }
 
 export function getBillingPlans(): BillingPlanConfig[] {
@@ -87,6 +112,7 @@ export function resolveCheckoutPriceId(input: {
 
   const priceId = input.priceId?.trim();
   if (priceId) {
+    assertStripePriceId(priceId);
     const match = allowed.find((p) => p.priceId === priceId);
     if (!match) {
       throw new Error("無效的 Stripe Price ID");
