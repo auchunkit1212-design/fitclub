@@ -719,6 +719,9 @@
     "sectionSubtitle": "Pro 解鎖微營養分析、AI 配餐、教練無限學員等進階功能。HK$20/月。",
     "sectionSubtitleDual": "選擇適合你嘅方案，透過 Stripe 安全付款。",
     "currentPro": "你已是 Pro 會員",
+    "currentProCoach": "你已是 Pro 會員（由教練提供）",
+    "coachProHint": "Pro 功能由你嘅 Pro 教練提供，無需自行管理 Stripe 訂閱。",
+    "syncPending": "Pro 已啟用，但 Stripe 訂閱記錄尚未同步。若剛完成付款，請重新整理；否則請確認 Webhook 已設定。",
     "upgradePro": "升級 Pro",
     "upgradeSolo": "升級 Solo 版（HK$68/月）",
     "upgradeCoachPro": "升級 Pro 教練版（HK$399/月）",
@@ -729,7 +732,7 @@
     "portalFailed": "無法開啟帳單管理",
     "successTitle": "訂閱成功",
     "successHeadline": "歡迎加入 Pro！",
-    "successBody": "付款已完成，Pro 功能已解鎖。正在返回主頁...",
+    "successBody": "付款已完成，Pro 功能已解鎖。正在返回設定頁...",
     "cancelTitle": "未完成付款",
     "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
   },

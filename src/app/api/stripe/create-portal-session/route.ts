@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSiteUrl } from "@/lib/legal-config";
-import { fetchStripeCustomerId } from "@/lib/stripe-billing";
+import { resolveStripeCustomerId } from "@/lib/stripe-billing";
 import { getStripe } from "@/lib/stripe";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
@@ -17,11 +17,15 @@ export async function POST(request: Request) {
     const stripe = getStripe();
     const origin = getSiteUrl(new URL(request.url).origin);
     const email = session.email.trim().toLowerCase();
-    const customerId = await fetchStripeCustomerId(email);
+    const customerId = await resolveStripeCustomerId(email);
 
     if (!customerId) {
       return NextResponse.json(
-        { error: "尚未訂閱 Pro，請先完成 Checkout。" },
+        {
+          error:
+            "找不到 Stripe 訂閱記錄。若你透過教練享有 Pro，無需管理訂閱；若已付款請稍後再試或聯絡客服。",
+          code: "NO_STRIPE_CUSTOMER",
+        },
         { status: 400 }
       );
     }
