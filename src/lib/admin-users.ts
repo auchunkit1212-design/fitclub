@@ -35,6 +35,8 @@ type RegistryRow = {
   added_by: string | null;
   tenant_id: string | null;
   plan?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
   avatar_url?: string | null;
   logo?: string | null;
   app_title?: string | null;
@@ -133,6 +135,10 @@ export type AdminUserProfileDetail = {
   tenant: Tenant | null;
   bodyProfile: StudentBodyProfile | null;
   mealCount: number;
+  billing: {
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+  };
   recentMeals: {
     id: string;
     mealType: string;
@@ -189,6 +195,12 @@ export async function fetchAdminUserProfile(
     tenant,
     bodyProfile,
     mealCount: meals.length,
+    billing: {
+      stripeCustomerId:
+        (row as RegistryRow).stripe_customer_id?.trim() || null,
+      stripeSubscriptionId:
+        (row as RegistryRow).stripe_subscription_id?.trim() || null,
+    },
     recentMeals,
   };
 }
@@ -549,7 +561,15 @@ export async function adminUpdateUser(
     .select("*")
     .maybeSingle();
 
-  if (updateErr) throw updateErr;
+  if (updateErr) {
+    const msg = updateErr.message ?? "";
+    if (/plan/i.test(msg) && /column|schema/i.test(msg)) {
+      throw new Error(
+        "資料庫缺少 plan 欄位。請在 Supabase SQL Editor 執行 supabase/user-plan.sql 後再試。"
+      );
+    }
+    throw updateErr;
+  }
   if (!updatedRow) throw new Error("資料庫更新失敗，請稍後再試。");
 
   if (tenantAssignment && input.tenantId?.trim() && nextRole === "student") {

@@ -119,6 +119,7 @@ export function AdminAccountsConsole({
   const [refreshing, setRefreshing] = useState(false);
   const [resetPassword, setResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [syncingStripe, setSyncingStripe] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const loadAccounts = useCallback(
@@ -422,11 +423,45 @@ export function AdminAccountsConsole({
     void handleSaveAccount({ auto: true, formOverride: nextForm });
   };
 
-  const handlePlanChange = (plan: UserPlan) => {
-    if (!editForm) return;
+  const handlePlanChange = async (plan: UserPlan) => {
+    if (!editForm || !profile) return;
     const nextForm = { ...editForm, plan };
     setEditForm(nextForm);
-    void handleSaveAccount({ auto: true, formOverride: nextForm });
+    const ok = await handleSaveAccount({ auto: true, formOverride: nextForm });
+    if (ok) {
+      await reloadProfile(profile.user.email, { keepOpen: true });
+      onToastRef.current(
+        plan === "pro" ? "已設為 Pro" : "已設為 Free"
+      );
+    }
+  };
+
+  const handleAdminSyncStripe = async () => {
+    if (!profile?.user.email || syncingStripe) return;
+    setSyncingStripe(true);
+    try {
+      const res = await fetch("/api/admin/users/sync-stripe", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        body: JSON.stringify({ email: profile.user.email }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        onToastRef.current(data.error ?? "Stripe 同步失敗");
+        return;
+      }
+      onToastRef.current("已從 Stripe 同步訂閱");
+      await reloadProfile(profile.user.email, { keepOpen: true });
+      void loadAccounts({ silent: true });
+    } catch {
+      onToastRef.current("Stripe 同步失敗");
+    } finally {
+      setSyncingStripe(false);
+    }
   };
 
   const handleResetPassword = async () => {
@@ -763,6 +798,34 @@ export function AdminAccountsConsole({
                         <option value="pro">Pro</option>
                       </select>
                     </label>
+                  </div>
+
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2">
+                    <p className="text-[11px] font-bold text-emerald-900">
+                      訂閱 / Stripe
+                    </p>
+                    <p className="text-[11px] text-emerald-900/80 font-mono break-all">
+                      Customer:{" "}
+                      {profile.billing?.stripeCustomerId ?? "— 未連結 —"}
+                    </p>
+                    <p className="text-[11px] text-emerald-900/80 font-mono break-all">
+                      Subscription:{" "}
+                      {profile.billing?.stripeSubscriptionId ?? "— 未連結 —"}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={syncingStripe}
+                      onClick={() => void handleAdminSyncStripe()}
+                      className={`w-full py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-60 ${btnClass}`}
+                    >
+                      {syncingStripe
+                        ? "同步 Stripe 中…"
+                        : "從 Stripe 同步訂閱（設 Pro + Customer ID）"}
+                    </button>
+                    <p className="text-[10px] text-emerald-800/70 leading-relaxed">
+                      若學員已付款但方案仍 Free，先撳同步；或確認 Supabase 已執行
+                      user-plan.sql 同 stripe-billing.sql。
+                    </p>
                   </div>
 
                   <label className="block text-xs text-zinc-600">
