@@ -721,5 +721,18 @@
     "successBody": "Payment complete. Pro features are unlocked. Returning home...",
     "cancelTitle": "Payment not completed",
     "cancelBody": "You cancelled Stripe Checkout. You can upgrade anytime."
+  },
+  "share": {
+    "copyFailed": "Copy failed — long-press to copy manually",
+    "student": {
+      "title": "Share app with friends",
+      "hintSolo": "Share the link so friends can log meals and get AI nutrition insights.",
+      "hintCoach": "Share the link — friends who sign up join your coach and gym.",
+      "copyLink": "Copy link",
+      "copyMessage": "Copy message",
+      "shareButton": "Share with friends",
+      "copiedLink": "Link copied",
+      "copiedMessage": "Message copied"
+    }
   }
 }

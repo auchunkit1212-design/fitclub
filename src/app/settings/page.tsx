@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
+import { StudentShareAppPanel } from "@/components/StudentShareAppPanel";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { resetAppGuide } from "@/lib/app-guide";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/personal-settings";
 import { loadReminderSettingsFromServer } from "@/lib/reminder-settings-client";
 import { getSession } from "@/lib/session";
+import type { UserSession } from "@/lib/types";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function SettingsPage() {
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState("");
   const [showAppGuide, setShowAppGuide] = useState(false);
+  const [session, setSession] = useState<UserSession | null>(null);
 
   useEffect(() => {
     const parsed = getSession();
@@ -33,6 +36,7 @@ export default function SettingsPage() {
       router.replace(parsed ? "/" : "/register");
       return;
     }
+    setSession(parsed);
 
     const raw = localStorage.getItem("student_settings");
     if (raw) {
@@ -71,6 +75,15 @@ export default function SettingsPage() {
       </header>
 
       <main className="px-4 py-5 min-w-0 space-y-4">
+        {session && (
+          <StudentShareAppPanel
+            session={session}
+            onCopied={(msg) => {
+              setToast(msg);
+              setTimeout(() => setToast(""), 3000);
+            }}
+          />
+        )}
         <ProBillingPanel />
         <StudentAppSettingsPanel
           settings={settings}

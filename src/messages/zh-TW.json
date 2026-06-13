@@ -721,5 +721,18 @@
     "successBody": "付款已完成，Pro 功能已解鎖。正在返回主頁...",
     "cancelTitle": "未完成付款",
     "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
+  },
+  "share": {
+    "copyFailed": "複製失敗，請長按手動複製",
+    "student": {
+      "title": "分享 App 給朋友",
+      "hintSolo": "分享連結給朋友，一起用 AI 記錄飲食與分析營養。",
+      "hintCoach": "分享連結給朋友，他們註冊後會自動加入你同一個教練／健身房。",
+      "copyLink": "複製連結",
+      "copyMessage": "複製文案",
+      "shareButton": "分享給朋友",
+      "copiedLink": "已複製連結",
+      "copiedMessage": "已複製分享文案"
+    }
   }
 }
