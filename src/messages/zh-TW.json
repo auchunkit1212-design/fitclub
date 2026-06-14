@@ -372,7 +372,12 @@
     },
     "proBadge": "Pro",
     "proMember": "Pro 會員",
-    "proOnly": "此功能僅供 Pro 會員使用。"
+    "proOnly": "此功能僅供 Pro 會員使用。",
+    "proOnlyTitle": "Pro 會員功能",
+    "proOnlyBody": "{feature}僅供 Pro 使用。學員可升級個人 Pro，或由 Pro 教練帶隊自動享有。",
+    "proCoachHint": "教練升 Pro：無限學員 + 旗下學員享有微營養分析與 AI 推薦菜單。",
+    "proFeatureDefault": "此進階功能",
+    "proPreviewBadge": "預覽"
   },
   "community": {
     "badge": "Community",
@@ -612,7 +617,22 @@
     "regenerate": "再想其他選擇",
     "regenerating": "大猩猩正在想其他選擇…",
     "error": "教練暫時忙碌，請稍後再試",
-    "empty": "教練沒有回覆，請再試一次"
+    "empty": "教練沒有回覆，請再試一次",
+    "demo": {
+      "text": "你今日還有約 1500 kcal 額度。午餐可以吃得清淡一些，留空間給晚餐的碳水；下午茶補充蛋白質，晚餐就不會吃太多。",
+      "lunchSlot": "午餐",
+      "lunchTitle": "雞胸糙米蔬菜碗",
+      "lunchDesc": "蒸雞胸、糙米、花椰菜與少量酪梨，蛋白質足夠又不會太油。",
+      "snackSlot": "下午茶",
+      "snackTitle": "希臘優格配藍莓",
+      "snackDesc": "補充蛋白質與少量碳水，避免晚餐前太餓。",
+      "dinnerSlot": "晚餐",
+      "dinnerTitle": "清蒸魚配時蔬",
+      "dinnerDesc": "優質蛋白與纖維，搭配少量地瓜或糙米完成今日額度。",
+      "tag1": "高蛋白",
+      "tag2": "均衡",
+      "tag3": "留碳"
+    }
   },
   "history": {
     "title": "歷史紀錄日曆",

@@ -13,6 +13,7 @@ import {
 import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { RestOfDayMeal } from "@/lib/coach-suggest";
+import { useProLocked } from "@/lib/pro-locked-context";
 
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
@@ -80,6 +81,77 @@ function MealPlanList({
   );
 }
 
+function CoachSuggestDemoPreview() {
+  const { t } = useI18n();
+  const demoText = t(
+    "coachSuggest.demo.text",
+    "你今日仲有約 1500 kcal 額度。午餐可以食清淡啲嘅雞胸同蔬菜，留位畀晚餐嘅碳水；下午茶加啲蛋白質，晚餐就唔會食得太heavy。"
+  );
+  const demoMeals: RestOfDayMeal[] = [
+    {
+      slot: t("coachSuggest.demo.lunchSlot", "午餐"),
+      title: t("coachSuggest.demo.lunchTitle", "雞胸糙米蔬菜碗"),
+      description: t(
+        "coachSuggest.demo.lunchDesc",
+        "蒸雞胸、糙米、西兰花同少量牛油果，蛋白質夠又唔會太油。"
+      ),
+      estimated_calories: 520,
+      protein_g: 42,
+    },
+    {
+      slot: t("coachSuggest.demo.snackSlot", "下午茶"),
+      title: t("coachSuggest.demo.snackTitle", "希腊酸奶配藍莓"),
+      description: t(
+        "coachSuggest.demo.snackDesc",
+        "補充蛋白質同少少碳水，避免晚餐前太餓。"
+      ),
+      estimated_calories: 180,
+      protein_g: 15,
+    },
+    {
+      slot: t("coachSuggest.demo.dinnerSlot", "晚餐"),
+      title: t("coachSuggest.demo.dinnerTitle", "清蒸鱼配时蔬"),
+      description: t(
+        "coachSuggest.demo.dinnerDesc",
+        "优质蛋白同纤维，配少量番薯或糙米完成今日额度。"
+      ),
+      estimated_calories: 480,
+      protein_g: 38,
+    },
+  ];
+  const demoTags = [
+    t("coachSuggest.demo.tag1", "高蛋白"),
+    t("coachSuggest.demo.tag2", "均衡"),
+    t("coachSuggest.demo.tag3", "留碳"),
+  ];
+
+  return (
+    <div className="relative pt-2">
+      <div className="flex gap-3 items-start">
+        <GorillaMascot size="sm" className="shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="rounded-3xl rounded-tl-lg bg-[#ecfdf5] px-4 py-3.5 shadow-sm">
+            <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+              {demoText}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2.5 pl-1">
+            {demoTags.map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+          <MealPlanList meals={demoMeals} mode="full_day_plan" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CoachSuggestCard({
   targetCalories,
   targetProtein,
@@ -92,6 +164,7 @@ export function CoachSuggestCard({
   mealsLoggedToday = 0,
 }: MacroProps) {
   const { t, lang } = useI18n();
+  const locked = useProLocked();
   const [craving, setCraving] = useState("");
   const [loadingAction, setLoadingAction] = useState<"ask" | "regenerate" | null>(
     null
@@ -222,7 +295,9 @@ export function CoachSuggestCard({
         <p className="text-sm text-red-600 text-center">{error}</p>
       )}
 
-      {suggestion && (
+      {locked && <CoachSuggestDemoPreview />}
+
+      {!locked && suggestion && (
         <div
           className={`relative pt-2 transition-opacity ${
             loadingAction === "regenerate" ? "opacity-60 pointer-events-none" : ""

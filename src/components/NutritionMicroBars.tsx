@@ -3,6 +3,7 @@
 import { useI18n } from "@/components/I18nProvider";
 import { estimateMicronutrients } from "@/lib/body-profile";
 import { getRecommendedMicronutrientTargets } from "@/lib/micronutrient-targets";
+import { useProLocked } from "@/lib/pro-locked-context";
 
 export function MicroBar({
   label,
@@ -73,12 +74,28 @@ export function MicronutrientGuideSection({
   showRecommendationsTable = true,
 }: MicronutrientGuideProps) {
   const { t } = useI18n();
-  const micro = estimateMicronutrients(calories, carbs, fats, protein);
+  const locked = useProLocked();
+
+  const effectiveCalories = locked ? 1450 : calories;
+  const effectiveProtein = locked ? 92 : protein;
+  const effectiveCarbs = locked ? 138 : carbs;
+  const effectiveFats = locked ? 46 : fats;
+  const effectiveTargetCalories = locked ? 2200 : targetCalories;
+  const effectiveTargetCarbs = locked ? 200 : targetCarbs;
+  const effectiveTargetFats = locked ? 65 : targetFats;
+  const effectiveWeightKg = locked ? 68 : weightKg;
+
+  const micro = estimateMicronutrients(
+    effectiveCalories,
+    effectiveCarbs,
+    effectiveFats,
+    effectiveProtein
+  );
   const targets = getRecommendedMicronutrientTargets({
-    targetCalories,
-    targetCarbs,
-    targetFats,
-    weightKg,
+    targetCalories: effectiveTargetCalories,
+    targetCarbs: effectiveTargetCarbs,
+    targetFats: effectiveTargetFats,
+    weightKg: effectiveWeightKg,
   });
 
   const rows = [

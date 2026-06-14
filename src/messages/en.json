@@ -372,7 +372,12 @@
     },
     "proBadge": "Pro",
     "proMember": "Pro member",
-    "proOnly": "This feature is for Pro members only."
+    "proOnly": "This feature is for Pro members only.",
+    "proOnlyTitle": "Pro feature",
+    "proOnlyBody": "{feature} is for Pro members. Students can upgrade to Solo Pro, or get access through a Pro coach.",
+    "proCoachHint": "Coach Pro: unlimited students + micro-nutrient analysis and AI meal plans for your roster.",
+    "proFeatureDefault": "This advanced feature",
+    "proPreviewBadge": "Preview"
   },
   "community": {
     "badge": "Community",
@@ -612,7 +617,22 @@
     "regenerate": "Try other options",
     "regenerating": "Coach is cooking up alternatives…",
     "error": "Coach is busy — try again shortly",
-    "empty": "No reply from coach — please try again"
+    "empty": "No reply from coach — please try again",
+    "demo": {
+      "text": "You still have about 1,500 kcal left today. Keep lunch lighter with lean protein and veggies, save carbs for dinner, and add a protein snack this afternoon.",
+      "lunchSlot": "Lunch",
+      "lunchTitle": "Chicken breast rice bowl",
+      "lunchDesc": "Steamed chicken, brown rice, broccoli, and a little avocado — high protein without heavy fats.",
+      "snackSlot": "Snack",
+      "snackTitle": "Greek yogurt with blueberries",
+      "snackDesc": "Top up protein and a little carbs so you are not starving before dinner.",
+      "dinnerSlot": "Dinner",
+      "dinnerTitle": "Steamed fish with greens",
+      "dinnerDesc": "Quality protein and fiber, with a small portion of sweet potato or rice to finish the day.",
+      "tag1": "High protein",
+      "tag2": "Balanced",
+      "tag3": "Save carbs"
+    }
   },
   "history": {
     "title": "History Calendar",
