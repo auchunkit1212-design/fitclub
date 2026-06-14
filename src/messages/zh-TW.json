@@ -736,7 +736,7 @@
   },
   "billing": {
     "sectionTitle": "訂閱方案",
-    "sectionSubtitle": "Pro 解鎖進階營養分析、AI 配餐、教練無限學員等功能。HK$20/月。",
+    "sectionSubtitle": "Pro 解鎖進階營養分析、AI 配餐、教練無限學員等功能。HK$38/月。",
     "sectionSubtitleDual": "選擇適合你的方案，透過 Stripe 安全付款。",
     "currentPro": "你已是 Pro 會員",
     "currentProCoach": "你已是 Pro 會員（由教練提供）",
@@ -747,7 +747,7 @@
     "syncing": "正在同步 Stripe...",
     "syncFailed": "同步失敗，請稍後再試",
     "upgradePro": "升級 Pro",
-    "upgradeSolo": "升級 Solo 版（HK$68/月）",
+    "upgradeSolo": "升級 Solo 版（HK$38/月）",
     "upgradeCoachPro": "升級 Pro 教練版（HK$399/月）",
     "manageBilling": "管理訂閱 / 付款方式",
     "openingCheckout": "正在前往 Stripe...",

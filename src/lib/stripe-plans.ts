@@ -69,7 +69,7 @@ export function getBillingPlans(): BillingPlanConfig[] {
     {
       key: "solo",
       name: "Solo AI 散客版",
-      priceLabel: "HK$68/月",
+      priceLabel: "HK$38/月",
       description: "微營養分析、AI 推薦菜單、AI 大猩猩私教",
       priceId: getSoloPriceId(),
       roles: ["student"],
