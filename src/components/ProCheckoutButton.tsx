@@ -70,7 +70,7 @@ export function ProCheckoutButton({
   const buttonLabel =
     label ??
     (plan === "solo"
-      ? t("billing.upgradeSolo", "升級 Solo 版（HK$68/月）")
+      ? t("billing.upgradeSolo", "升級 Solo 版（HK$38/月）")
       : plan === "coach_pro"
         ? t("billing.upgradeCoachPro", "升級 Pro 教練版（HK$399/月）")
         : t("billing.upgradePro", "升級 Pro"));

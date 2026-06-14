@@ -49,7 +49,7 @@ export function ProUpgradePrompt({ feature, className = "" }: Props) {
               ? "billing.upgradeSolo"
               : "billing.upgradeCoachPro",
             plan.key === "solo"
-              ? "升級 Solo 版（HK$68/月）"
+              ? "升級 Solo 版（HK$38/月）"
               : "升級 Pro 教練版（HK$399/月）"
           )}
         />
