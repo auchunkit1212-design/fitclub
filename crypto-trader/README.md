@@ -100,12 +100,26 @@ python scripts/test_notifications.py
 
 > Telegram 取得方式：向 [@BotFather](https://t.me/BotFather) 建立 bot 取得 token；向 [@userinfobot](https://t.me/userinfobot) 取得 chat id。
 
+### 5. Dashboard（Streamlit）
+
+用於顯示你目前的 **paper/live portfolio**（讀 `data/paper_portfolio.json` / `data/live_portfolio.json`）。
+
+1. 確保你已安裝依賴（`requirements.txt` 已包含 streamlit）
+2. 啟動：
+
+```bash
+streamlit run dashboard/app.py
+```
+
+> 建議先跑一次 `python scripts/run_paper.py --once` 產生 paper 檔案，再打開 Dashboard。
+
 ## 專案結構
 
 ```
 crypto-trader/
 ├── config/settings.yaml    # 主設定（策略、風控、交易對）
 ├── .env.example            # API 金鑰（勿提交 .env）
+├── dashboard/             # Streamlit Dashboard
 ├── scripts/
 │   ├── run_backtest.py     # 回測
 │   ├── run_paper.py        # 模擬盤
@@ -117,6 +131,7 @@ crypto-trader/
 │   ├── strategies/         # 策略（可擴展）
 │   ├── risk/               # 風控
 │   ├── portfolio/          # 組合追蹤
+│   ├── dashboard/          # Dashboard 資料載入工具
 │   ├── backtest/           # 回測引擎
 │   ├── trading/            # Bot 主迴圈
 │   ├── notifications/      # Telegram / Discord 通知
