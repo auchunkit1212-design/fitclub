@@ -19,8 +19,10 @@ trading:
 strategy:
   name: sma_crossover
   params:
-    fast_period: 10
-    slow_period: 30
+    fast_period: 10     # sma_crossover 參數
+    slow_period: 30     # sma_crossover 參數
+    # MACD 範例（切換 strategy.name: macd 時啟用）
+    # signal_period: 9
 
 risk:
   max_position_pct: 0.25        # 單一持倉最多佔組合 25%

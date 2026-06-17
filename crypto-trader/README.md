@@ -9,7 +9,7 @@
 | 模組 | 說明 |
 |------|------|
 | **交易所** | 透過 [CCXT](https://github.com/ccxt/ccxt) 連接 Binance 等主流交易所 |
-| **策略** | 可插拔策略框架；內建 SMA 均線交叉、RSI 策略 |
+| **策略** | 可插拔策略框架；內建 SMA 均線交叉、RSI、MACD 策略 |
 | **風控** | 倉位上限、日內虧損熔斷、止損／止盈 |
 | **組合** | 持倉追蹤、成交記錄、JSON 持久化 |
 | **回測** | 歷史 K 線模擬，輸出報酬率、最大回撤、Sharpe |
@@ -99,10 +99,11 @@ trading:
   timeframe: 1h              # K 線週期
   base_order_size_usd: 100   # 每筆下單金額（USD）
 strategy:
-  name: sma_crossover        # sma_crossover | rsi
+  name: sma_crossover        # sma_crossover | rsi | macd
   params:
     fast_period: 10
     slow_period: 30
+    # macd 可加：signal_period: 9
 risk:
   max_position_pct: 0.25     # 單倉上限
   stop_loss_pct: 0.03        # 止損 3%
@@ -118,6 +119,7 @@ risk:
 4. 將 `config/settings.yaml` 的 `strategy.name` 改為你的策略名
 
 範例請參考 `src/strategies/sma_crossover.py`。
+MACD 範例請參考 `src/strategies/macd_strategy.py`。
 
 ## 測試
 

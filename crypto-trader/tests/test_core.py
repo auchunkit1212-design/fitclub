@@ -4,6 +4,7 @@ import pytest
 from src.risk.manager import Position, RiskManager
 from src.config import RiskConfig
 from src.strategies.base import SignalAction
+from src.strategies.macd_strategy import MacdStrategy
 from src.strategies.sma_crossover import SmaCrossoverStrategy
 from src.strategies.rsi_strategy import RsiStrategy
 from src.portfolio.tracker import PortfolioTracker
@@ -35,6 +36,12 @@ def test_sma_strategy_returns_signal():
 def test_rsi_strategy_returns_signal():
     strategy = RsiStrategy({"period": 14})
     signal = strategy.generate_signal(_sample_candles(30))
+    assert signal.action in SignalAction
+
+
+def test_macd_strategy_returns_signal():
+    strategy = MacdStrategy({"fast_period": 12, "slow_period": 26, "signal_period": 9})
+    signal = strategy.generate_signal(_sample_candles(60))
     assert signal.action in SignalAction
 
 
