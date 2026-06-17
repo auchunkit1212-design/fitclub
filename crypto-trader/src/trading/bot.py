@@ -37,47 +37,81 @@ class TradingBot:
         self.notifier = notifier or NotificationManager(config.notifications)
 
     def run_once(self) -> None:
-        symbol = self.config.trading.symbol
         timeframe = self.config.trading.timeframe
-        candles = self.exchange.fetch_ohlcv(symbol, timeframe, limit=max(200, self.strategy.warmup_bars() + 10))
-        ticker = self.exchange.fetch_ticker(symbol)
-        price = float(ticker.get("last") or ticker.get("close") or candles["close"].iloc[-1])
         today = datetime.now(timezone.utc).date()
+        symbols = self._symbols()
+        prices: dict[str, float] = {}
 
-        equity = self.portfolio.mark_equity({symbol: price})
-        self.risk.update_equity(equity, today)
-        logger.info("[%s] %s price=%.2f equity=%.2f cash=%.2f", self.mode.upper(), symbol, price, equity, self.portfolio.cash)
-
-        pos = self.portfolio.position(symbol)
-        if pos:
-            exit_signal = self.risk.apply_stop_take(pos, price)
-            if exit_signal and exit_signal.action == SignalAction.SELL:
-                self._execute_sell(symbol, pos.amount, price, exit_signal.reason)
-                return
-
-        signal = self.strategy.generate_signal(candles)
-        logger.info("Signal: %s (%s)", signal.action.value, signal.reason)
-
-        if signal.action == SignalAction.BUY and not pos:
-            size_usd = self.risk.adjust_order_size(
-                equity, self.config.trading.base_order_size_usd * signal.strength
+        for symbol in symbols:
+            candles = self.exchange.fetch_ohlcv(
+                symbol, timeframe, limit=max(200, self.strategy.warmup_bars() + 10)
             )
-            ok, reason = self.risk.can_open_position(equity, size_usd, self.portfolio.open_positions_count())
-            if not ok:
-                logger.warning("Buy blocked: %s", reason)
-                return
-            if size_usd <= 0 or self.portfolio.cash < size_usd:
-                logger.warning("Buy skipped: insufficient funds")
-                return
-            amount = size_usd / price
-            self._execute_buy(symbol, amount, price, signal.reason)
+            ticker = self.exchange.fetch_ticker(symbol)
+            prices[symbol] = float(
+                ticker.get("last") or ticker.get("close") or candles["close"].iloc[-1]
+            )
 
-        elif signal.action == SignalAction.SELL and pos:
-            self._execute_sell(symbol, pos.amount, price, signal.reason)
+        equity = self.portfolio.mark_equity(prices)
+        self.risk.update_equity(equity, today)
+        logger.info(
+            "[%s] symbols=%s equity=%.2f cash=%.2f",
+            self.mode.upper(),
+            ",".join(symbols),
+            equity,
+            self.portfolio.cash,
+        )
+
+        for symbol in symbols:
+            candles = self.exchange.fetch_ohlcv(
+                symbol, timeframe, limit=max(200, self.strategy.warmup_bars() + 10)
+            )
+            price = prices[symbol]
+            pos = self.portfolio.position(symbol)
+
+            if pos:
+                exit_signal = self.risk.apply_stop_take(pos, price)
+                if exit_signal and exit_signal.action == SignalAction.SELL:
+                    self._execute_sell(symbol, pos.amount, price, exit_signal.reason)
+                    continue
+
+            signal = self.strategy.generate_signal(candles)
+            logger.info("%s signal: %s (%s)", symbol, signal.action.value, signal.reason)
+
+            if signal.action == SignalAction.BUY and not pos:
+                if self.portfolio.open_positions_count() >= self.config.trading.max_open_positions:
+                    logger.warning("Buy blocked (%s): max_open_positions reached", symbol)
+                    continue
+                size_usd = self._order_size_usd(
+                    symbol=symbol,
+                    equity=equity,
+                    signal_strength=signal.strength,
+                    current_position_value=0.0,
+                )
+                size_usd = self.risk.adjust_order_size(equity, size_usd)
+                ok, reason = self.risk.can_open_position(
+                    equity, size_usd, self.portfolio.open_positions_count()
+                )
+                if not ok:
+                    logger.warning("Buy blocked (%s): %s", symbol, reason)
+                    continue
+                if size_usd <= 0 or self.portfolio.cash < size_usd:
+                    logger.warning("Buy skipped (%s): insufficient funds", symbol)
+                    continue
+                amount = size_usd / price
+                self._execute_buy(symbol, amount, price, signal.reason)
+
+            elif signal.action == SignalAction.SELL and pos:
+                self._execute_sell(symbol, pos.amount, price, signal.reason)
 
     def run_forever(self) -> None:
         interval = self.config.trading.poll_interval_seconds
-        logger.info("Starting %s bot on %s (%s), poll=%ds", self.mode, self.config.trading.symbol, self.config.strategy.name, interval)
+        logger.info(
+            "Starting %s bot on %s (%s), poll=%ds",
+            self.mode,
+            ",".join(self._symbols()),
+            self.config.strategy.name,
+            interval,
+        )
         while True:
             try:
                 self.run_once()
@@ -104,3 +138,24 @@ class TradingBot:
         trade = self.portfolio.execute_trade(symbol, "sell", amount, price, self.fee_rate, reason, self.mode)
         logger.info("SELL %s %.6f @ %.2f | %s", symbol, amount, price, reason)
         self.notifier.notify_trade(trade)
+
+    def _symbols(self) -> list[str]:
+        symbols = [s.strip() for s in self.config.trading.symbols if s and s.strip()]
+        if symbols:
+            return list(dict.fromkeys(symbols))
+        return [self.config.trading.symbol]
+
+    def _order_size_usd(
+        self,
+        symbol: str,
+        equity: float,
+        signal_strength: float,
+        current_position_value: float,
+    ) -> float:
+        requested = self.config.trading.base_order_size_usd * signal_strength
+        allocation = self.config.trading.symbol_allocations.get(symbol)
+        if allocation is None:
+            return requested
+        target_value = max(0.0, equity * allocation)
+        remaining = max(0.0, target_value - current_position_value)
+        return min(requested, remaining)

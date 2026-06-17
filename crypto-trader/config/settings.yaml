@@ -10,10 +10,18 @@ exchange:
 
 trading:
   symbol: BTC/USDT
+  # 多交易對（有值時會覆蓋上面的 symbol）
+  symbols:
+    - BTC/USDT
+    # - ETH/USDT
+  # 每個交易對資金配置上限（佔總 equity）；留空即只用 base_order_size_usd
+  symbol_allocations:
+    BTC/USDT: 0.5
+    # ETH/USDT: 0.3
   timeframe: 1h
   quote_currency: USDT
   base_order_size_usd: 100
-  max_open_positions: 1
+  max_open_positions: 3
   poll_interval_seconds: 60
 
 strategy:

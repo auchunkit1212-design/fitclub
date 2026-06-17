@@ -11,7 +11,7 @@
 | **交易所** | 透過 [CCXT](https://github.com/ccxt/ccxt) 連接 Binance 等主流交易所 |
 | **策略** | 可插拔策略框架；內建 SMA 均線交叉、RSI、MACD、MACD+RSI 雙確認策略 |
 | **風控** | 倉位上限、日內虧損熔斷、止損／止盈 |
-| **組合** | 持倉追蹤、成交記錄、JSON 持久化 |
+| **組合** | 持倉追蹤、成交記錄、JSON 持久化、多交易對資金配置 |
 | **回測** | 歷史 K 線模擬，輸出報酬率、最大回撤、Sharpe |
 | **Bot** | 定時輪詢市場、產生信號、執行買賣 |
 | **通知** | Telegram / Discord 成交通知（Paper / Live） |
@@ -49,6 +49,25 @@ python scripts/run_paper.py --once
 # 持續運行（每 60 秒輪詢，可在 settings.yaml 調整）
 python scripts/run_paper.py
 ```
+
+#### 多交易對 + 資金配置（可選）
+
+在 `config/settings.yaml` 設定：
+
+```yaml
+trading:
+  symbols:
+    - BTC/USDT
+    - ETH/USDT
+  symbol_allocations:
+    BTC/USDT: 0.5
+    ETH/USDT: 0.3
+  max_open_positions: 3
+```
+
+- `symbols` 有值時，bot 會輪詢多個交易對
+- `symbol_allocations` 代表每個交易對可用的總資金上限比例（佔 equity）
+- `base_order_size_usd` 仍是每次下單的基準大小
 
 查看組合狀態：
 
@@ -147,8 +166,12 @@ crypto-trader/
 mode: paper                  # paper | live | backtest
 trading:
   symbol: BTC/USDT           # 交易對
+  symbols: [BTC/USDT]        # 可選：多交易對
+  symbol_allocations:        # 可選：每個交易對上限（佔 equity）
+    BTC/USDT: 0.5
   timeframe: 1h              # K 線週期
   base_order_size_usd: 100   # 每筆下單金額（USD）
+  max_open_positions: 3      # 同時最多開倉數
 strategy:
   name: sma_crossover        # sma_crossover | rsi | macd | macd_rsi_filter
   params:
@@ -273,7 +296,7 @@ AI 改完 code 後，你應該：
 - [x] 更多策略：MACD、MACD+RSI 雙確認
 - [x] Telegram / Discord 成交通知
 - [ ] Streamlit 或 Next.js Dashboard
-- [ ] 多交易對組合、資金配置
+- [x] 多交易對組合、資金配置
 - [ ] 本地 K 線 CSV 快取（減少 API 請求）
 - [ ] Docker 部署 + systemd / cron 常駐
 - [ ] 訂單類型：限價單、OCO

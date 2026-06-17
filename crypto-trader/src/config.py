@@ -25,6 +25,8 @@ class ExchangeConfig:
 @dataclass
 class TradingConfig:
     symbol: str = "BTC/USDT"
+    symbols: list[str] = field(default_factory=list)
+    symbol_allocations: dict[str, float] = field(default_factory=dict)
     timeframe: str = "1h"
     quote_currency: str = "USDT"
     base_order_size_usd: float = 100.0
