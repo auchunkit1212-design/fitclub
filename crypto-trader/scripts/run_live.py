@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.config import load_config
+from src.exchange.caching_client import CachingExchangeClient
 from src.exchange.ccxt_client import CcxtExchangeClient
 from src.portfolio.tracker import PortfolioTracker
 from src.trading.bot import TradingBot
@@ -37,7 +38,12 @@ def main() -> None:
     config.mode = "live"
     setup_logger("live", config.logging.level, config.logging.file)
 
-    exchange = CcxtExchangeClient(config.exchange)
+    inner = CcxtExchangeClient(config.exchange)
+    exchange = (
+        CachingExchangeClient(config, inner)
+        if config.data.ohlcv_cache_enabled
+        else inner
+    )
     balances = exchange.fetch_balance()
     quote = config.trading.quote_currency
     cash = balances.get(quote, None)

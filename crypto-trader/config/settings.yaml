@@ -60,3 +60,8 @@ notifications:
   notify_modes:
     - paper
     - live
+
+data:
+  ohlcv_cache_enabled: true
+  ohlcv_cache_dir: data/ohlcv
+  ohlcv_cache_ttl_hours: 24

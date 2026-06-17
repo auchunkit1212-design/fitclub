@@ -15,6 +15,7 @@ from rich.table import Table
 
 from src.backtest.engine import BacktestEngine
 from src.config import load_config
+from src.exchange.caching_client import CachingExchangeClient
 from src.exchange.ccxt_client import CcxtExchangeClient
 from src.exchange.mock_client import MockExchangeClient
 from src.utils.logger import setup_logger
@@ -26,7 +27,10 @@ def _create_exchange(config, offline: bool):
     if offline:
         return MockExchangeClient()
     try:
-        return CcxtExchangeClient(config.exchange)
+        inner = CcxtExchangeClient(config.exchange)
+        if config.data.ohlcv_cache_enabled:
+            return CachingExchangeClient(config, inner)
+        return inner
     except Exception as exc:
         console.print(f"[yellow]Exchange unavailable ({exc}); using mock data.[/yellow]")
         return MockExchangeClient()

@@ -132,6 +132,29 @@ streamlit run dashboard/app.py
 
 > 建議先跑一次 `python scripts/run_paper.py --once` 產生 paper 檔案，再打開 Dashboard。
 
+### 6. K 線 CSV 快取（減少 API 請求）
+
+預設已開啟，K 線會存到 `data/ohlcv/{exchange}/`：
+
+```yaml
+data:
+  ohlcv_cache_enabled: true
+  ohlcv_cache_dir: data/ohlcv
+  ohlcv_cache_ttl_hours: 24
+```
+
+預先下載回測所需 K 線：
+
+```bash
+python scripts/cache_ohlcv.py --symbol BTC/USDT --timeframe 1h --start 2024-01-01 --end 2024-12-31
+```
+
+之後跑回測會優先讀本地 CSV，大幅減少 API 請求：
+
+```bash
+python scripts/run_backtest.py
+```
+
 ## 專案結構
 
 ```
@@ -143,7 +166,8 @@ crypto-trader/
 │   ├── run_backtest.py     # 回測
 │   ├── run_paper.py        # 模擬盤
 │   ├── run_live.py         # 實盤
-│   └── status.py           # 組合狀態
+│   ├── status.py           # 組合狀態
+│   └── cache_ohlcv.py      # 預下載 K 線快取
 ├── src/
 │   ├── config.py           # 設定載入
 │   ├── exchange/           # CCXT 交易所適配
@@ -297,7 +321,7 @@ AI 改完 code 後，你應該：
 - [x] Telegram / Discord 成交通知
 - [ ] Streamlit 或 Next.js Dashboard
 - [x] 多交易對組合、資金配置
-- [ ] 本地 K 線 CSV 快取（減少 API 請求）
+- [x] 本地 K 線 CSV 快取（減少 API 請求）
 - [ ] Docker 部署 + systemd / cron 常駐
 - [ ] 訂單類型：限價單、OCO
 - [ ] 策略參數自動優化（grid search）

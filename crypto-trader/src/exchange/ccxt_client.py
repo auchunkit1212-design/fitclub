@@ -42,6 +42,40 @@ class CcxtExchangeClient(ExchangeClient):
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
         return df
 
+    def fetch_ohlcv_range(
+        self,
+        symbol: str,
+        timeframe: str,
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        limit: int = 1000,
+    ) -> pd.DataFrame:
+        since_ms = int(start.timestamp() * 1000)
+        until_ms = int(end.timestamp() * 1000)
+        all_rows: list[list] = []
+
+        while since_ms < until_ms:
+            batch = self._exchange.fetch_ohlcv(
+                symbol, timeframe=timeframe, since=since_ms, limit=limit
+            )
+            if not batch:
+                break
+            all_rows.extend(batch)
+            last_ts = batch[-1][0]
+            if last_ts <= since_ms:
+                break
+            since_ms = last_ts + 1
+            if len(batch) < limit:
+                break
+
+        if not all_rows:
+            return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+
+        df = pd.DataFrame(all_rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+        df = df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp")
+        return df[(df["timestamp"] >= start) & (df["timestamp"] < end)].reset_index(drop=True)
+
     def fetch_ticker(self, symbol: str) -> dict[str, Any]:
         return self._exchange.fetch_ticker(symbol)
 

@@ -75,6 +75,13 @@ class NotificationsConfig:
 
 
 @dataclass
+class DataConfig:
+    ohlcv_cache_enabled: bool = True
+    ohlcv_cache_dir: str = "data/ohlcv"
+    ohlcv_cache_ttl_hours: int = 24
+
+
+@dataclass
 class AppConfig:
     mode: str = "paper"
     exchange: ExchangeConfig = field(default_factory=ExchangeConfig)
@@ -84,6 +91,7 @@ class AppConfig:
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
+    data: DataConfig = field(default_factory=DataConfig)
 
 
 def _merge_dataclass(cls: type, data: dict[str, Any] | None) -> Any:
@@ -130,4 +138,5 @@ def load_config(path: Path | str | None = None) -> AppConfig:
         backtest=_merge_dataclass(BacktestConfig, raw.get("backtest")),
         logging=logging_cfg,
         notifications=notifications,
+        data=_merge_dataclass(DataConfig, raw.get("data")),
     )

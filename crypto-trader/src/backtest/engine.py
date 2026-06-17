@@ -6,6 +6,7 @@ from datetime import datetime
 import pandas as pd
 
 from src.config import AppConfig
+from src.data.ohlcv_service import fetch_ohlcv_for_backtest
 from src.exchange.base import ExchangeClient
 from src.portfolio.tracker import PortfolioTracker
 from src.risk.manager import RiskManager
@@ -35,12 +36,11 @@ class BacktestEngine:
     def run(self) -> BacktestResult:
         symbol = self.config.trading.symbol
         timeframe = self.config.trading.timeframe
-        candles = self.exchange.fetch_ohlcv(symbol, timeframe, limit=1000)
+        candles = fetch_ohlcv_for_backtest(self.config, self.exchange, symbol, timeframe)
         candles = candles.sort_values("timestamp").reset_index(drop=True)
 
         start = pd.Timestamp(self.config.backtest.start_date, tz="UTC")
         end = pd.Timestamp(self.config.backtest.end_date, tz="UTC") + pd.Timedelta(days=1)
-        candles = candles[(candles["timestamp"] >= start) & (candles["timestamp"] < end)]
         if candles.empty:
             raise ValueError("No candles in backtest date range")
 
