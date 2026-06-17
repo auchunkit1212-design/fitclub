@@ -155,12 +155,51 @@ python scripts/cache_ohlcv.py --symbol BTC/USDT --timeframe 1h --start 2024-01-0
 python scripts/run_backtest.py
 ```
 
+### 7. Docker 部署（Bot + Dashboard）
+
+一鍵啟動 **Paper Bot** 同 **Streamlit Dashboard**：
+
+```bash
+cd crypto-trader
+cp .env.example .env   # 按需填寫 API / Telegram
+docker compose up -d --build
+```
+
+- Dashboard: http://localhost:8501
+- Paper bot 會在背景持續運行
+- `data/`、`logs/` 會掛載到本機（重啟容器資料保留）
+
+常用指令：
+
+```bash
+docker compose ps
+docker compose logs -f paper-bot
+docker compose logs -f dashboard
+docker compose down
+```
+
+啟動實盤（需自行承擔風險，並在 `.env` 設好 API key）：
+
+```bash
+docker compose --profile live up -d live-bot
+```
+
+單獨跑回測 / 快取 K 線：
+
+```bash
+docker compose run --rm paper-bot backtest --offline
+docker compose run --rm paper-bot cache --symbol BTC/USDT --timeframe 1h --start 2024-01-01 --end 2024-12-31
+```
+
 ## 專案結構
 
 ```
 crypto-trader/
 ├── config/settings.yaml    # 主設定（策略、風控、交易對）
 ├── .env.example            # API 金鑰（勿提交 .env）
+├── Dockerfile              # Docker 映像
+├── docker-compose.yml      # Bot + Dashboard 編排
+├── docker/entrypoint.sh    # 容器入口腳本
 ├── dashboard/             # Streamlit Dashboard
 ├── scripts/
 │   ├── run_backtest.py     # 回測
@@ -322,7 +361,7 @@ AI 改完 code 後，你應該：
 - [ ] Streamlit 或 Next.js Dashboard
 - [x] 多交易對組合、資金配置
 - [x] 本地 K 線 CSV 快取（減少 API 請求）
-- [ ] Docker 部署 + systemd / cron 常駐
+- [x] Docker 部署 + systemd / cron 常駐
 - [ ] 訂單類型：限價單、OCO
 - [ ] 策略參數自動優化（grid search）
 
