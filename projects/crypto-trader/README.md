@@ -19,7 +19,7 @@
 ## 快速開始
 
 ```bash
-cd crypto-trader
+cd projects/crypto-trader
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -191,7 +191,7 @@ python scripts/run_backtest.py
 一鍵啟動 **Paper Bot** 同 **Streamlit Dashboard**：
 
 ```bash
-cd crypto-trader
+cd projects/crypto-trader
 cp .env.example .env   # 按需填寫 API / Telegram
 docker compose up -d --build
 ```
@@ -225,7 +225,7 @@ docker compose run --rm paper-bot cache --symbol BTC/USDT --timeframe 1h --start
 ## 專案結構
 
 ```
-crypto-trader/
+projects/crypto-trader/
 ├── config/settings.yaml    # 主設定（策略、風控、交易對）
 ├── .env.example            # API 金鑰（勿提交 .env）
 ├── Dockerfile              # Docker 映像
@@ -314,12 +314,12 @@ pytest tests/ -v
 向 AI 描述時，盡量包含：
 
 - **做咩**：例如「加 MACD 策略」「接 OKX 交易所」「做 Web Dashboard」
-- **限制**：例如「只改 `crypto-trader/`，唔好動 fitness app」「實盤前要測試網」
+- **限制**：例如「只改 `projects/crypto-trader/`，唔好動 fitness app」「實盤前要測試網」
 - **驗收標準**：例如「回測總報酬 > 0」「`pytest` 全過」「有 CLI 可以跑」
 
 **好嘅 prompt 範例：**
 
-> 幫我喺 `crypto-trader` 加一個 MACD 策略，參數 fast=12 slow=26 signal=9，註冊到 registry，並寫單元測試。唔好改其他檔案。
+> 幫我喺 `projects/crypto-trader` 加一個 MACD 策略，參數 fast=12 slow=26 signal=9，註冊到 registry，並寫單元測試。唔好改其他檔案。
 
 > 幫我做一個簡單 Web Dashboard（Next.js 或 Streamlit 都得），顯示 paper portfolio 嘅 equity curve 同最近 10 筆成交。
 
@@ -357,7 +357,7 @@ AI 改完 code 後，你應該：
 複製以下模板，填入你嘅需求：
 
 ```
-【任務】在 crypto-trader 加入 XXX 功能
+【任務】在 projects/crypto-trader 加入 XXX 功能
 【模式】只回測 / 要支援實盤
 【交易所】Binance testnet
 【策略】基於現有 sma_crossover 擴展
