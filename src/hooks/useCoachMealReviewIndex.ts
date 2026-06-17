@@ -117,9 +117,47 @@ export function useCoachMealReviewIndex(
     [coachEmail]
   );
 
+  const markAllMealsReviewed = useCallback(
+    (mealLogIds: string[]) => {
+      if (!coachEmail || mealLogIds.length === 0) return;
+      const coach = coachEmail.trim().toLowerCase();
+      const idSet = new Set(mealLogIds);
+
+      setReactions((prev) => {
+        const reviewed = new Set(
+          prev
+            .filter(
+              (r) =>
+                idSet.has(r.mealLogId) &&
+                r.coachEmail.trim().toLowerCase() === coach
+            )
+            .map((r) => r.mealLogId)
+        );
+        const additions = mealLogIds
+          .filter((id) => !reviewed.has(id))
+          .map((mealLogId) => ({
+            id: `local-${mealLogId}-${coach}`,
+            mealLogId,
+            coachEmail,
+            sticker: "clap",
+            createdAt: new Date().toISOString(),
+          }));
+        return additions.length > 0 ? [...prev, ...additions] : prev;
+      });
+    },
+    [coachEmail]
+  );
+
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  return { reactions, feedback, loading, reload, markMealReviewed };
+  return {
+    reactions,
+    feedback,
+    loading,
+    reload,
+    markMealReviewed,
+    markAllMealsReviewed,
+  };
 }

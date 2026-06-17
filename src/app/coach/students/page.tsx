@@ -92,6 +92,14 @@ export default function CoachStudentsPage() {
     [reviewIndex]
   );
 
+  const handleBulkReviewed = useCallback(
+    (mealLogIds: string[]) => {
+      reviewIndex.markAllMealsReviewed(mealLogIds);
+      void reviewIndex.reload();
+    },
+    [reviewIndex]
+  );
+
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(""), 3000);
@@ -250,6 +258,7 @@ export default function CoachStudentsPage() {
                       feedback={reviewIndex.feedback}
                       loading={reviewIndex.loading}
                       onReviewChange={handleReviewChange}
+                      onBulkReviewed={handleBulkReviewed}
                       onToast={showToast}
                       onLogUpdated={handleLogUpdated}
                       onLogDeleted={handleLogDeleted}

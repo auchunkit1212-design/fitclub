@@ -5,6 +5,8 @@ import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { filterUnreviewedMeals } from "@/lib/meal-review-status";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
+import { errorMessage } from "@/lib/errors";
+import { getSessionRequestHeaders } from "@/lib/session";
 import { IconLabel, ScrollText } from "@/components/icons";
 import type {
   MealLog,
@@ -24,6 +26,7 @@ type Props = {
   feedback: MealLogFeedback[];
   loading?: boolean;
   onReviewChange?: (mealLogId?: string) => void;
+  onBulkReviewed?: (mealLogIds: string[]) => void;
   onToast: (message: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
@@ -37,12 +40,14 @@ export function CoachUnreviewedMealsPanel({
   feedback,
   loading = false,
   onReviewChange,
+  onBulkReviewed,
   onToast,
   onLogUpdated,
   onLogDeleted,
 }: Props) {
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   const unreviewed = useMemo(
     () => filterUnreviewedMeals(logs, coachEmail, reactions, feedback),
@@ -54,6 +59,50 @@ export function CoachUnreviewedMealsPanel({
   const handleReviewed = (mealLogId: string) => {
     onReviewChange?.(mealLogId);
     onToast("已標記檢閱");
+  };
+
+  const handleMarkAllReviewed = async () => {
+    if (unreviewed.length === 0 || markingAll) return;
+
+    const confirmed = window.confirm(
+      `將近 ${unreviewed.length} 筆未批閱飲食全部標記為已批閱？\n\n唔會推送通知俾學員，之後仍可逐筆補送評語或貼紙。`
+    );
+    if (!confirmed) return;
+
+    const mealLogIds = unreviewed.map((log) => log.id);
+    setMarkingAll(true);
+    try {
+      const res = await fetch("/api/coach/mark-all-reviewed", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ mealLogIds }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        marked?: number;
+        failed?: number;
+      };
+      if (!res.ok) {
+        onToast(data.error ?? "批量批閱失敗");
+        return;
+      }
+
+      onBulkReviewed?.(mealLogIds);
+      const marked = data.marked ?? mealLogIds.length;
+      onToast(
+        data.failed
+          ? `已標記 ${marked} 筆，${data.failed} 筆未能更新`
+          : `已全部標記 ${marked} 筆飲食為已批閱`
+      );
+    } catch (err) {
+      onToast(errorMessage(err, "批量批閱失敗"));
+    } finally {
+      setMarkingAll(false);
+    }
   };
 
   return (
@@ -84,6 +133,20 @@ export function CoachUnreviewedMealsPanel({
           </p>
         ) : (
           <>
+            <button
+              type="button"
+              disabled={markingAll}
+              onClick={() => void handleMarkAllReviewed()}
+              className={`w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 ${btnClass}`}
+            >
+              {markingAll
+                ? "標記中…"
+                : `全部標記已批閱（${unreviewed.length} 筆）`}
+            </button>
+            <p className="text-[10px] text-zinc-500 text-center -mt-1">
+              靜默批閱，唔會推送通知俾學員
+            </p>
+
             <ul className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
               {visible.map((log) => {
                 const student = students.find((s) => s.email === log.email);
