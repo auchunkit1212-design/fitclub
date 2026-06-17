@@ -1,0 +1,40 @@
+# Crypto Auto Trader 設定
+# 修改後重啟 bot 即可生效
+
+mode: paper  # paper | live | backtest
+
+exchange:
+  id: binance
+  sandbox: false   # 回測／模擬盤用公開行情；實盤請設 true 並用測試網 API
+  rate_limit: true
+
+trading:
+  symbol: BTC/USDT
+  timeframe: 1h
+  quote_currency: USDT
+  base_order_size_usd: 100
+  max_open_positions: 1
+  poll_interval_seconds: 60
+
+strategy:
+  name: sma_crossover
+  params:
+    fast_period: 10
+    slow_period: 30
+
+risk:
+  max_position_pct: 0.25        # 單一持倉最多佔組合 25%
+  max_daily_loss_pct: 0.05      # 日內虧損 5% 暫停交易
+  stop_loss_pct: 0.03           # 3% 止損
+  take_profit_pct: 0.06         # 6% 止盈
+  max_slippage_pct: 0.002       # 0.2% 滑點容忍
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_capital: 10000
+  fee_rate: 0.001
+
+logging:
+  level: INFO
+  file: logs/trader.log
