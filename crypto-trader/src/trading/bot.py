@@ -10,6 +10,7 @@ from src.portfolio.tracker import PortfolioTracker
 from src.risk.manager import RiskManager
 from src.strategies import get_strategy
 from src.strategies.base import SignalAction
+from src.trading.order_executor import OrderExecutor
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -35,6 +36,7 @@ class TradingBot:
         self.fee_rate = config.backtest.fee_rate
         self.mode = "live" if live else "paper"
         self.notifier = notifier or NotificationManager(config.notifications)
+        self.orders = OrderExecutor(config, exchange, live=live)
 
     def run_once(self) -> None:
         timeframe = self.config.trading.timeframe
@@ -68,7 +70,7 @@ class TradingBot:
             price = prices[symbol]
             pos = self.portfolio.position(symbol)
 
-            if pos:
+            if pos and not self.orders.uses_exchange_oco():
                 exit_signal = self.risk.apply_stop_take(pos, price)
                 if exit_signal and exit_signal.action == SignalAction.SELL:
                     self._execute_sell(symbol, pos.amount, price, exit_signal.reason)
@@ -120,21 +122,26 @@ class TradingBot:
             time.sleep(interval)
 
     def _execute_buy(self, symbol: str, amount: float, price: float, reason: str) -> None:
+        fill = self.orders.buy(symbol, amount, price)
+        if fill is None:
+            return
+        price = fill.price
+        amount = fill.amount
         if self.live:
-            order = self.exchange.create_market_order(symbol, "buy", amount)
-            price = order.price or price
-            amount = order.amount or amount
-            logger.info("LIVE BUY filled id=%s", order.id)
+            logger.info("LIVE BUY filled id=%s type=%s", fill.order_id, fill.order_type)
         trade = self.portfolio.execute_trade(symbol, "buy", amount, price, self.fee_rate, reason, self.mode)
         logger.info("BUY %s %.6f @ %.2f | %s", symbol, amount, price, reason)
         self.notifier.notify_trade(trade)
+        self.orders.place_oco_exit(symbol, amount, price)
 
     def _execute_sell(self, symbol: str, amount: float, price: float, reason: str) -> None:
+        fill = self.orders.sell(symbol, amount, price)
+        if fill is None:
+            return
+        price = fill.price
+        amount = fill.amount
         if self.live:
-            order = self.exchange.create_market_order(symbol, "sell", amount)
-            price = order.price or price
-            amount = order.amount or amount
-            logger.info("LIVE SELL filled id=%s", order.id)
+            logger.info("LIVE SELL filled id=%s type=%s", fill.order_id, fill.order_type)
         trade = self.portfolio.execute_trade(symbol, "sell", amount, price, self.fee_rate, reason, self.mode)
         logger.info("SELL %s %.6f @ %.2f | %s", symbol, amount, price, reason)
         self.notifier.notify_trade(trade)

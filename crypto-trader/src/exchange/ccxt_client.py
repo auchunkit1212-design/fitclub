@@ -112,3 +112,32 @@ class CcxtExchangeClient(ExchangeClient):
             status=str(order.get("status", "")),
             raw=order,
         )
+
+    def create_oco_order(
+        self,
+        symbol: str,
+        amount: float,
+        take_profit_price: float,
+        stop_price: float,
+    ) -> str:
+        """Binance spot OCO：限價止盈 + 止損觸發。"""
+        market = self._exchange.market(symbol)
+        qty = float(self._exchange.amount_to_precision(symbol, amount))
+        price = float(self._exchange.price_to_precision(symbol, take_profit_price))
+        stop = float(self._exchange.price_to_precision(symbol, stop_price))
+        stop_limit = float(
+            self._exchange.price_to_precision(symbol, stop_price * 0.999)
+        )
+        params = {
+            "symbol": market["id"],
+            "side": "SELL",
+            "quantity": qty,
+            "price": price,
+            "stopPrice": stop,
+            "stopLimitPrice": stop_limit,
+            "stopLimitTimeInForce": "GTC",
+        }
+        if hasattr(self._exchange, "privatePostOrderOco"):
+            response = self._exchange.privatePostOrderOco(params)
+            return str(response.get("orderListId", response.get("id", "")))
+        raise NotImplementedError(f"OCO not supported for exchange {self._exchange.id}")

@@ -54,3 +54,12 @@ class MockExchangeClient(ExchangeClient):
         self, symbol: str, side: str, amount: float, price: float
     ) -> OrderResult:
         return OrderResult("mock-2", symbol, side, amount, price, "closed")
+
+    def create_oco_order(
+        self,
+        symbol: str,
+        amount: float,
+        take_profit_price: float,
+        stop_price: float,
+    ) -> str:
+        return "mock-oco-1"

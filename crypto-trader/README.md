@@ -119,7 +119,38 @@ python scripts/test_notifications.py
 
 > Telegram 取得方式：向 [@BotFather](https://t.me/BotFather) 建立 bot 取得 token；向 [@userinfobot](https://t.me/userinfobot) 取得 chat id。
 
-### 5. Dashboard（Streamlit）
+### 5. 限價單與 OCO（實盤進階）
+
+在 `config/settings.yaml` 設定：
+
+```yaml
+trading:
+  order_type: limit           # market | limit（進場）
+  exit_order_type: market     # market | limit（出場）
+  limit_buy_offset_pct: -0.001
+  limit_sell_offset_pct: 0.001
+  oco_enabled: true           # 實盤買入後掛交易所 OCO 止損止盈
+```
+
+- **限價單**：Paper 模式會模擬是否成交（市價觸及限價才成交）；Live 會向交易所提交限價單
+- **OCO**：僅 Live 模式生效；買入成功後自動掛止盈限價 + 止損觸發（目前支援 Binance spot）
+- 啟用 OCO 時，bot 會跳過軟件輪詢止損/止盈，改由交易所託管
+
+### 6. 策略參數 Grid Search
+
+用歷史回測自動掃描參數組合：
+
+```bash
+python scripts/run_grid_search.py --offline \
+  --param fast_period=5,10,15 \
+  --param slow_period=20,30,40 \
+  --metric total_return_pct \
+  --top 10
+```
+
+不帶 `--param` 時會使用預設 SMA grid（fast 5/10/15 × slow 20/30/40）。
+
+### 7. Dashboard（Streamlit）
 
 用於顯示你目前的 **paper/live portfolio**（讀 `data/paper_portfolio.json` / `data/live_portfolio.json`）。
 
@@ -132,7 +163,7 @@ streamlit run dashboard/app.py
 
 > 建議先跑一次 `python scripts/run_paper.py --once` 產生 paper 檔案，再打開 Dashboard。
 
-### 6. K 線 CSV 快取（減少 API 請求）
+### 8. K 線 CSV 快取（減少 API 請求）
 
 預設已開啟，K 線會存到 `data/ohlcv/{exchange}/`：
 
@@ -155,7 +186,7 @@ python scripts/cache_ohlcv.py --symbol BTC/USDT --timeframe 1h --start 2024-01-0
 python scripts/run_backtest.py
 ```
 
-### 7. Docker 部署（Bot + Dashboard）
+### 9. Docker 部署（Bot + Dashboard）
 
 一鍵啟動 **Paper Bot** 同 **Streamlit Dashboard**：
 
@@ -205,6 +236,7 @@ crypto-trader/
 │   ├── run_backtest.py     # 回測
 │   ├── run_paper.py        # 模擬盤
 │   ├── run_live.py         # 實盤
+│   ├── run_grid_search.py  # 參數 grid search
 │   ├── status.py           # 組合狀態
 │   └── cache_ohlcv.py      # 預下載 K 線快取
 ├── src/
@@ -214,8 +246,8 @@ crypto-trader/
 │   ├── risk/               # 風控
 │   ├── portfolio/          # 組合追蹤
 │   ├── dashboard/          # Dashboard 資料載入工具
-│   ├── backtest/           # 回測引擎
-│   ├── trading/            # Bot 主迴圈
+│   ├── backtest/           # 回測引擎 + grid search
+│   ├── trading/            # Bot 主迴圈 + 訂單執行
 │   ├── notifications/      # Telegram / Discord 通知
 │   └── data/               # 行情工具
 └── tests/                  # 單元測試
@@ -362,8 +394,8 @@ AI 改完 code 後，你應該：
 - [x] 多交易對組合、資金配置
 - [x] 本地 K 線 CSV 快取（減少 API 請求）
 - [x] Docker 部署 + systemd / cron 常駐
-- [ ] 訂單類型：限價單、OCO
-- [ ] 策略參數自動優化（grid search）
+- [x] 訂單類型：限價單、OCO
+- [x] 策略參數自動優化（grid search）
 
 ---
 

@@ -23,6 +23,11 @@ trading:
   base_order_size_usd: 100
   max_open_positions: 3
   poll_interval_seconds: 60
+  order_type: market          # market | limit（進場）
+  exit_order_type: market      # market | limit（出場）
+  limit_buy_offset_pct: -0.001  # 限價買：略低於市價
+  limit_sell_offset_pct: 0.001  # 限價賣：略高於市價
+  oco_enabled: false            # 實盤進場後掛交易所 OCO 止損止盈
 
 strategy:
   name: sma_crossover

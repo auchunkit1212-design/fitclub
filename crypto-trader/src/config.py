@@ -32,6 +32,11 @@ class TradingConfig:
     base_order_size_usd: float = 100.0
     max_open_positions: int = 1
     poll_interval_seconds: int = 60
+    order_type: str = "market"
+    exit_order_type: str = "market"
+    limit_buy_offset_pct: float = -0.001
+    limit_sell_offset_pct: float = 0.001
+    oco_enabled: bool = False
 
 
 @dataclass
