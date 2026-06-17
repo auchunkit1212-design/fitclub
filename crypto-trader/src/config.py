@@ -62,6 +62,17 @@ class LoggingConfig:
 
 
 @dataclass
+class NotificationsConfig:
+    enabled: bool = False
+    telegram: bool = True
+    discord: bool = False
+    notify_modes: list[str] = field(default_factory=lambda: ["paper", "live"])
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    discord_webhook_url: str = ""
+
+
+@dataclass
 class AppConfig:
     mode: str = "paper"
     exchange: ExchangeConfig = field(default_factory=ExchangeConfig)
@@ -70,6 +81,7 @@ class AppConfig:
     risk: RiskConfig = field(default_factory=RiskConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
 
 
 def _merge_dataclass(cls: type, data: dict[str, Any] | None) -> Any:
@@ -100,6 +112,13 @@ def load_config(path: Path | str | None = None) -> AppConfig:
     if os.getenv("LOG_LEVEL"):
         logging_cfg.level = os.getenv("LOG_LEVEL", logging_cfg.level)
 
+    notifications = _merge_dataclass(NotificationsConfig, raw.get("notifications"))
+    notifications.telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", notifications.telegram_bot_token)
+    notifications.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", notifications.telegram_chat_id)
+    notifications.discord_webhook_url = os.getenv("DISCORD_WEBHOOK_URL", notifications.discord_webhook_url)
+    if os.getenv("NOTIFICATIONS_ENABLED", "").lower() in {"1", "true", "yes"}:
+        notifications.enabled = True
+
     return AppConfig(
         mode=raw.get("mode", "paper"),
         exchange=exchange,
@@ -108,4 +127,5 @@ def load_config(path: Path | str | None = None) -> AppConfig:
         risk=_merge_dataclass(RiskConfig, raw.get("risk")),
         backtest=_merge_dataclass(BacktestConfig, raw.get("backtest")),
         logging=logging_cfg,
+        notifications=notifications,
     )

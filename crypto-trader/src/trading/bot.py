@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from src.config import AppConfig
 from src.exchange.base import ExchangeClient
+from src.notifications import NotificationManager
 from src.portfolio.tracker import PortfolioTracker
 from src.risk.manager import RiskManager
 from src.strategies import get_strategy
@@ -23,6 +24,7 @@ class TradingBot:
         exchange: ExchangeClient,
         portfolio: PortfolioTracker,
         live: bool = False,
+        notifier: NotificationManager | None = None,
     ) -> None:
         self.config = config
         self.exchange = exchange
@@ -32,6 +34,7 @@ class TradingBot:
         self.risk = RiskManager(config.risk)
         self.fee_rate = config.backtest.fee_rate
         self.mode = "live" if live else "paper"
+        self.notifier = notifier or NotificationManager(config.notifications)
 
     def run_once(self) -> None:
         symbol = self.config.trading.symbol
@@ -88,8 +91,9 @@ class TradingBot:
             price = order.price or price
             amount = order.amount or amount
             logger.info("LIVE BUY filled id=%s", order.id)
-        self.portfolio.execute_trade(symbol, "buy", amount, price, self.fee_rate, reason, self.mode)
+        trade = self.portfolio.execute_trade(symbol, "buy", amount, price, self.fee_rate, reason, self.mode)
         logger.info("BUY %s %.6f @ %.2f | %s", symbol, amount, price, reason)
+        self.notifier.notify_trade(trade)
 
     def _execute_sell(self, symbol: str, amount: float, price: float, reason: str) -> None:
         if self.live:
@@ -97,5 +101,6 @@ class TradingBot:
             price = order.price or price
             amount = order.amount or amount
             logger.info("LIVE SELL filled id=%s", order.id)
-        self.portfolio.execute_trade(symbol, "sell", amount, price, self.fee_rate, reason, self.mode)
+        trade = self.portfolio.execute_trade(symbol, "sell", amount, price, self.fee_rate, reason, self.mode)
         logger.info("SELL %s %.6f @ %.2f | %s", symbol, amount, price, reason)
+        self.notifier.notify_trade(trade)

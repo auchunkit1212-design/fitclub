@@ -44,3 +44,11 @@ backtest:
 logging:
   level: INFO
   file: logs/trader.log
+
+notifications:
+  enabled: false
+  telegram: true
+  discord: false
+  notify_modes:
+    - paper
+    - live

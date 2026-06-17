@@ -14,6 +14,7 @@
 | **組合** | 持倉追蹤、成交記錄、JSON 持久化 |
 | **回測** | 歷史 K 線模擬，輸出報酬率、最大回撤、Sharpe |
 | **Bot** | 定時輪詢市場、產生信號、執行買賣 |
+| **通知** | Telegram / Discord 成交通知（Paper / Live） |
 
 ## 快速開始
 
@@ -65,6 +66,40 @@ python scripts/status.py
 python scripts/run_live.py --confirm-live --once
 ```
 
+### 4. 成交通知（Telegram / Discord）
+
+1. 複製 `.env.example` 為 `.env`
+2. 設定以下其中一種（或兩種）：
+
+```bash
+NOTIFICATIONS_ENABLED=true
+TELEGRAM_BOT_TOKEN=你的BotToken
+TELEGRAM_CHAT_ID=你的ChatID
+
+# 可選 Discord
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+3. 在 `config/settings.yaml` 開啟：
+
+```yaml
+notifications:
+  enabled: true
+  telegram: true
+  discord: false
+  notify_modes:
+    - paper
+    - live
+```
+
+4. 發送測試訊息：
+
+```bash
+python scripts/test_notifications.py
+```
+
+> Telegram 取得方式：向 [@BotFather](https://t.me/BotFather) 建立 bot 取得 token；向 [@userinfobot](https://t.me/userinfobot) 取得 chat id。
+
 ## 專案結構
 
 ```
@@ -84,6 +119,7 @@ crypto-trader/
 │   ├── portfolio/          # 組合追蹤
 │   ├── backtest/           # 回測引擎
 │   ├── trading/            # Bot 主迴圈
+│   ├── notifications/      # Telegram / Discord 通知
 │   └── data/               # 行情工具
 └── tests/                  # 單元測試
 ```
@@ -219,8 +255,8 @@ AI 改完 code 後，你應該：
 
 ### 建議下一步擴展（可以逐個叫 AI 做）
 
-- [ ] 更多策略：MACD、Bollinger Bands、網格交易
-- [ ] Telegram / Discord 成交通知
+- [x] 更多策略：MACD、MACD+RSI 雙確認
+- [x] Telegram / Discord 成交通知
 - [ ] Streamlit 或 Next.js Dashboard
 - [ ] 多交易對組合、資金配置
 - [ ] 本地 K 線 CSV 快取（減少 API 請求）
