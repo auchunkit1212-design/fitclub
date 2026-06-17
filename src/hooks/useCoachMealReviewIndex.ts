@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { filterRecentCoachReviewLogs } from "@/lib/meal-review-status";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
 const CHUNK_SIZE = 80;
@@ -50,8 +51,13 @@ export function useCoachMealReviewIndex(
   const [feedback, setFeedback] = useState<MealLogFeedback[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const recentLogs = useMemo(
+    () => filterRecentCoachReviewLogs(logs),
+    [logs]
+  );
+
   const reload = useCallback(async () => {
-    if (!coachEmail || logs.length === 0) {
+    if (!coachEmail || recentLogs.length === 0) {
       setReactions([]);
       setFeedback([]);
       return;
@@ -59,7 +65,7 @@ export function useCoachMealReviewIndex(
 
     setLoading(true);
     try {
-      const ids = logs.map((l) => l.id);
+      const ids = recentLogs.map((l) => l.id);
       const allReactions: MealLogReaction[] = [];
       const allFeedback: MealLogFeedback[] = [];
 
@@ -78,7 +84,7 @@ export function useCoachMealReviewIndex(
     } finally {
       setLoading(false);
     }
-  }, [coachEmail, logs]);
+  }, [coachEmail, recentLogs]);
 
   const markMealReviewed = useCallback(
     (mealLogId: string) => {

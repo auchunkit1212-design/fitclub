@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { FreeTrialBadge } from "@/components/FreeTrialBadge";
 import { ShoppingCart, IconLabel } from "@/components/icons";
 import type { BillingPlanKey } from "@/lib/stripe-plans";
 import { getSessionRequestHeaders } from "@/lib/session";
@@ -76,20 +77,27 @@ export function ProCheckoutButton({
         : t("billing.upgradePro", "升級 Pro"));
 
   return (
-    <button
-      type="button"
-      disabled={loading}
-      onClick={() => void startCheckout()}
-      className={`w-full font-semibold py-3 rounded-xl disabled:opacity-60 ${base} ${btnClass} ${className}`}
-    >
-      <IconLabel
-        icon={ShoppingCart}
-        className="justify-center"
-        iconClassName={variant === "primary" ? "text-white" : "text-emerald-700"}
+    <div className={`space-y-2 ${className}`}>
+      {(plan === "solo" || plan === "coach_pro") && (
+        <div className="flex justify-center">
+          <FreeTrialBadge />
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => void startCheckout()}
+        className={`w-full font-semibold py-3 rounded-xl disabled:opacity-60 ${base} ${btnClass}`}
       >
-        {loading ? t("billing.openingCheckout", "正在前往 Stripe...") : buttonLabel}
-      </IconLabel>
-    </button>
+        <IconLabel
+          icon={ShoppingCart}
+          className="justify-center"
+          iconClassName={variant === "primary" ? "text-white" : "text-emerald-700"}
+        >
+          {loading ? t("billing.openingCheckout", "正在前往 Stripe...") : buttonLabel}
+        </IconLabel>
+      </button>
+    </div>
   );
 }
 

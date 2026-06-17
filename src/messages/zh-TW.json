@@ -757,8 +757,14 @@
     "successTitle": "訂閱成功",
     "successHeadline": "歡迎加入 Pro！",
     "successBody": "付款已完成，Pro 功能已解鎖。正在返回主頁...",
+    "freeTrialBadge": "首 3 日免費試用",
     "cancelTitle": "未完成付款",
     "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
+  },
+  "pullRefresh": {
+    "pull": "下拉刷新",
+    "release": "鬆手刷新",
+    "refreshing": "刷新中..."
   },
   "share": {
     "copyFailed": "複製失敗，請長按手動複製",

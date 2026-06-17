@@ -15,6 +15,21 @@ export async function fetchStripeCustomerId(email: string): Promise<string | nul
   return typeof id === "string" && id.trim() ? id.trim() : null;
 }
 
+export async function fetchStripeSubscriptionStatus(
+  email: string
+): Promise<string | null> {
+  const admin = getSupabaseServiceRole();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("stripe_subscription_status")
+    .eq("email", email.trim().toLowerCase())
+    .maybeSingle();
+
+  if (error) throw error;
+  const status = data?.stripe_subscription_status;
+  return typeof status === "string" && status.trim() ? status.trim() : null;
+}
+
 /** DB 搵唔到時，向 Stripe 用 email 查 customer 並可寫回 DB */
 export async function resolveStripeCustomerId(
   email: string,
@@ -82,11 +97,13 @@ export async function syncStripeBillingForUser(
 
     const active = subs.data.find((s) => subscriptionGrantsPro(s.status));
     const latest = subs.data[0];
+    const statusSub = active ?? latest;
 
     await setUserBillingPlan(normalized, {
       plan: active ? "pro" : latest ? "free" : "pro",
       stripeCustomerId: customerId,
-      stripeSubscriptionId: active?.id ?? latest?.id ?? null,
+      stripeSubscriptionId: statusSub?.id ?? null,
+      stripeSubscriptionStatus: statusSub?.status ?? null,
     });
 
     return { ok: true, customerId };
@@ -131,10 +148,17 @@ export async function syncCheckoutSessionToUser(
     return { ok: false, error: "付款尚未完成" };
   }
 
+  let subscriptionStatus: string | null = null;
+  if (subscriptionId) {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    subscriptionStatus = sub.status;
+  }
+
   await setUserBillingPlan(email, {
-    plan: "pro",
+    plan: subscriptionGrantsPro(subscriptionStatus) ? "pro" : "free",
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,
+    stripeSubscriptionStatus: subscriptionStatus,
   });
 
   return { ok: true };
@@ -146,6 +170,7 @@ export async function setUserBillingPlan(
     plan?: UserPlan;
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
+    stripeSubscriptionStatus?: string | null;
   }
 ): Promise<void> {
   const admin = getSupabaseServiceRole();
@@ -158,6 +183,9 @@ export async function setUserBillingPlan(
   }
   if (patch.stripeSubscriptionId !== undefined) {
     update.stripe_subscription_id = patch.stripeSubscriptionId;
+  }
+  if (patch.stripeSubscriptionStatus !== undefined) {
+    update.stripe_subscription_status = patch.stripeSubscriptionStatus;
   }
 
   if (Object.keys(update).length === 0) return;

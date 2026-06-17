@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bodyProfileToFormValues } from "@/components/BodyProfileFields";
 import { CoachLogoAvatar } from "@/components/CoachLogoAvatar";
@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from "@/components/icons";
 import { BottomNav } from "@/components/BottomNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { CoachSuggestCard } from "@/components/CoachSuggestCard";
 import { MealSearchSheet } from "@/components/MealSearchSheet";
 import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
@@ -213,6 +214,8 @@ export default function StudentDashboard() {
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const silentRefreshRef = useRef(false);
   const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_PERSONAL_SETTINGS);
   const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(
@@ -277,7 +280,9 @@ export default function StudentDashboard() {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      if (!silentRefreshRef.current) {
+        setLoading(true);
+      }
       setLoadError(null);
 
       const parsed = getSession();
@@ -409,6 +414,7 @@ export default function StudentDashboard() {
         showToast(t("home.errors.cloudLoadFailed", "雲端讀取失敗，請檢查網絡或 Supabase。"));
       } finally {
         if (!cancelled) {
+          silentRefreshRef.current = false;
           setLoading(false);
           if (role !== "student") setProfileChecked(true);
         }
@@ -420,7 +426,7 @@ export default function StudentDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router, t, lang]);
+  }, [router, t, lang, refreshKey]);
 
   const isStudent = session?.role === "student";
 
@@ -655,6 +661,12 @@ export default function StudentDashboard() {
   const todayFats = todayLogs.reduce((s, l) => s + l.fats, 0);
 
   return (
+    <PullToRefresh
+      onRefresh={() => {
+        silentRefreshRef.current = true;
+        setRefreshKey((key) => key + 1);
+      }}
+    >
     <div className="min-h-screen bg-white pb-32">
       {isStudent && (
         <StudentPushPrompt
@@ -1096,5 +1108,6 @@ export default function StudentDashboard() {
         onFabClick={isStudent ? () => setMealSearchOpen(true) : undefined}
       />
     </div>
+    </PullToRefresh>
   );
 }

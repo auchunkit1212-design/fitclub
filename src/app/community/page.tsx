@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
 import { Globe, IconLabel, Loader2 } from "@/components/icons";
@@ -57,6 +58,7 @@ export default function CommunityPage() {
   }
 
   return (
+    <PullToRefresh onRefresh={() => refreshFeed()}>
     <div className="min-h-screen bg-white pb-32 overflow-x-hidden max-w-lg mx-auto w-full">
       <header className="pt-safe px-4 pb-4 border-b border-gray-100 bg-gradient-to-b from-[#ecfdf5] to-white">
         <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-1">
@@ -156,5 +158,6 @@ export default function CommunityPage() {
 
       <BottomNav role={session.role ?? "student"} />
     </div>
+    </PullToRefresh>
   );
 }

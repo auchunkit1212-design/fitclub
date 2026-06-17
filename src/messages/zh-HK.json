@@ -755,10 +755,15 @@
     "checkoutFailed": "無法開始付款",
     "portalFailed": "無法開啟帳單管理",
     "successTitle": "訂閱成功",
-    "successHeadline": "歡迎加入 Pro！",
     "successBody": "付款已完成，Pro 功能已解鎖。正在返回設定頁...",
+    "freeTrialBadge": "首 3 日免費試用",
     "cancelTitle": "未完成付款",
     "cancelBody": "你已取消 Stripe Checkout。隨時可以再升級 Pro。"
+  },
+  "pullRefresh": {
+    "pull": "轆低刷新",
+    "release": "放手刷新",
+    "refreshing": "刷新緊..."
   },
   "share": {
     "copyFailed": "複製失敗，請長按手動複製",

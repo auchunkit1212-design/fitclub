@@ -6,13 +6,19 @@ import { ChevronRight, LayoutList } from "@/components/icons";
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-export type CoachStudentsSection = "review" | "daily" | "roster" | "history";
+export type CoachStudentsSection =
+  | "review"
+  | "activity"
+  | "daily"
+  | "roster"
+  | "history";
 
 export const COACH_STUDENTS_SECTION_LABELS: Record<
   CoachStudentsSection,
   string
 > = {
   review: "待批閱飲食",
+  activity: "動態牆",
   daily: "今日攝取達標",
   roster: "學員名單",
   history: "飲食歷史",
@@ -28,6 +34,7 @@ type SectionItem = {
 
 const SECTIONS: SectionItem[] = [
   { id: "review", label: SECTION_LABELS.review, showCoachOnly: true },
+  { id: "activity", label: SECTION_LABELS.activity, showCoachOnly: true },
   { id: "daily", label: SECTION_LABELS.daily },
   { id: "roster", label: SECTION_LABELS.roster },
   { id: "history", label: SECTION_LABELS.history },

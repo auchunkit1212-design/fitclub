@@ -6,7 +6,7 @@ import {
   resolveCheckoutPriceId,
   type BillingPlanKey,
 } from "@/lib/stripe-plans";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, getStripeTrialPeriodDays } from "@/lib/stripe";
 import { parseSessionFromRequest } from "@/lib/session-server";
 
 export const runtime = "nodejs";
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     assertPlanAllowedForRole(planKey, session.role);
 
     const existingCustomerId = await fetchStripeCustomerId(email);
+    const trialDays = getStripeTrialPeriodDays();
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -57,6 +58,14 @@ export async function POST(request: Request) {
       customer_email: existingCustomerId ? undefined : email,
       client_reference_id: email,
       line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: trialDays,
+        metadata: {
+          email,
+          role: session.role,
+          plan_key: planKey ?? "",
+        },
+      },
       billing_address_collection: "auto",
       allow_promotion_codes: true,
       success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -65,6 +74,8 @@ export async function POST(request: Request) {
         email,
         role: session.role,
         plan_key: planKey ?? "",
+        price_id: priceId,
+        trial_days: String(trialDays),
       },
     });
 

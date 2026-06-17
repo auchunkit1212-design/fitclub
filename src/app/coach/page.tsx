@@ -18,6 +18,7 @@ import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { IconLabel } from "@/components/icons";
@@ -55,6 +56,8 @@ export default function CoachPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
   const [toast, setToast] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const silentRefreshRef = useRef(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -68,6 +71,10 @@ export default function CoachPage() {
         setLoading(false);
         router.push("/register");
         return;
+      }
+
+      if (!silentRefreshRef.current) {
+        setLoading(true);
       }
 
       setSession(current);
@@ -99,12 +106,13 @@ export default function CoachPage() {
       } catch {
         alert("無法從 Supabase 載入教練數據。");
       } finally {
+        silentRefreshRef.current = false;
         setLoading(false);
       }
     };
 
     load();
-  }, [router]);
+  }, [router, refreshKey]);
 
   const handlePublish = async () => {
     if (!session || session.role !== "coach") {
@@ -196,6 +204,12 @@ export default function CoachPage() {
   }
 
   return (
+    <PullToRefresh
+      onRefresh={() => {
+        silentRefreshRef.current = true;
+        setRefreshKey((key) => key + 1);
+      }}
+    >
     <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
       <PageHeader
         title={`${appTitle.trim() || brand.gymName} · 教練後台`}
@@ -336,5 +350,6 @@ export default function CoachPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

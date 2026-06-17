@@ -13,6 +13,7 @@ import {
   type CoachStudentsSection,
 } from "@/components/CoachStudentsSectionPicker";
 import { BottomNav } from "@/components/BottomNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
@@ -96,8 +97,8 @@ export default function CoachStudentsPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     setLoadError(null);
 
     const current = getSession();
@@ -133,7 +134,7 @@ export default function CoachStudentsPage() {
       setLogs([]);
       setStudents([]);
     } finally {
-      setLoading(false);
+      if (!options?.silent) setLoading(false);
     }
   }, [router]);
 
@@ -172,6 +173,7 @@ export default function CoachStudentsPage() {
     !loadError && section !== "roster" && !hasStudents;
 
   return (
+    <PullToRefresh onRefresh={() => loadData({ silent: true })}>
     <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
       <PageHeader
         title="學員"
@@ -240,31 +242,32 @@ export default function CoachStudentsPage() {
                   )}
 
                   {section === "review" && canReviewMeals && session && (
-                    <div className="space-y-4">
-                      <CoachUnreviewedMealsPanel
-                        logs={logs}
-                        students={students}
-                        coachEmail={session.email}
-                        reactions={reviewIndex.reactions}
-                        feedback={reviewIndex.feedback}
-                        loading={reviewIndex.loading}
-                        onReviewChange={handleReviewChange}
-                        onToast={showToast}
-                        onLogUpdated={handleLogUpdated}
-                        onLogDeleted={handleLogDeleted}
-                      />
-                      <CoachActivityWall
-                        logs={logs}
-                        students={students}
-                        coachEmail={session.email}
-                        reactions={reviewIndex.reactions}
-                        feedback={reviewIndex.feedback}
-                        onReviewChange={handleReviewChange}
-                        onToast={showToast}
-                        onLogUpdated={handleLogUpdated}
-                        onLogDeleted={handleLogDeleted}
-                      />
-                    </div>
+                    <CoachUnreviewedMealsPanel
+                      logs={logs}
+                      students={students}
+                      coachEmail={session.email}
+                      reactions={reviewIndex.reactions}
+                      feedback={reviewIndex.feedback}
+                      loading={reviewIndex.loading}
+                      onReviewChange={handleReviewChange}
+                      onToast={showToast}
+                      onLogUpdated={handleLogUpdated}
+                      onLogDeleted={handleLogDeleted}
+                    />
+                  )}
+
+                  {section === "activity" && canReviewMeals && session && (
+                    <CoachActivityWall
+                      logs={logs}
+                      students={students}
+                      coachEmail={session.email}
+                      reactions={reviewIndex.reactions}
+                      feedback={reviewIndex.feedback}
+                      onReviewChange={handleReviewChange}
+                      onToast={showToast}
+                      onLogUpdated={handleLogUpdated}
+                      onLogDeleted={handleLogDeleted}
+                    />
                   )}
 
                   {section === "history" && (
@@ -292,5 +295,6 @@ export default function CoachStudentsPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }
