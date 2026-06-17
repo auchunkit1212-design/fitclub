@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { useCoachUnreviewedMealCount } from "@/hooks/useCoachUnreviewedMealCount";
 import { getSession } from "@/lib/session";
 import {
   CircleUser,
@@ -88,6 +89,9 @@ export function BottomNav({
   const isStudent = effectiveRole === "student";
   const isCoachOrAdmin =
     effectiveRole === "coach" || effectiveRole === "admin";
+  const fetchedStudentsBadgeCount = useCoachUnreviewedMealCount(isCoachOrAdmin);
+  const studentsBadge =
+    studentsBadgeCount ?? fetchedStudentsBadgeCount;
 
   const communityActive = pathname === "/community";
   const homeActive = pathname === "/";
@@ -133,7 +137,7 @@ export function BottomNav({
         active={studentsActive}
         label={t("nav.students", "學員")}
         icon={Users}
-        badgeCount={studentsBadgeCount}
+        badgeCount={studentsBadge}
         onClick={() => router.push("/coach/students")}
       />
       <NavTabButton
