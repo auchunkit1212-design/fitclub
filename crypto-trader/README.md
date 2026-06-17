@@ -358,7 +358,7 @@ AI 改完 code 後，你應該：
 
 - [x] 更多策略：MACD、MACD+RSI 雙確認
 - [x] Telegram / Discord 成交通知
-- [ ] Streamlit 或 Next.js Dashboard
+- [x] Streamlit 或 Next.js Dashboard
 - [x] 多交易對組合、資金配置
 - [x] 本地 K 線 CSV 快取（減少 API 請求）
 - [x] Docker 部署 + systemd / cron 常駐
