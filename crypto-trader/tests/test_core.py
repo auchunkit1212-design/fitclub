@@ -1,9 +1,9 @@
 import pandas as pd
-import pytest
 
 from src.risk.manager import Position, RiskManager
 from src.config import RiskConfig
 from src.strategies.base import SignalAction
+from src.strategies.macd_rsi_filter_strategy import MacdRsiFilterStrategy
 from src.strategies.macd_strategy import MacdStrategy
 from src.strategies.sma_crossover import SmaCrossoverStrategy
 from src.strategies.rsi_strategy import RsiStrategy
@@ -42,6 +42,21 @@ def test_rsi_strategy_returns_signal():
 def test_macd_strategy_returns_signal():
     strategy = MacdStrategy({"fast_period": 12, "slow_period": 26, "signal_period": 9})
     signal = strategy.generate_signal(_sample_candles(60))
+    assert signal.action in SignalAction
+
+
+def test_macd_rsi_filter_strategy_returns_signal():
+    strategy = MacdRsiFilterStrategy(
+        {
+            "fast_period": 12,
+            "slow_period": 26,
+            "signal_period": 9,
+            "rsi_period": 14,
+            "rsi_buy_max": 60,
+            "rsi_sell_min": 40,
+        }
+    )
+    signal = strategy.generate_signal(_sample_candles(100))
     assert signal.action in SignalAction
 
 

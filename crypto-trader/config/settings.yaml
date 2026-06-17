@@ -23,6 +23,10 @@ strategy:
     slow_period: 30     # sma_crossover 參數
     # MACD 範例（切換 strategy.name: macd 時啟用）
     # signal_period: 9
+    # MACD+RSI 雙確認範例（切換 strategy.name: macd_rsi_filter 時啟用）
+    # rsi_period: 14
+    # rsi_buy_max: 55
+    # rsi_sell_min: 45
 
 risk:
   max_position_pct: 0.25        # 單一持倉最多佔組合 25%
