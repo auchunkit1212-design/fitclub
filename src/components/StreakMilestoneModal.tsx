@@ -1,20 +1,86 @@
 "use client";
 
+import { useState } from "react";
 import { GorillaMascot } from "@/components/GorillaMascot";
-import { Flame, Sparkles } from "@/components/icons";
+import { Flame, Smartphone, Sparkles, Users } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import {
+  publishStreakToCommunity,
+  shareStreakExternally,
+} from "@/lib/streak-share";
 import type { StreakMilestoneDay } from "@/lib/streak";
+import type { UserSession } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 interface StreakMilestoneModalProps {
   days: StreakMilestoneDay;
+  session?: UserSession | null;
+  longestStreak?: number;
   onClose: () => void;
+  onNotify?: (message: string) => void;
 }
 
-export function StreakMilestoneModal({ days, onClose }: StreakMilestoneModalProps) {
+export function StreakMilestoneModal({
+  days,
+  session,
+  longestStreak,
+  onClose,
+  onNotify,
+}: StreakMilestoneModalProps) {
   const { t } = useI18n();
+  const [sharing, setSharing] = useState<"social" | "community" | null>(null);
+
+  const notify = (message: string) => {
+    onNotify?.(message);
+  };
+
+  const handleShareSocial = async () => {
+    setSharing("social");
+    try {
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : undefined;
+      const result = await shareStreakExternally({
+        currentStreak: days,
+        longestStreak,
+        studentName: session?.name,
+        origin,
+      });
+      if (result === "shared") {
+        notify(t("streak.share.shared", "已開啟分享"));
+      } else if (result === "copied") {
+        notify(t("streak.share.copied", "已複製打卡文案"));
+      } else {
+        notify(t("streak.share.failed", "分享失敗，請再試"));
+      }
+    } finally {
+      setSharing(null);
+    }
+  };
+
+  const handleShareCommunity = async () => {
+    if (!session?.email) {
+      notify(t("streak.share.needLogin", "請先登入再分享"));
+      return;
+    }
+    setSharing("community");
+    try {
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : undefined;
+      await publishStreakToCommunity({
+        session,
+        currentStreak: days,
+        longestStreak,
+        origin,
+      });
+      notify(t("streak.share.communityPosted", "已分享到 Community"));
+    } catch {
+      notify(t("streak.share.failed", "分享失敗，請再試"));
+    } finally {
+      setSharing(null);
+    }
+  };
 
   return (
     <div
@@ -59,6 +125,35 @@ export function StreakMilestoneModal({ days, onClose }: StreakMilestoneModalProp
 
         <div className="flex justify-center">
           <GorillaMascot size="md" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={sharing !== null}
+            onClick={() => void handleShareSocial()}
+            className={`py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm ${btnClass} disabled:opacity-60`}
+          >
+            <span className="inline-flex items-center justify-center gap-1.5">
+              <Smartphone size={16} aria-hidden />
+              {sharing === "social"
+                ? t("streak.share.sharing", "分享中…")
+                : t("streak.share.social", "分享")}
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={sharing !== null}
+            onClick={() => void handleShareCommunity()}
+            className={`py-3 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm ${btnClass} disabled:opacity-60`}
+          >
+            <span className="inline-flex items-center justify-center gap-1.5">
+              <Users size={16} aria-hidden />
+              {sharing === "community"
+                ? t("streak.share.sharing", "分享中…")
+                : t("streak.share.community", "Community")}
+            </span>
+          </button>
         </div>
 
         <button

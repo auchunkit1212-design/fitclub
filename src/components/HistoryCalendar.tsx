@@ -22,8 +22,10 @@ import { MealDetailModal } from "@/components/MealDetailModal";
 import type {
   HistoryDayDetail,
   HistoryDaySummary,
+  HistoryMonthStats,
   ResolvedNutritionTargets,
 } from "@/lib/history-calendar";
+import type { ComplianceLevel } from "@/lib/nutrition-compliance";
 import type { MealLog } from "@/lib/types";
 
 const SOFT_CARD =
@@ -37,7 +39,23 @@ type MonthPayload = {
   month: number;
   targets: ResolvedNutritionTargets;
   days: HistoryDaySummary[];
+  stats?: HistoryMonthStats;
 };
+
+function dotClassForStatus(status: ComplianceLevel | undefined): string {
+  switch (status) {
+    case "met":
+      return "bg-emerald-500";
+    case "partial":
+      return "bg-amber-400";
+    case "low":
+      return "bg-orange-500";
+    case "over":
+      return "bg-red-500";
+    default:
+      return "";
+  }
+}
 
 function localeForTag(tag: string) {
   if (tag.startsWith("zh-TW")) return zhTW;
@@ -146,9 +164,19 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
             </h2>
             {monthData && (
               <p className="text-[11px] text-gray-400 mt-0.5">
-                {t("history.targetHint", "目標 {calories} kcal/日", {
-                  calories: monthData.targets.targetCalories,
-                })}
+                {monthData.stats
+                  ? t(
+                      "history.monthStats",
+                      "本月 {met}/{logged} 天達標 · 目標 {calories} kcal/日",
+                      {
+                        met: monthData.stats.met,
+                        logged: monthData.stats.logged,
+                        calories: monthData.targets.targetCalories,
+                      }
+                    )
+                  : t("history.targetHint", "目標 {calories} kcal/日", {
+                      calories: monthData.targets.targetCalories,
+                    })}
               </p>
             )}
           </div>
@@ -187,12 +215,10 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
                 selectedDate !== null && isSameDay(day, new Date(selectedDate));
               const isToday = isSameDay(day, new Date());
 
-              let dotClass = "";
-              if (inMonth && summary?.status === "under") {
-                dotClass = "bg-green-500";
-              } else if (inMonth && summary?.status === "over") {
-                dotClass = "bg-red-500";
-              }
+              const dotClass =
+                inMonth && summary && summary.status !== "none"
+                  ? dotClassForStatus(summary.status)
+                  : "";
 
               return (
                 <button
@@ -229,10 +255,18 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
           </div>
         )}
 
-        <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-gray-50">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-5 pt-4 border-t border-gray-50">
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            {t("history.legend.under", "達標")}
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            {t("history.legend.met", "達標")}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            {t("history.legend.partial", "注意")}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
+            {t("history.legend.low", "未達")}
           </span>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
             <span className="w-2 h-2 rounded-full bg-red-500" />

@@ -8,12 +8,21 @@ import {
   fetchReactionsForMealIds,
   fetchStudentNutritionTargets,
 } from "@/lib/phase4-db";
-import { sumLogsForDay } from "@/lib/nutrition-compliance";
+import {
+  buildStudentDailyCompliance,
+  type ComplianceLevel,
+  sumLogsForDay,
+} from "@/lib/nutrition-compliance";
 import { AI_GORILLA_COACH_EMAIL } from "@/lib/registry-constants";
 import { isValidSticker } from "@/lib/meal-stickers";
-import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
+import type {
+  MealLog,
+  MealLogFeedback,
+  MealLogReaction,
+  RegistryUser,
+} from "@/lib/types";
 
-export type DayStatus = "under" | "over" | "none";
+export type DayStatus = ComplianceLevel;
 
 export type HistoryDaySummary = {
   date: string;
@@ -25,12 +34,31 @@ export type HistoryDaySummary = {
   status: DayStatus;
 };
 
+export type HistoryMonthStats = {
+  logged: number;
+  met: number;
+  partial: number;
+  low: number;
+  over: number;
+  none: number;
+};
+
 export type ResolvedNutritionTargets = {
   targetCalories: number;
   targetProtein: number;
   targetCarbs: number;
   targetFats: number;
 };
+
+function minimalStudent(email: string, name?: string): RegistryUser {
+  const normalized = email.trim().toLowerCase();
+  return {
+    email: normalized,
+    name: name?.trim() || normalized.split("@")[0] || "學員",
+    role: "student",
+    gym: "",
+  };
+}
 
 export async function resolveStudentNutritionTargets(
   email: string
@@ -66,14 +94,20 @@ export async function resolveStudentNutritionTargets(
   };
 }
 
-function dayStatus(
-  totalCalories: number,
-  mealCount: number,
-  targetCalories: number
-): DayStatus {
-  if (mealCount === 0) return "none";
-  if (totalCalories <= targetCalories) return "under";
-  return "over";
+function summarizeMonthStats(days: HistoryDaySummary[]): HistoryMonthStats {
+  const stats: HistoryMonthStats = {
+    logged: 0,
+    met: 0,
+    partial: 0,
+    low: 0,
+    over: 0,
+    none: 0,
+  };
+  for (const day of days) {
+    stats[day.status]++;
+    if (day.mealCount > 0) stats.logged++;
+  }
+  return stats;
 }
 
 export async function fetchHistoryMonthSummary(
@@ -85,6 +119,7 @@ export async function fetchHistoryMonthSummary(
   month: number;
   targets: ResolvedNutritionTargets;
   days: HistoryDaySummary[];
+  stats: HistoryMonthStats;
 }> {
   const normalized = email.trim().toLowerCase();
   const monthStr = String(month).padStart(2, "0");
@@ -92,12 +127,16 @@ export async function fetchHistoryMonthSummary(
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
-  const [targets, logs] = await Promise.all([
+  const [targets, body, coachTargets, logs] = await Promise.all([
     resolveStudentNutritionTargets(normalized),
+    fetchStudentBodyProfile(normalized),
+    fetchStudentNutritionTargets(normalized),
     fetchMealLogs({ emails: [normalized], from, to }),
   ]);
 
+  const student = minimalStudent(normalized);
   const days: HistoryDaySummary[] = [];
+
   for (let d = 1; d <= lastDay; d++) {
     const date = `${year}-${monthStr}-${String(d).padStart(2, "0")}`;
     const totals = sumLogsForDay(logs, normalized, date);
@@ -106,6 +145,13 @@ export async function fetchHistoryMonthSummary(
         l.email.trim().toLowerCase() === normalized &&
         l.date.slice(0, 10) === date
     ).length;
+    const compliance = buildStudentDailyCompliance({
+      student,
+      logs,
+      coachTargets,
+      bodyProfile: body,
+      day: date,
+    });
     days.push({
       date,
       totalCalories: totals.calories,
@@ -113,11 +159,17 @@ export async function fetchHistoryMonthSummary(
       totalCarbs: totals.carbs,
       totalFats: totals.fats,
       mealCount,
-      status: dayStatus(totals.calories, mealCount, targets.targetCalories),
+      status: compliance.macroLevels.overall,
     });
   }
 
-  return { year, month, targets, days };
+  return {
+    year,
+    month,
+    targets,
+    days,
+    stats: summarizeMonthStats(days),
+  };
 }
 
 export type HistoryDayDetail = {
@@ -137,6 +189,13 @@ export type HistoryDayDetail = {
     text: string;
     createdAt: string;
   }>;
+  compliance: {
+    overall: ComplianceLevel;
+    calories: ComplianceLevel;
+    protein: ComplianceLevel;
+    carbs: ComplianceLevel;
+    fats: ComplianceLevel;
+  };
 };
 
 export async function fetchHistoryDayDetail(
@@ -144,8 +203,10 @@ export async function fetchHistoryDayDetail(
   date: string
 ): Promise<HistoryDayDetail> {
   const normalized = email.trim().toLowerCase();
-  const [targets, logs] = await Promise.all([
+  const [targets, body, coachTargets, logs] = await Promise.all([
     resolveStudentNutritionTargets(normalized),
+    fetchStudentBodyProfile(normalized),
+    fetchStudentNutritionTargets(normalized),
     fetchMealLogs({ emails: [normalized], from: date, to: date }),
   ]);
 
@@ -179,6 +240,14 @@ export async function fetchHistoryDayDetail(
       createdAt: r.createdAt,
     }));
 
+  const complianceRow = buildStudentDailyCompliance({
+    student: minimalStudent(normalized),
+    logs,
+    coachTargets,
+    bodyProfile: body,
+    day: date,
+  });
+
   return {
     date,
     targets,
@@ -187,5 +256,12 @@ export async function fetchHistoryDayDetail(
     reactions,
     feedback,
     aiReviews,
+    compliance: {
+      overall: complianceRow.macroLevels.overall,
+      calories: complianceRow.macroLevels.calories,
+      protein: complianceRow.macroLevels.protein,
+      carbs: complianceRow.macroLevels.carbs,
+      fats: complianceRow.macroLevels.fats,
+    },
   };
 }

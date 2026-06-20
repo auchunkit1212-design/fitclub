@@ -19,6 +19,7 @@ import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
 import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
 import {
+  defaultMealLogsFromDate,
   fetchAllUsers,
   fetchMealLogsForSession,
   fetchUsersForSession,
@@ -121,7 +122,9 @@ export default function CoachStudentsPage() {
       setRegistry(userRegistry);
 
       const mealLogs = await withTimeout(
-        fetchMealLogsForSession(current, userRegistry),
+        fetchMealLogsForSession(current, userRegistry, {
+          from: defaultMealLogsFromDate(30),
+        }),
         LOAD_TIMEOUT_MS,
         "讀取飲食記錄逾時"
       );

@@ -6,8 +6,9 @@ import { APP_LOGO_PATH } from "@/lib/brand";
 import { useI18n } from "@/components/I18nProvider";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { isValidSticker } from "@/lib/meal-stickers";
-import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
+import { COMPLIANCE_CLASS, COMPLIANCE_LABEL } from "@/lib/nutrition-compliance";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
 const SOFT_CARD =
@@ -109,6 +110,26 @@ export function HistoryDayDetailPanel({
           {" · "}
           {detail.totals.calories} kcal
         </p>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.overall]}`}
+          >
+            {t("history.day.overall", "整體")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.overall]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.calories]}`}
+          >
+            {t("common.calories", "熱量")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.calories]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.protein]}`}
+          >
+            {t("common.protein", "蛋白")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.protein]}
+          </span>
+        </div>
       </div>
 
       <div className="space-y-3">

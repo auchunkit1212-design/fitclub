@@ -11,6 +11,7 @@ import {
   IconLabel,
   CircleUser,
   ScrollText,
+  Smartphone,
 } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { ProBadge } from "@/components/ProBadge";
@@ -40,6 +41,7 @@ const TRAINING_LABEL_KEY = {
 } as const;
 import { isValidWeightChangePace } from "@/lib/body-profile";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { shareStreakExternally } from "@/lib/streak-share";
 import type {
   MealLog,
   MealLogFeedback,
@@ -192,19 +194,49 @@ export function StudentProfilePanel({
             <p className="text-xs text-gray-500 mt-0.5">{session.gym}</p>
           </div>
           {currentStreak > 0 && (
-            <span
-              className="shrink-0 inline-flex items-center gap-1 text-sm font-bold text-orange-500"
-              title={t("streak.longestHint", "最長紀錄 {days} 天", {
-                days: longestStreak,
-              })}
-            >
-              <Flame
-                size={18}
-                className="fill-orange-400 text-orange-500"
-                aria-hidden
-              />
-              {t("streak.days", "{count} 天", { count: currentStreak })}
-            </span>
+            <div className="shrink-0 flex flex-col items-end gap-1.5">
+              <span
+                className="inline-flex items-center gap-1 text-sm font-bold text-orange-500"
+                title={t("streak.longestHint", "最長紀錄 {days} 天", {
+                  days: longestStreak,
+                })}
+              >
+                <Flame
+                  size={18}
+                  className="fill-orange-400 text-orange-500"
+                  aria-hidden
+                />
+                {t("streak.days", "{count} 天", { count: currentStreak })}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  void (async () => {
+                    const origin =
+                      typeof window !== "undefined"
+                        ? window.location.origin
+                        : undefined;
+                    const result = await shareStreakExternally({
+                      currentStreak,
+                      longestStreak,
+                      studentName: displayName,
+                      origin,
+                    });
+                    if (result === "shared") {
+                      onSaved(t("streak.share.shared", "已開啟分享"));
+                    } else if (result === "copied") {
+                      onSaved(t("streak.share.copied", "已複製打卡文案"));
+                    } else {
+                      onSaved(t("streak.share.failed", "分享失敗，請再試"));
+                    }
+                  })();
+                }}
+                className={`text-[11px] font-semibold text-sky-700 inline-flex items-center gap-1 ${btnClass}`}
+              >
+                <Smartphone size={12} aria-hidden />
+                {t("streak.share.cta", "分享 streak")}
+              </button>
+            </div>
           )}
         </div>
       </section>

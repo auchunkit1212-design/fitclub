@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bodyProfileToFormValues } from "@/components/BodyProfileFields";
@@ -21,13 +22,11 @@ import {
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { CoachSuggestCard } from "@/components/CoachSuggestCard";
-import { MealSearchSheet } from "@/components/MealSearchSheet";
 import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudentAppGuide } from "@/components/StudentAppGuide";
-import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
@@ -50,7 +49,7 @@ import {
   computeTargetProfile,
   isBodyProfileComplete,
 } from "@/lib/body-profile";
-import { fetchStudentBodyProfile } from "@/lib/db";
+import { fetchOwnMealLogsForSession, fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
@@ -63,6 +62,16 @@ import {
   getUserProfile,
   isToday,
 } from "@/lib/storage";
+import {
+  loadReminderSettingsFromServer,
+  syncReminderSettingsToServer,
+} from "@/lib/reminder-settings-client";
+import {
+  DEFAULT_PERSONAL_SETTINGS,
+  WEEKLY_FREQUENCY_KEYS,
+  normalizePersonalSettings,
+  type PersonalSettings,
+} from "@/lib/personal-settings";
 import type {
   CoachBranding,
   MealLog,
@@ -76,16 +85,21 @@ import type {
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
-import {
-  loadReminderSettingsFromServer,
-  syncReminderSettingsToServer,
-} from "@/lib/reminder-settings-client";
-import {
-  DEFAULT_PERSONAL_SETTINGS,
-  WEEKLY_FREQUENCY_KEYS,
-  normalizePersonalSettings,
-  type PersonalSettings,
-} from "@/lib/personal-settings";
+const NutritionDashboard = dynamic(
+  () =>
+    import("@/components/NutritionDashboard").then((m) => ({
+      default: m.NutritionDashboard,
+    })),
+  { ssr: false }
+);
+
+const MealSearchSheet = dynamic(
+  () =>
+    import("@/components/MealSearchSheet").then((m) => ({
+      default: m.MealSearchSheet,
+    })),
+  { ssr: false }
+);
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -317,15 +331,15 @@ export default function StudentDashboard() {
           12_000,
           t("errors.fetchUsersTimeout", "讀取用戶逾時")
         );
-        const mealLogs = await withTimeout(
-          getMealLogs(activeSession, registry),
+        const [mealLogs, brand] = await withTimeout(
+          Promise.all([
+            role === "student"
+              ? fetchOwnMealLogsForSession(activeSession)
+              : getMealLogs(activeSession, registry),
+            resolveBrandForUser(activeSession, registry),
+          ]),
           12_000,
-          t("errors.fetchMealsTimeout", "讀取餐食逾時")
-        );
-        const brand = await withTimeout(
-          resolveBrandForUser(activeSession, registry),
-          12_000,
-          t("errors.fetchBrandTimeout", "讀取品牌逾時")
+          t("errors.cloudLoadFailed", "雲端讀取失敗")
         );
 
         if (cancelled) return;
@@ -339,10 +353,18 @@ export default function StudentDashboard() {
 
         if (role === "student" && activeSession.email) {
           try {
-            const streakRes = await fetch("/api/student/streak", {
-              credentials: "include",
-              headers: getSessionRequestHeaders(),
-            });
+            const [streakRes, body, tRes, cloudReminder] = await Promise.all([
+              fetch("/api/student/streak", {
+                credentials: "include",
+                headers: getSessionRequestHeaders(),
+              }),
+              fetchStudentBodyProfile(activeSession.email),
+              fetch("/api/coach/student-targets", {
+                credentials: "include",
+              }),
+              loadReminderSettingsFromServer(),
+            ]);
+
             if (streakRes.ok) {
               const streakData = (await streakRes.json()) as {
                 streak?: { currentStreak?: number; longestStreak?: number };
@@ -352,35 +374,38 @@ export default function StudentDashboard() {
                 setLongestStreak(streakData.streak.longestStreak ?? 0);
               }
             }
-          } catch {
-            // streak columns may not exist yet
-          }
 
-          const body = await fetchStudentBodyProfile(activeSession.email);
-          if (!cancelled) {
-            setBodyProfile(body);
-            setBodyForm(bodyProfileToFormValues(body));
-            if (body && isBodyProfileComplete(body)) {
-              setProfile(
-                computeTargetProfile(body, {
-                  job: settings.job,
-                  weeklyFrequency: settings.weeklyFrequency,
-                })
-              );
+            if (!cancelled) {
+              setBodyProfile(body);
+              setBodyForm(bodyProfileToFormValues(body));
+              if (body && isBodyProfileComplete(body)) {
+                setProfile(
+                  computeTargetProfile(body, {
+                    job: settings.job,
+                    weeklyFrequency: settings.weeklyFrequency,
+                  })
+                );
+              }
             }
-            const tRes = await fetch("/api/coach/student-targets", {
-              credentials: "include",
-            });
+
             const tData = (await tRes.json()) as {
               targets?: StudentNutritionTargets | null;
             };
-            if (tData.targets?.locked) {
+            if (!cancelled && tData.targets?.locked) {
               setCoachTargets(tData.targets);
               setProfile({
                 targetCalories: tData.targets.targetCalories,
                 targetProtein: tData.targets.targetProtein,
               });
             }
+
+            if (cloudReminder && !cancelled) {
+              setSettings((prev) =>
+                normalizePersonalSettings({ ...prev, ...cloudReminder })
+              );
+            }
+          } catch {
+            // streak columns or profile APIs may not exist yet
           }
         }
         if (!cancelled) setProfileChecked(true);
@@ -392,14 +417,6 @@ export default function StudentDashboard() {
             setSettings(normalizePersonalSettings(settingsParsed));
           } catch {
             // Keep default settings when parse fails
-          }
-        }
-        if (role === "student") {
-          const cloudReminder = await loadReminderSettingsFromServer();
-          if (cloudReminder && !cancelled) {
-            setSettings((prev) =>
-              normalizePersonalSettings({ ...prev, ...cloudReminder })
-            );
           }
         }
       } catch (error) {
@@ -438,6 +455,9 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (!isStudent || todayLogs.length === 0) return;
     const poll = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
       const ids = todayLogs.map((l) => l.id).join(",");
       const headers = getSessionRequestHeaders();
       const [reactionRes, feedbackRes] = await Promise.all([
@@ -469,6 +489,14 @@ export default function StudentDashboard() {
 
   const targetCalories = profile?.targetCalories ?? 2000;
   const targetProtein = profile?.targetProtein ?? 120;
+
+  const todayLogKey = useMemo(
+    () =>
+      todayLogs
+        .map((l) => `${l.id}:${l.calories}:${l.protein}`)
+        .join("|"),
+    [todayLogs]
+  );
 
   useEffect(() => {
     if (!isStudent || !session) return;
@@ -507,9 +535,7 @@ export default function StudentDashboard() {
   }, [
     isStudent,
     session,
-    todayLogs,
-    todayCalories,
-    todayProtein,
+    todayLogKey,
     targetCalories,
     targetProtein,
     lang,
@@ -1091,7 +1117,10 @@ export default function StudentDashboard() {
       {milestoneModalDays && (
         <StreakMilestoneModal
           days={milestoneModalDays}
+          session={session}
+          longestStreak={longestStreak}
           onClose={() => setMilestoneModalDays(null)}
+          onNotify={showToast}
         />
       )}
 

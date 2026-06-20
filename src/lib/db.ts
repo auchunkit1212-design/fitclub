@@ -62,6 +62,19 @@ type MealRow = {
   created_at: string;
 };
 
+const REGISTRY_LIST_COLUMNS =
+  "email, name, role, gym, coach, logo, added_by, app_title, theme_color, broadcast, tenant_id, plan, avatar_url, created_at, current_streak, longest_streak, last_streak_update";
+
+const MEAL_LIST_COLUMNS =
+  "id, email, meal_type, description, calories, protein, carbs, fats, image_url, created_at";
+
+/** Default lookback for client meal lists (avoids loading entire history + base64). */
+export function defaultMealLogsFromDate(daysBack = 45): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysBack);
+  return d.toISOString().slice(0, 10);
+}
+
 function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
   const user: RegistryUser = {
     email: row.email,
@@ -220,7 +233,7 @@ export async function fetchUserByEmailForAuth(
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
   const { data, error } = await supabase
     .from("users_registry")
-    .select("*")
+    .select(REGISTRY_LIST_COLUMNS)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
@@ -231,9 +244,60 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
   return getDemoRegistry();
 }
 
+async function fetchRegistryForStudentSession(
+  session: UserSession
+): Promise<RegistryUser[]> {
+  const email = session.email.trim().toLowerCase();
+  const users: RegistryUser[] = [];
+
+  const { data: selfRow, error: selfError } = await supabase
+    .from("users_registry")
+    .select(REGISTRY_LIST_COLUMNS)
+    .eq("email", email)
+    .maybeSingle();
+  if (selfError) throw selfError;
+  if (selfRow) users.push(mapUser(selfRow as UserRow));
+
+  if (session.tenantId) {
+    const { data: coachRows, error: coachError } = await supabase
+      .from("users_registry")
+      .select(REGISTRY_LIST_COLUMNS)
+      .eq("role", "coach")
+      .eq("tenant_id", session.tenantId)
+      .limit(1);
+    if (coachError) throw coachError;
+    if (coachRows?.[0]) users.push(mapUser(coachRows[0] as UserRow));
+  } else if (session.coach?.trim()) {
+    const { data: coachRows, error: coachError } = await supabase
+      .from("users_registry")
+      .select(REGISTRY_LIST_COLUMNS)
+      .eq("role", "coach")
+      .eq("name", session.coach.trim())
+      .limit(1);
+    if (coachError) throw coachError;
+    if (coachRows?.[0]) users.push(mapUser(coachRows[0] as UserRow));
+  }
+
+  if (users.length === 0) {
+    const { getDemoRegistry } = await import("@/lib/demo-users");
+    return getDemoRegistry().filter(
+      (u) =>
+        u.email === email ||
+        u.tenantId === session.tenantId ||
+        (session.coach && u.role === "coach" && u.name === session.coach)
+    );
+  }
+
+  return attachTenantNames(users);
+}
+
 export async function fetchUsersForSession(
   session: UserSession
 ): Promise<RegistryUser[]> {
+  if (session.role === "student" && session.email) {
+    return fetchRegistryForStudentSession(session);
+  }
+
   const all = await fetchAllUsers();
 
   if (session.role === "admin") return all;
@@ -385,10 +449,12 @@ export async function fetchMealLogs(options?: {
   emails?: string[];
   from?: string;
   to?: string;
+  includeImageBase64?: boolean;
 }): Promise<MealLog[]> {
+  const selectCols = options?.includeImageBase64 ? "*" : MEAL_LIST_COLUMNS;
   let query = supabase
     .from("meal_logs")
-    .select("*")
+    .select(selectCols)
     .order("created_at", { ascending: false });
 
   if (options?.emails && options.emails.length > 0) {
@@ -403,7 +469,7 @@ export async function fetchMealLogs(options?: {
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data as MealRow[]).map(mapMeal);
+  return ((data ?? []) as unknown as MealRow[]).map(mapMeal);
 }
 
 export async function insertMealLog(
@@ -559,7 +625,10 @@ export async function fetchMealLogsForSession(
     return fetchMealLogs({ ...filters, emails });
   }
 
-  return fetchMealLogs({ ...filters, emails: [session.email] });
+  const from =
+    filters?.from ??
+    (session.role === "student" ? defaultMealLogsFromDate(45) : undefined);
+  return fetchMealLogs({ ...filters, from, emails: [session.email] });
 }
 
 /** Meal logs for the logged-in user only (coach/admin self, or student self). */
@@ -567,7 +636,10 @@ export async function fetchOwnMealLogsForSession(
   session: UserSession,
   filters?: { from?: string; to?: string }
 ): Promise<MealLog[]> {
-  return fetchMealLogs({ ...filters, emails: [session.email] });
+  const from =
+    filters?.from ??
+    (session.role === "student" ? defaultMealLogsFromDate(45) : undefined);
+  return fetchMealLogs({ ...filters, from, emails: [session.email] });
 }
 
 export async function resolveBranding(
