@@ -63,7 +63,19 @@ function localeForTag(tag: string) {
   return enUS;
 }
 
-export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
+function historyStudentQuery(studentEmail?: string): string {
+  if (!studentEmail?.trim()) return "";
+  return `&studentEmail=${encodeURIComponent(studentEmail.trim().toLowerCase())}`;
+}
+
+export function HistoryCalendar({
+  embedded = false,
+  studentEmail,
+}: {
+  embedded?: boolean;
+  /** When set (coach view), loads that student's nutrition history. */
+  studentEmail?: string;
+}) {
   const { t, lang } = useI18n();
   const dateLocale = localeForTag(lang);
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -81,7 +93,7 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     setMonthLoading(true);
     try {
       const res = await fetch(
-        `/api/history/month?year=${year}&month=${month}`,
+        `/api/history/month?year=${year}&month=${month}${historyStudentQuery(studentEmail)}`,
         { credentials: "include", headers: getSessionRequestHeaders() }
       );
       if (!res.ok) throw new Error("month fetch failed");
@@ -92,9 +104,11 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     } finally {
       setMonthLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, studentEmail]);
 
   useEffect(() => {
+    setSelectedDate(null);
+    setDayDetail(null);
     void loadMonth();
   }, [loadMonth]);
 
@@ -102,10 +116,13 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     setDayLoading(true);
     setDayDetail(null);
     try {
-      const res = await fetch(`/api/history/day?date=${date}`, {
-        credentials: "include",
-        headers: getSessionRequestHeaders(),
-      });
+      const res = await fetch(
+        `/api/history/day?date=${date}${historyStudentQuery(studentEmail)}`,
+        {
+          credentials: "include",
+          headers: getSessionRequestHeaders(),
+        }
+      );
       if (!res.ok) throw new Error("day fetch failed");
       const data = (await res.json()) as HistoryDayDetail;
       setDayDetail(data);
@@ -114,7 +131,7 @@ export function HistoryCalendar({ embedded = false }: { embedded?: boolean }) {
     } finally {
       setDayLoading(false);
     }
-  }, []);
+  }, [studentEmail]);
 
   const handleSelectDay = (date: Date) => {
     if (!isSameMonth(date, viewDate)) return;
