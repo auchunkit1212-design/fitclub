@@ -2,11 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
+html {
+  max-width: 100vw;
+  overflow-x: hidden;
+  /* Let the page scroll vertically; avoid trapping scroll on Android WebView/PWA. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
+  overflow-y: visible;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
 
 :root {
