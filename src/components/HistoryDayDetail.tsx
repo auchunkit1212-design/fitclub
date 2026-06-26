@@ -20,19 +20,25 @@ function MacroBar({
   target,
   unit,
   colorClass,
+  overColorClass = "bg-orange-500",
 }: {
   label: string;
   current: number;
   target: number;
   unit: string;
   colorClass: string;
+  overColorClass?: string;
 }) {
-  const pct = Math.min(100, Math.round((current / Math.max(target, 1)) * 100));
+  const rawPct = Math.round((current / Math.max(target, 1)) * 100);
+  const isOver = rawPct > 100;
+  const barPct = Math.min(100, rawPct);
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs">
         <span className="font-semibold text-gray-700">{label}</span>
-        <span className="text-gray-500 tabular-nums">
+        <span
+          className={`tabular-nums ${isOver ? "text-orange-700 font-semibold" : "text-gray-500"}`}
+        >
           {Math.round(current)}
           {unit} / {target}
           {unit}
@@ -40,11 +46,15 @@ function MacroBar({
       </div>
       <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
-          style={{ width: `${pct}%` }}
+          className={`h-full rounded-full transition-all duration-500 ${isOver ? overColorClass : colorClass}`}
+          style={{ width: `${barPct}%` }}
         />
       </div>
-      <p className="text-[10px] text-gray-400 text-right">{pct}%</p>
+      <p
+        className={`text-[10px] text-right ${isOver ? "text-orange-600 font-semibold" : "text-gray-400"}`}
+      >
+        {rawPct}%
+      </p>
     </div>
   );
 }
@@ -128,6 +138,18 @@ export function HistoryDayDetailPanel({
           >
             {t("common.protein", "蛋白")}{" "}
             {COMPLIANCE_LABEL[detail.compliance.protein]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.carbs]}`}
+          >
+            {t("common.carbs", "碳水")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.carbs]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.fats]}`}
+          >
+            {t("common.fat", "脂肪")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.fats]}
           </span>
         </div>
       </div>

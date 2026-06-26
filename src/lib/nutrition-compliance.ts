@@ -51,12 +51,13 @@ export function sumLogsForDay(
 export function macroComplianceLevel(
   current: number,
   target: number,
-  options?: { minRatio?: number; metRatio?: number }
+  options?: { minRatio?: number; metRatio?: number; maxRatio?: number }
 ): ComplianceLevel {
   if (target <= 0) return "none";
   const minR = options?.minRatio ?? 0.5;
   const metR = options?.metRatio ?? 0.9;
   const ratio = current / target;
+  if (options?.maxRatio !== undefined && ratio > options.maxRatio) return "over";
   if (ratio >= metR) return "met";
   if (ratio >= minR) return "partial";
   return "low";
@@ -91,6 +92,7 @@ export function overallMacroLevel(
 ): ComplianceLevel {
   if (mealCount === 0) return "none";
   const levels = [calories, protein, carbs, fats].filter((l) => l !== "none");
+  if (levels.some((l) => l === "over")) return "over";
   if (levels.every((l) => l === "met")) return "met";
   if (levels.some((l) => l === "low")) return "low";
   if (levels.some((l) => l === "partial")) return "partial";
@@ -269,11 +271,16 @@ export function buildStudentDailyCompliance(input: {
   const targets = targetSnapshots.active;
   const targetsSource = targetSnapshots.activeSource;
 
+  const cappedMacro = { maxRatio: 1 };
   const macroLevels = {
-    calories: macroComplianceLevel(totals.calories, targets.calories),
+    calories: macroComplianceLevel(
+      totals.calories,
+      targets.calories,
+      cappedMacro
+    ),
     protein: macroComplianceLevel(totals.protein, targets.protein),
-    carbs: macroComplianceLevel(totals.carbs, targets.carbs),
-    fats: macroComplianceLevel(totals.fats, targets.fats),
+    carbs: macroComplianceLevel(totals.carbs, targets.carbs, cappedMacro),
+    fats: macroComplianceLevel(totals.fats, targets.fats, cappedMacro),
     overall: "none" as ComplianceLevel,
   };
   macroLevels.overall = overallMacroLevel(
