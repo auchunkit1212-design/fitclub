@@ -2,10 +2,30 @@
   "streak": {
     "days": "{count} Days",
     "longestHint": "Longest streak: {days} days",
+    "guestName": "Student",
+    "cardAlt": "Streak share card",
+    "celebration": {
+      "title": "{days}-day streak!",
+      "body": "Logged today! Save your card or share it with friends."
+    },
     "milestone": {
       "title": "Amazing! {days}-day healthy logging streak",
       "body": "Gorilla coach salutes your discipline! You're ahead of 90% of members on a cut — keep it up!",
       "cta": "Keep going"
+    },
+    "share": {
+      "saveImage": "Save image",
+      "saving": "Saving…",
+      "savedImage": "Streak image saved",
+      "social": "Share",
+      "community": "Community",
+      "sharing": "Sharing…",
+      "shared": "Share sheet opened",
+      "copied": "Caption copied",
+      "failed": "Share failed, try again",
+      "needLogin": "Please sign in to share",
+      "communityPosted": "Posted to Community",
+      "cta": "Share streak"
     }
   },
   "nav": {

@@ -934,6 +934,8 @@ const EMPTY_STREAK_RESULT: StreakUpdateResult = {
   longestStreak: 0,
   lastStreakUpdate: null,
   streakUpdated: false,
+  celebrationTriggered: false,
+  isSpecialMilestone: false,
   milestoneTriggered: false,
 };
 

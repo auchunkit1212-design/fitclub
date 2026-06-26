@@ -44,7 +44,7 @@ import { initUserRegistry } from "@/lib/registry";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
-import { storePendingStreakMilestone } from "@/lib/streak";
+import { storePendingStreakCelebration } from "@/lib/streak";
 import { getMealLogs, getOwnMealLogs, isToday } from "@/lib/storage";
 import { detectMealFoodsFromPhoto } from "@/lib/meal-photo-detect-client";
 import type { DetectedMealFood } from "@/lib/meal-photo-detect";
@@ -525,14 +525,17 @@ function AddMealPageContent() {
         advanced: searchAdvanced,
       });
 
-      if (
-        result.streak?.milestoneTriggered &&
-        result.streak.milestoneDays &&
-        [3, 7, 14, 30].includes(result.streak.milestoneDays)
-      ) {
-        storePendingStreakMilestone(
-          result.streak.milestoneDays as 3 | 7 | 14 | 30
-        );
+      if (result.streak?.celebrationTriggered || result.streak?.milestoneTriggered) {
+        const days =
+          result.streak.celebrationDays ?? result.streak.milestoneDays;
+        if (days && days >= 1) {
+          storePendingStreakCelebration({
+            days,
+            isSpecialMilestone:
+              result.streak.isSpecialMilestone ??
+              [3, 7, 14, 30].includes(days),
+          });
+        }
       }
 
       await finishAfterSave(result.log, uploadedImageUrl);

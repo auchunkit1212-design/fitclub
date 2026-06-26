@@ -34,6 +34,9 @@ export async function POST(request: Request) {
     streak: {
       currentStreak: result.currentStreak,
       longestStreak: result.longestStreak,
+      celebrationTriggered: result.celebrationTriggered,
+      celebrationDays: result.celebrationDays,
+      isSpecialMilestone: result.isSpecialMilestone,
       milestoneTriggered: result.milestoneTriggered,
       milestoneDays: result.milestoneDays,
     },

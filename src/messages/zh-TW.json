@@ -2,10 +2,30 @@
   "streak": {
     "days": "{count} 天",
     "longestHint": "最長紀錄 {days} 天",
+    "guestName": "學員",
+    "cardAlt": "連續打卡分享圖",
+    "celebration": {
+      "title": "連續打卡 {days} 天！",
+      "body": "今日打卡成功！儲存圖片或分享給朋友，一起自律。"
+    },
     "milestone": {
       "title": "震撼！連續 {days} 天健康打卡",
       "body": "大猩猩為你的自律點讚！你已經超越了 90% 正在減脂的學員，繼續保持！",
       "cta": "繼續努力"
+    },
+    "share": {
+      "saveImage": "儲存圖片",
+      "saving": "儲存中…",
+      "savedImage": "已儲存打卡圖片",
+      "social": "分享",
+      "community": "Community",
+      "sharing": "分享中…",
+      "shared": "已開啟分享",
+      "copied": "已複製打卡文案",
+      "failed": "分享失敗，請再試",
+      "needLogin": "請先登入再分享",
+      "communityPosted": "已分享到 Community",
+      "cta": "分享 streak"
     }
   },
   "nav": {

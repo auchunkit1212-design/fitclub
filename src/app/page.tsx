@@ -37,9 +37,8 @@ import { generateRoast } from "@/lib/ai-mock";
 import { fetchAiRoast } from "@/lib/ai-feedback-client";
 import { saveMealViaApi } from "@/lib/meal-save-client";
 import {
-  consumePendingStreakMilestone,
-  storePendingStreakMilestone,
-  type StreakMilestoneDay,
+  consumePendingStreakCelebration,
+  type PendingStreakCelebration,
 } from "@/lib/streak";
 import {
   hasCompletedAppGuide,
@@ -247,8 +246,8 @@ export default function StudentDashboard() {
   const [quickMealSaving, setQuickMealSaving] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [milestoneModalDays, setMilestoneModalDays] =
-    useState<StreakMilestoneDay | null>(null);
+  const [streakCelebration, setStreakCelebration] =
+    useState<PendingStreakCelebration | null>(null);
   const [roast, setRoast] = useState("");
   const [roastLoading, setRoastLoading] = useState(false);
   const [showAppGuide, setShowAppGuide] = useState(false);
@@ -256,6 +255,9 @@ export default function StudentDashboard() {
   const applyStreakApiPayload = (payload?: {
     currentStreak?: number;
     longestStreak?: number;
+    celebrationTriggered?: boolean;
+    celebrationDays?: number;
+    isSpecialMilestone?: boolean;
     milestoneTriggered?: boolean;
     milestoneDays?: number;
   }) => {
@@ -266,12 +268,16 @@ export default function StudentDashboard() {
     if (typeof payload.longestStreak === "number") {
       setLongestStreak(payload.longestStreak);
     }
-    if (
-      payload.milestoneTriggered &&
-      payload.milestoneDays &&
-      [3, 7, 14, 30].includes(payload.milestoneDays)
-    ) {
-      setMilestoneModalDays(payload.milestoneDays as StreakMilestoneDay);
+    const triggered =
+      payload.celebrationTriggered ?? payload.milestoneTriggered ?? false;
+    const days = payload.celebrationDays ?? payload.milestoneDays;
+    if (triggered && days && days >= 1) {
+      setStreakCelebration({
+        days,
+        isSpecialMilestone:
+          payload.isSpecialMilestone ??
+          [3, 7, 14, 30].includes(days),
+      });
     }
   };
 
@@ -286,8 +292,8 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    const pending = consumePendingStreakMilestone();
-    if (pending) setMilestoneModalDays(pending);
+    const pending = consumePendingStreakCelebration();
+    if (pending) setStreakCelebration(pending);
   }, []);
 
   useEffect(() => {
@@ -1114,12 +1120,13 @@ export default function StudentDashboard() {
       </main>
       </div>
 
-      {milestoneModalDays && (
+      {streakCelebration && (
         <StreakMilestoneModal
-          days={milestoneModalDays}
+          days={streakCelebration.days}
+          isSpecialMilestone={streakCelebration.isSpecialMilestone}
           session={session}
           longestStreak={longestStreak}
-          onClose={() => setMilestoneModalDays(null)}
+          onClose={() => setStreakCelebration(null)}
           onNotify={showToast}
         />
       )}

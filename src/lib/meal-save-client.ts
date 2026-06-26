@@ -23,6 +23,9 @@ export type SaveMealResult = {
   streak?: {
     currentStreak?: number;
     longestStreak?: number;
+    celebrationTriggered?: boolean;
+    celebrationDays?: number;
+    isSpecialMilestone?: boolean;
     milestoneTriggered?: boolean;
     milestoneDays?: number;
   };

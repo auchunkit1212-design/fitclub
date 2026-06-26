@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GorillaMascot } from "@/components/GorillaMascot";
-import { Flame, Smartphone, Sparkles, Users } from "@/components/icons";
+import { Download, Flame, Smartphone, Sparkles, Users } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
+  createStreakShareImage,
   publishStreakToCommunity,
+  saveStreakShareImage,
   shareStreakExternally,
 } from "@/lib/streak-share";
-import type { StreakMilestoneDay } from "@/lib/streak";
 import type { UserSession } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
 interface StreakMilestoneModalProps {
-  days: StreakMilestoneDay;
+  days: number;
+  isSpecialMilestone?: boolean;
   session?: UserSession | null;
   longestStreak?: number;
   onClose: () => void;
@@ -24,16 +26,75 @@ interface StreakMilestoneModalProps {
 
 export function StreakMilestoneModal({
   days,
+  isSpecialMilestone = false,
   session,
   longestStreak,
   onClose,
   onNotify,
 }: StreakMilestoneModalProps) {
   const { t } = useI18n();
-  const [sharing, setSharing] = useState<"social" | "community" | null>(null);
+  const [sharing, setSharing] = useState<"social" | "community" | "save" | null>(
+    null
+  );
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
+
+  const displayName = session?.name?.trim() || t("streak.guestName", "學員");
+
+  const cardInput = useMemo(
+    () => ({
+      currentStreak: days,
+      longestStreak,
+      studentName: displayName,
+      isSpecialMilestone,
+    }),
+    [days, longestStreak, displayName, isSpecialMilestone]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    void (async () => {
+      try {
+        const blob = await createStreakShareImage(cardInput);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setCardBlob(blob);
+        setCardUrl(objectUrl);
+      } catch {
+        if (!cancelled) {
+          setCardBlob(null);
+          setCardUrl(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [cardInput]);
 
   const notify = (message: string) => {
     onNotify?.(message);
+  };
+
+  const handleSaveImage = async () => {
+    setSharing("save");
+    try {
+      if (cardBlob) {
+        const { downloadStreakCard } = await import("@/lib/streak-card");
+        downloadStreakCard(cardBlob, days);
+      } else {
+        await saveStreakShareImage(cardInput);
+      }
+      notify(t("streak.share.savedImage", "已儲存打卡圖片"));
+    } catch {
+      notify(t("streak.share.failed", "分享失敗，請再試"));
+    } finally {
+      setSharing(null);
+    }
   };
 
   const handleShareSocial = async () => {
@@ -42,15 +103,14 @@ export function StreakMilestoneModal({
       const origin =
         typeof window !== "undefined" ? window.location.origin : undefined;
       const result = await shareStreakExternally({
-        currentStreak: days,
-        longestStreak,
-        studentName: session?.name,
+        ...cardInput,
         origin,
+        imageBlob: cardBlob ?? undefined,
       });
       if (result === "shared") {
         notify(t("streak.share.shared", "已開啟分享"));
       } else if (result === "copied") {
-        notify(t("streak.share.copied", "已複製打卡文案"));
+        notify(t("streak.share.savedImage", "已儲存打卡圖片"));
       } else {
         notify(t("streak.share.failed", "分享失敗，請再試"));
       }
@@ -82,6 +142,20 @@ export function StreakMilestoneModal({
     }
   };
 
+  const title = isSpecialMilestone
+    ? t("streak.milestone.title", "震撼！連續 {days} 天健康打卡", { days })
+    : t("streak.celebration.title", "連續打卡 {days} 天！", { days });
+
+  const body = isSpecialMilestone
+    ? t(
+        "streak.milestone.body",
+        "大猩猩為你的自律點讚！你已經超越了 90% 正在減脂的學員，繼續保持！"
+      )
+    : t(
+        "streak.celebration.body",
+        "今日打卡成功！儲存圖片或分享俾朋友，一齊自律。"
+      );
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 p-5"
@@ -89,7 +163,7 @@ export function StreakMilestoneModal({
       aria-modal="true"
       aria-labelledby="streak-milestone-title"
     >
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-[0_24px_80px_rgb(0,0,0,0.18)] p-8 text-center space-y-5">
+      <div className="w-full max-w-md rounded-3xl bg-white shadow-[0_24px_80px_rgb(0,0,0,0.18)] p-6 sm:p-8 text-center space-y-4 max-h-[92vh] overflow-y-auto">
         <div className="flex justify-center">
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-100 to-emerald-100 flex items-center justify-center">
@@ -111,21 +185,39 @@ export function StreakMilestoneModal({
             id="streak-milestone-title"
             className="text-xl font-bold text-zinc-900 leading-snug"
           >
-            {t("streak.milestone.title", "震撼！連續 {days} 天健康打卡", {
-              days,
-            })}
+            {title}
           </p>
-          <p className="text-sm text-zinc-600 leading-relaxed">
-            {t(
-              "streak.milestone.body",
-              "大猩猩為你的自律點讚！你已經超越了 90% 正在減脂的學員，繼續保持！"
-            )}
-          </p>
+          <p className="text-sm text-zinc-600 leading-relaxed">{body}</p>
         </div>
 
-        <div className="flex justify-center">
-          <GorillaMascot size="md" />
-        </div>
+        {cardUrl ? (
+          <div className="rounded-2xl overflow-hidden border border-zinc-100 shadow-sm bg-zinc-50">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={cardUrl}
+              alt={t("streak.cardAlt", "連續打卡分享圖")}
+              className="w-full h-auto block"
+            />
+          </div>
+        ) : (
+          <div className="flex justify-center py-4">
+            <GorillaMascot size="md" />
+          </div>
+        )}
+
+        <button
+          type="button"
+          disabled={sharing !== null}
+          onClick={() => void handleSaveImage()}
+          className={`w-full py-3 rounded-2xl bg-zinc-900 text-white font-bold text-sm ${btnClass} disabled:opacity-60`}
+        >
+          <span className="inline-flex items-center justify-center gap-1.5">
+            <Download size={16} aria-hidden />
+            {sharing === "save"
+              ? t("streak.share.saving", "儲存中…")
+              : t("streak.share.saveImage", "儲存圖片")}
+          </span>
+        </button>
 
         <div className="grid grid-cols-2 gap-2">
           <button

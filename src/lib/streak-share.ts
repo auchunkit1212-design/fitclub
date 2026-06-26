@@ -1,5 +1,6 @@
 import { BRAND_NAME } from "@/lib/brand";
 import { publishThoughtPostCloud } from "@/lib/community-client";
+import { downloadStreakCard, renderStreakCardBlob } from "@/lib/streak-card";
 import type { UserSession } from "@/lib/types";
 
 export function buildStreakShareMessage(input: {
@@ -49,25 +50,83 @@ export async function copyShareText(text: string): Promise<boolean> {
   }
 }
 
+export async function createStreakShareImage(input: {
+  currentStreak: number;
+  longestStreak?: number;
+  studentName?: string;
+  isSpecialMilestone?: boolean;
+}): Promise<Blob> {
+  return renderStreakCardBlob({
+    days: input.currentStreak,
+    studentName: input.studentName,
+    longestStreak: input.longestStreak,
+    isSpecialMilestone: input.isSpecialMilestone,
+  });
+}
+
+export async function saveStreakShareImage(input: {
+  currentStreak: number;
+  longestStreak?: number;
+  studentName?: string;
+  isSpecialMilestone?: boolean;
+}): Promise<void> {
+  const blob = await createStreakShareImage(input);
+  downloadStreakCard(blob, Math.max(1, Math.round(input.currentStreak)));
+}
+
 export async function shareStreakExternally(input: {
   currentStreak: number;
   longestStreak?: number;
   studentName?: string;
   origin?: string;
+  imageBlob?: Blob;
+  isSpecialMilestone?: boolean;
 }): Promise<"shared" | "copied" | "failed"> {
   const text = buildStreakShareMessage(input);
+  const streak = Math.max(1, Math.round(input.currentStreak));
+
+  let imageBlob = input.imageBlob;
+  if (!imageBlob) {
+    try {
+      imageBlob = await createStreakShareImage({
+        currentStreak: streak,
+        longestStreak: input.longestStreak,
+        studentName: input.studentName,
+        isSpecialMilestone: input.isSpecialMilestone,
+      });
+    } catch {
+      imageBlob = undefined;
+    }
+  }
 
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
-      await navigator.share({
-        title: `${BRAND_NAME} 連續打卡 ${input.currentStreak} 天`,
+      const shareData: ShareData = {
+        title: `${BRAND_NAME} 連續打卡 ${streak} 天`,
         text,
         url: input.origin,
-      });
+      };
+
+      if (imageBlob && typeof File !== "undefined") {
+        const file = new File([imageBlob], `streak-${streak}.png`, {
+          type: "image/png",
+        });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ ...shareData, files: [file] });
+          return "shared";
+        }
+      }
+
+      await navigator.share(shareData);
       return "shared";
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return "failed";
     }
+  }
+
+  if (imageBlob) {
+    downloadStreakCard(imageBlob, streak);
+    return "copied";
   }
 
   const copied = await copyShareText(text);

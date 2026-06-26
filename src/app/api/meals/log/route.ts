@@ -137,6 +137,9 @@ export async function POST(request: Request) {
     let streak = {
       currentStreak: 0,
       longestStreak: 0,
+      celebrationTriggered: false as boolean,
+      celebrationDays: undefined as number | undefined,
+      isSpecialMilestone: false as boolean,
       milestoneTriggered: false as boolean,
       milestoneDays: undefined as number | undefined,
     };
@@ -145,6 +148,9 @@ export async function POST(request: Request) {
       streak = {
         currentStreak: streakResult.currentStreak,
         longestStreak: streakResult.longestStreak,
+        celebrationTriggered: streakResult.celebrationTriggered,
+        celebrationDays: streakResult.celebrationDays,
+        isSpecialMilestone: streakResult.isSpecialMilestone,
         milestoneTriggered: streakResult.milestoneTriggered,
         milestoneDays: streakResult.milestoneDays,
       };
