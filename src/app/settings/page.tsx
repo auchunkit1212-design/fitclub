@@ -7,6 +7,7 @@ import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { StudentShareAppPanel } from "@/components/StudentShareAppPanel";
+import { LoadingView } from "@/components/LoadingView";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { resetAppGuide } from "@/lib/app-guide";
@@ -57,11 +58,7 @@ export default function SettingsPage() {
   }, [router]);
 
   if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500 text-sm">
-        {t("common.loading", "載入中…")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中…")} />;
   }
 
   return (

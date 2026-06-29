@@ -16,6 +16,7 @@ import {
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
+import { LoadingView } from "@/components/LoadingView";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -214,9 +215,7 @@ export default function CoachPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        從雲端載入緊...
-      </div>
+      <LoadingView message="從雲端載入緊..." logoUrl={brand.logo} />
     );
   }
 

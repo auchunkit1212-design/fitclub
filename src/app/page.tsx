@@ -32,6 +32,7 @@ import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPane
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LoadingView } from "@/components/LoadingView";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
 import { fetchAiRoast } from "@/lib/ai-feedback-client";
@@ -664,9 +665,11 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-zinc-500 px-6 text-center">
-        <p>{t("common.loadingCloud", "從雲端載入緊...")}</p>
-        {loadError && (
+      <LoadingView
+        message={t("common.loadingCloud", "從雲端載入緊...")}
+        logoUrl={branding?.logo}
+      >
+        {loadError ? (
           <>
             <p className="text-sm text-red-600">{loadError}</p>
             <button
@@ -677,8 +680,8 @@ export default function StudentDashboard() {
               {t("auth.backToLogin", "返回登入")}
             </button>
           </>
-        )}
-      </div>
+        ) : null}
+      </LoadingView>
     );
   }
 

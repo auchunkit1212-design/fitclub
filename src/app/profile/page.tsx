@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { StudentProfilePanel } from "@/components/StudentProfilePanel";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
+import { LoadingView } from "@/components/LoadingView";
 import { Calendar, CircleUser, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
@@ -221,11 +222,7 @@ export default function ProfilePage() {
   };
 
   if (!ready || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500 text-sm">
-        {t("common.loading", "載入中…")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中…")} />;
   }
 
   return (

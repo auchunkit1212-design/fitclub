@@ -12,6 +12,7 @@ import {
   MACRO_SOFT_MAX_RATIO,
 } from "@/lib/nutrition-compliance";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import { LoadingView } from "@/components/LoadingView";
 import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
@@ -77,9 +78,11 @@ export function HistoryDayDetailPanel({
 
   if (loading) {
     return (
-      <div className={`${SOFT_CARD} p-6 text-center text-sm text-gray-400`}>
-        {t("history.day.loading", "載入當日紀錄…")}
-      </div>
+      <LoadingView
+        variant="section"
+        message={t("history.day.loading", "載入當日紀錄…")}
+        className={SOFT_CARD}
+      />
     );
   }
 

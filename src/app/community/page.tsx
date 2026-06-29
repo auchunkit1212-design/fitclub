@@ -6,7 +6,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
-import { Globe, IconLabel, Loader2 } from "@/components/icons";
+import { LoadingView } from "@/components/LoadingView";
+import { Globe, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { fetchCommunityFeedCloud } from "@/lib/community-client";
 import type { CommunityFeedPost } from "@/lib/community";
@@ -50,11 +51,7 @@ export default function CommunityPage() {
   }, [router, refreshFeed]);
 
   if (!ready || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500 text-sm">
-        {t("common.loading", "載入中…")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中…")} />;
   }
 
   return (
@@ -116,9 +113,10 @@ export default function CommunityPage() {
           ) : null}
 
           {loading && posts.length === 0 ? (
-            <div className="flex justify-center py-12 text-zinc-400">
-              <Loader2 size={28} className="animate-spin" aria-hidden />
-            </div>
+            <LoadingView
+              variant="section"
+              message={t("community.feed.loading", "載入社群動態…")}
+            />
           ) : posts.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center">
               <p className="text-sm font-medium text-gray-700">

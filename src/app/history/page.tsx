@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
+import { LoadingView } from "@/components/LoadingView";
 import { Calendar, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { getSession } from "@/lib/session";
@@ -23,11 +24,7 @@ export default function HistoryPage() {
   }, [router]);
 
   if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500 text-sm">
-        {t("common.loading", "載入中…")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中…")} />;
   }
 
   return (

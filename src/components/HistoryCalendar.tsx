@@ -19,6 +19,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { fetchWithTimeout } from "@/lib/with-timeout";
 import { HistoryDayDetailPanel } from "@/components/HistoryDayDetail";
+import { LoadingView } from "@/components/LoadingView";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import type {
   HistoryDayDetail,
@@ -223,9 +224,10 @@ export function HistoryCalendar({
         </div>
 
         {monthLoading ? (
-          <div className="py-16 text-center text-sm text-gray-400">
-            {t("history.loading", "載入日曆…")}
-          </div>
+          <LoadingView
+            variant="section"
+            message={t("history.loading", "載入日曆…")}
+          />
         ) : monthError ? (
           <div className="py-12 text-center space-y-3">
             <p className="text-sm text-gray-500">

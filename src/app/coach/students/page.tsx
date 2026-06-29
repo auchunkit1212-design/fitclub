@@ -14,6 +14,7 @@ import {
 } from "@/components/CoachStudentsSectionPicker";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { LoadingView } from "@/components/LoadingView";
 import { PageHeader } from "@/components/PageHeader";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
@@ -164,11 +165,7 @@ export default function CoachStudentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        載入學員資料中...
-      </div>
-    );
+    return <LoadingView message="載入學員資料中..." logoUrl={brand.logo} />;
   }
 
   const hasStudents = students.length > 0;

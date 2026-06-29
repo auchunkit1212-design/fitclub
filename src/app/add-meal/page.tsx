@@ -9,6 +9,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { MultiFoodPortionPanel, type MultiFoodTotals } from "@/components/MultiFoodPortionPanel";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { LoadingView } from "@/components/LoadingView";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
@@ -563,11 +564,7 @@ function AddMealPageContent() {
   };
 
   if (!profileChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        {t("common.loading", "載入中...")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中...")} />;
   }
 
   if (needsOnboarding && session?.email) {
@@ -1006,13 +1003,7 @@ function AddMealPageContent() {
 
 export default function AddMealPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center text-zinc-500">
-          載入中...
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingView message="載入中..." />}>
       <AddMealPageContent />
     </Suspense>
   );

@@ -20,6 +20,7 @@ import type {
   StudentNutritionTargets,
 } from "@/lib/types";
 import { CoachStudentMealsModal } from "@/components/CoachStudentMealsModal";
+import { LoadingView } from "@/components/LoadingView";
 import { ChevronRight, IconLabel, Target, UtensilsCrossed } from "@/components/icons";
 
 const btnClass =
@@ -229,7 +230,7 @@ export function CoachStudentDailyPanel({
           </IconLabel>
         </h2>
         {loadingTargets && (
-          <span className="text-[10px] text-zinc-400">載入目標中…</span>
+          <LoadingView variant="inline" message="載入目標中…" />
         )}
       </div>
       <p className="text-xs text-zinc-500 leading-relaxed">

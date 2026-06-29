@@ -6,6 +6,7 @@ import { MealDetailModal } from "@/components/MealDetailModal";
 import { filterUnreviewedMeals } from "@/lib/meal-review-status";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import { IconLabel, ScrollText } from "@/components/icons";
+import { LoadingView } from "@/components/LoadingView";
 import type {
   MealLog,
   MealLogFeedback,
@@ -77,7 +78,7 @@ export function CoachUnreviewedMealsPanel({
         </div>
 
         {loading ? (
-          <p className="text-sm text-zinc-400 text-center py-6">載入檢閱狀態…</p>
+          <LoadingView variant="section" message="載入檢閱狀態…" />
         ) : unreviewed.length === 0 ? (
           <p className="text-sm text-emerald-700 bg-emerald-50 rounded-xl px-3 py-4 text-center">
             全部學員飲食已檢閱，做得好！
