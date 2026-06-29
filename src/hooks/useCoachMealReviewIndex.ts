@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { fetchWithTimeout } from "@/lib/with-timeout";
 import { filterRecentCoachReviewLogs } from "@/lib/meal-review-status";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
@@ -18,12 +19,12 @@ async function fetchReviewChunk(mealLogIds: string[]): Promise<{
   const qs = encodeURIComponent(mealLogIds.join(","));
   const headers = getSessionRequestHeaders();
   const [reactionRes, feedbackRes] = await Promise.all([
-    fetch(`/api/coach/reactions?mealLogIds=${qs}`, {
+    fetchWithTimeout(`/api/coach/reactions?mealLogIds=${qs}`, {
       credentials: "include",
       cache: "no-store",
       headers,
     }),
-    fetch(`/api/coach/meal-feedback?mealLogIds=${qs}`, {
+    fetchWithTimeout(`/api/coach/meal-feedback?mealLogIds=${qs}`, {
       credentials: "include",
       cache: "no-store",
       headers,

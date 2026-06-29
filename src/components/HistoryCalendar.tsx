@@ -17,6 +17,7 @@ import { zhHK, zhTW, enUS } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { fetchWithTimeout } from "@/lib/with-timeout";
 import { HistoryDayDetailPanel } from "@/components/HistoryDayDetail";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import type {
@@ -81,6 +82,7 @@ export function HistoryCalendar({
   const [viewDate, setViewDate] = useState(() => new Date());
   const [monthData, setMonthData] = useState<MonthPayload | null>(null);
   const [monthLoading, setMonthLoading] = useState(true);
+  const [monthError, setMonthError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<HistoryDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
@@ -91,8 +93,9 @@ export function HistoryCalendar({
 
   const loadMonth = useCallback(async () => {
     setMonthLoading(true);
+    setMonthError(false);
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `/api/history/month?year=${year}&month=${month}${historyStudentQuery(studentEmail)}`,
         { credentials: "include", headers: getSessionRequestHeaders() }
       );
@@ -101,6 +104,7 @@ export function HistoryCalendar({
       setMonthData(data);
     } catch {
       setMonthData(null);
+      setMonthError(true);
     } finally {
       setMonthLoading(false);
     }
@@ -116,7 +120,7 @@ export function HistoryCalendar({
     setDayLoading(true);
     setDayDetail(null);
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `/api/history/day?date=${date}${historyStudentQuery(studentEmail)}`,
         {
           credentials: "include",
@@ -221,6 +225,19 @@ export function HistoryCalendar({
         {monthLoading ? (
           <div className="py-16 text-center text-sm text-gray-400">
             {t("history.loading", "載入日曆…")}
+          </div>
+        ) : monthError ? (
+          <div className="py-12 text-center space-y-3">
+            <p className="text-sm text-gray-500">
+              {t("history.loadFailed", "日曆載入失敗，請檢查網絡後重試")}
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadMonth()}
+              className={`text-xs font-semibold text-emerald-700 px-3 py-1.5 rounded-lg bg-emerald-50 ${btnClass}`}
+            >
+              {t("common.retry", "重試")}
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-7 gap-1">

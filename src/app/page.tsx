@@ -54,7 +54,7 @@ import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
 import { syncSessionPlan } from "@/lib/plan-client";
 import { clearSession, getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
-import { withTimeout } from "@/lib/with-timeout";
+import { fetchWithTimeout, withTimeout } from "@/lib/with-timeout";
 import {
   getMealLogs,
   getThemeClasses,
@@ -316,7 +316,9 @@ export default function StudentDashboard() {
         parsed.role === "coach" || parsed.role === "admin"
           ? parsed.role
           : "student";
-      const synced = (await syncSessionPlan()) ?? parsed;
+      const synced =
+        (await withTimeout(syncSessionPlan(), 8_000).catch(() => parsed)) ??
+        parsed;
       const activeSession: UserSession = {
         ...synced,
         role,
@@ -357,64 +359,7 @@ export default function StudentDashboard() {
         setSession(applyBrandToSession(activeSession, brand));
         saveSession(applyBrandToSession(activeSession, brand));
 
-        if (role === "student" && activeSession.email) {
-          try {
-            const [streakRes, body, tRes, cloudReminder] = await Promise.all([
-              fetch("/api/student/streak", {
-                credentials: "include",
-                headers: getSessionRequestHeaders(),
-              }),
-              fetchStudentBodyProfile(activeSession.email),
-              fetch("/api/coach/student-targets", {
-                credentials: "include",
-              }),
-              loadReminderSettingsFromServer(),
-            ]);
-
-            if (streakRes.ok) {
-              const streakData = (await streakRes.json()) as {
-                streak?: { currentStreak?: number; longestStreak?: number };
-              };
-              if (!cancelled && streakData.streak) {
-                setCurrentStreak(streakData.streak.currentStreak ?? 0);
-                setLongestStreak(streakData.streak.longestStreak ?? 0);
-              }
-            }
-
-            if (!cancelled) {
-              setBodyProfile(body);
-              setBodyForm(bodyProfileToFormValues(body));
-              if (body && isBodyProfileComplete(body)) {
-                setProfile(
-                  computeTargetProfile(body, {
-                    job: settings.job,
-                    weeklyFrequency: settings.weeklyFrequency,
-                  })
-                );
-              }
-            }
-
-            const tData = (await tRes.json()) as {
-              targets?: StudentNutritionTargets | null;
-            };
-            if (!cancelled && tData.targets?.locked) {
-              setCoachTargets(tData.targets);
-              setProfile({
-                targetCalories: tData.targets.targetCalories,
-                targetProtein: tData.targets.targetProtein,
-              });
-            }
-
-            if (cloudReminder && !cancelled) {
-              setSettings((prev) =>
-                normalizePersonalSettings({ ...prev, ...cloudReminder })
-              );
-            }
-          } catch {
-            // streak columns or profile APIs may not exist yet
-          }
-        }
-        if (!cancelled) setProfileChecked(true);
+        if (!cancelled) setProfileChecked(role !== "student");
 
         const rawSettings = localStorage.getItem("student_settings");
         if (rawSettings) {
@@ -439,7 +384,6 @@ export default function StudentDashboard() {
         if (!cancelled) {
           silentRefreshRef.current = false;
           setLoading(false);
-          if (role !== "student") setProfileChecked(true);
         }
       }
     };
@@ -450,6 +394,88 @@ export default function StudentDashboard() {
       cancelled = true;
     };
   }, [router, t, lang, refreshKey]);
+
+  useEffect(() => {
+    if (!session?.email || session.role !== "student") return;
+
+    let cancelled = false;
+
+    const loadStudentExtras = async () => {
+      try {
+        const headers = getSessionRequestHeaders();
+        const [streakRes, body, tRes, cloudReminder] = await withTimeout(
+          Promise.all([
+            fetchWithTimeout("/api/student/streak", {
+              credentials: "include",
+              headers,
+            }),
+            fetchStudentBodyProfile(session.email),
+            fetchWithTimeout("/api/coach/student-targets", {
+              credentials: "include",
+            }),
+            loadReminderSettingsFromServer(),
+          ]),
+          10_000
+        );
+
+        if (streakRes.ok) {
+          const streakData = (await streakRes.json()) as {
+            streak?: { currentStreak?: number; longestStreak?: number };
+          };
+          if (!cancelled && streakData.streak) {
+            setCurrentStreak(streakData.streak.currentStreak ?? 0);
+            setLongestStreak(streakData.streak.longestStreak ?? 0);
+          }
+        }
+
+        if (!cancelled) {
+          setBodyProfile(body);
+          setBodyForm(bodyProfileToFormValues(body));
+          if (body && isBodyProfileComplete(body)) {
+            setProfile(
+              computeTargetProfile(body, {
+                job: settings.job,
+                weeklyFrequency: settings.weeklyFrequency,
+              })
+            );
+          }
+        }
+
+        const tData = (await tRes.json()) as {
+          targets?: StudentNutritionTargets | null;
+        };
+        if (!cancelled && tData.targets?.locked) {
+          setCoachTargets(tData.targets);
+          setProfile({
+            targetCalories: tData.targets.targetCalories,
+            targetProtein: tData.targets.targetProtein,
+          });
+        }
+
+        if (cloudReminder && !cancelled) {
+          setSettings((prev) =>
+            normalizePersonalSettings({ ...prev, ...cloudReminder })
+          );
+        }
+      } catch {
+        // streak columns or profile APIs may not exist yet
+      } finally {
+        if (!cancelled) setProfileChecked(true);
+      }
+    };
+
+    void loadStudentExtras();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.email,
+    session?.role,
+    refreshKey,
+    settings.job,
+    settings.weeklyFrequency,
+  ]);
 
   const isStudent = session?.role === "student";
 
@@ -636,7 +662,7 @@ export default function StudentDashboard() {
     );
   }
 
-  if (loading || !branding) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-zinc-500 px-6 text-center">
         <p>{t("common.loadingCloud", "從雲端載入緊...")}</p>

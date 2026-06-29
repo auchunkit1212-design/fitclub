@@ -12,6 +12,7 @@ import {
   type TargetsSource,
 } from "@/lib/nutrition-compliance";
 import { getSessionRequestHeaders } from "@/lib/session";
+import { fetchWithTimeout } from "@/lib/with-timeout";
 import type {
   MealLog,
   RegistryUser,
@@ -146,11 +147,11 @@ export function CoachStudentDailyPanel({
         students.map(async (s) => {
           try {
             const [targetsRes, bodyRes] = await Promise.all([
-              fetch(
+              fetchWithTimeout(
                 `/api/coach/student-targets?studentEmail=${encodeURIComponent(s.email)}`,
                 { credentials: "include", headers }
               ),
-              fetch(
+              fetchWithTimeout(
                 `/api/coach/student-body-profile?studentEmail=${encodeURIComponent(s.email)}`,
                 { credentials: "include", headers }
               ),

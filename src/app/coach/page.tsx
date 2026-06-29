@@ -23,6 +23,7 @@ import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { IconLabel } from "@/components/icons";
 import { getSession } from "@/lib/session";
+import { withTimeout } from "@/lib/with-timeout";
 import type {
   CoachBranding,
   MealLog,
@@ -40,6 +41,8 @@ const THEME_OPTIONS: { value: ThemeColor; label: string }[] = [
   { value: "blue", label: "藍色 (Blue)" },
   { value: "black", label: "黑色 (Black)" },
 ];
+
+const LOAD_TIMEOUT_MS = 12_000;
 
 export default function CoachPage() {
   const router = useRouter();
@@ -80,12 +83,22 @@ export default function CoachPage() {
       setSession(current);
 
       try {
-        const userRegistry = await fetchUsersForSession(current);
+        const userRegistry = await withTimeout(
+          fetchUsersForSession(current),
+          LOAD_TIMEOUT_MS,
+          "讀取用戶逾時"
+        );
         setRegistry(userRegistry);
 
         if (current.role === "coach") {
-          const brandResolved = await resolveBrandForUser(current, userRegistry);
-          const resolved = await resolveBranding(current, userRegistry);
+          const [brandResolved, resolved] = await withTimeout(
+            Promise.all([
+              resolveBrandForUser(current, userRegistry),
+              resolveBranding(current, userRegistry),
+            ]),
+            LOAD_TIMEOUT_MS,
+            "讀取品牌設定逾時"
+          );
           setInviteCode(
             brandResolved.tenantSlug ??
               current.tenantSlug ??
@@ -101,7 +114,11 @@ export default function CoachPage() {
           setThemeColor(DEFAULT_BRANDING.themeColor);
         }
 
-        const ownLogs = await fetchOwnMealLogsForSession(current);
+        const ownLogs = await withTimeout(
+          fetchOwnMealLogsForSession(current),
+          LOAD_TIMEOUT_MS,
+          "讀取飲食記錄逾時"
+        );
         setOwnMealLogs(ownLogs);
       } catch {
         alert("無法從 Supabase 載入教練數據。");
