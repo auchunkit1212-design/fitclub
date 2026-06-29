@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import { PushReminderToggle } from "@/components/PushReminderToggle";
@@ -12,6 +13,12 @@ import {
   type PersonalSettings,
 } from "@/lib/personal-settings";
 import { syncReminderSettingsToServer } from "@/lib/reminder-settings-client";
+import { StreakTemplatePicker } from "@/components/StreakTemplatePicker";
+import {
+  getStreakCardTemplate,
+  setStreakCardTemplate,
+  type StreakCardTemplateId,
+} from "@/lib/streak-templates";
 
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100";
@@ -45,6 +52,9 @@ export function StudentAppSettingsPanel({
   onOpenAppGuide,
 }: Props) {
   const { t } = useI18n();
+  const [streakTemplate, setStreakTemplate] = useState<StreakCardTemplateId>(() =>
+    getStreakCardTemplate()
+  );
 
   const patch = (partial: Partial<PersonalSettings>) => {
     onSettingsChange(normalizePersonalSettings({ ...settings, ...partial }));
@@ -124,6 +134,16 @@ export function StudentAppSettingsPanel({
         reminderSettings={settings}
         onSettingsSync={syncReminderSettingsToServer}
       />
+
+      <div className="pt-1 border-t border-gray-100">
+        <StreakTemplatePicker
+          value={streakTemplate}
+          onChange={(id) => {
+            setStreakTemplate(id);
+            setStreakCardTemplate(id);
+          }}
+        />
+      </div>
 
       {onOpenAppGuide && (
         <div className="pt-1 border-t border-gray-100 space-y-2">

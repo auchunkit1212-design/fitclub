@@ -42,6 +42,7 @@ const TRAINING_LABEL_KEY = {
 import { isValidWeightChangePace } from "@/lib/body-profile";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { shareStreakExternally } from "@/lib/streak-share";
+import { getStreakCardTemplate } from "@/lib/streak-templates";
 import type {
   MealLog,
   MealLogFeedback,
@@ -221,6 +222,7 @@ export function StudentProfilePanel({
                       longestStreak,
                       studentName: displayName,
                       origin,
+                      templateId: getStreakCardTemplate(),
                     });
                     if (result === "shared") {
                       onSaved(t("streak.share.shared", "已開啟分享"));

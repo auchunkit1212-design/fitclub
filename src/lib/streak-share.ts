@@ -1,6 +1,7 @@
 import { BRAND_NAME } from "@/lib/brand";
 import { publishThoughtPostCloud } from "@/lib/community-client";
 import { downloadStreakCard, renderStreakCardBlob } from "@/lib/streak-card";
+import type { StreakCardTemplateId } from "@/lib/streak-templates";
 import type { UserSession } from "@/lib/types";
 
 export function buildStreakShareMessage(input: {
@@ -55,12 +56,14 @@ export async function createStreakShareImage(input: {
   longestStreak?: number;
   studentName?: string;
   isSpecialMilestone?: boolean;
+  templateId?: StreakCardTemplateId;
 }): Promise<Blob> {
   return renderStreakCardBlob({
     days: input.currentStreak,
     studentName: input.studentName,
     longestStreak: input.longestStreak,
     isSpecialMilestone: input.isSpecialMilestone,
+    templateId: input.templateId,
   });
 }
 
@@ -69,6 +72,7 @@ export async function saveStreakShareImage(input: {
   longestStreak?: number;
   studentName?: string;
   isSpecialMilestone?: boolean;
+  templateId?: StreakCardTemplateId;
 }): Promise<void> {
   const blob = await createStreakShareImage(input);
   downloadStreakCard(blob, Math.max(1, Math.round(input.currentStreak)));
@@ -81,6 +85,7 @@ export async function shareStreakExternally(input: {
   origin?: string;
   imageBlob?: Blob;
   isSpecialMilestone?: boolean;
+  templateId?: StreakCardTemplateId;
 }): Promise<"shared" | "copied" | "failed"> {
   const text = buildStreakShareMessage(input);
   const streak = Math.max(1, Math.round(input.currentStreak));
@@ -93,6 +98,7 @@ export async function shareStreakExternally(input: {
         longestStreak: input.longestStreak,
         studentName: input.studentName,
         isSpecialMilestone: input.isSpecialMilestone,
+        templateId: input.templateId,
       });
     } catch {
       imageBlob = undefined;
