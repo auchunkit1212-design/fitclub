@@ -14,6 +14,9 @@ import type {
 
 export type ComplianceLevel = "met" | "partial" | "low" | "over" | "none";
 
+/** Slight overage on calories/carbs/fats is OK when cutting (≈10% buffer). */
+export const MACRO_SOFT_MAX_RATIO = 1.1;
+
 export type MacroTotals = {
   calories: number;
   protein: number;
@@ -91,6 +94,23 @@ export function overallMacroLevel(
   mealCount: number
 ): ComplianceLevel {
   if (mealCount === 0) return "none";
+
+  const energy = [calories, carbs, fats].filter((l) => l !== "none");
+
+  // Cutting: protein adequacy is the first priority
+  if (protein === "low") return "low";
+  if (protein === "partial") return "partial";
+
+  if (protein === "met") {
+    const overEnergy = energy.filter((l) => l === "over");
+    if (overEnergy.length >= 2) return "over";
+    if (overEnergy.length === 1) return "partial";
+    if (energy.every((l) => l === "met")) return "met";
+    // Slightly under/over energy macros is acceptable when protein is met
+    if (energy.some((l) => l === "partial" || l === "low")) return "partial";
+    return "met";
+  }
+
   const levels = [calories, protein, carbs, fats].filter((l) => l !== "none");
   if (levels.some((l) => l === "over")) return "over";
   if (levels.every((l) => l === "met")) return "met";
@@ -271,16 +291,16 @@ export function buildStudentDailyCompliance(input: {
   const targets = targetSnapshots.active;
   const targetsSource = targetSnapshots.activeSource;
 
-  const cappedMacro = { maxRatio: 1 };
+  const softCap = { maxRatio: MACRO_SOFT_MAX_RATIO };
   const macroLevels = {
     calories: macroComplianceLevel(
       totals.calories,
       targets.calories,
-      cappedMacro
+      softCap
     ),
     protein: macroComplianceLevel(totals.protein, targets.protein),
-    carbs: macroComplianceLevel(totals.carbs, targets.carbs, cappedMacro),
-    fats: macroComplianceLevel(totals.fats, targets.fats, cappedMacro),
+    carbs: macroComplianceLevel(totals.carbs, targets.carbs, softCap),
+    fats: macroComplianceLevel(totals.fats, targets.fats, softCap),
     overall: "none" as ComplianceLevel,
   };
   macroLevels.overall = overallMacroLevel(

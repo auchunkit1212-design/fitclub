@@ -6,7 +6,11 @@ import { APP_LOGO_PATH } from "@/lib/brand";
 import { useI18n } from "@/components/I18nProvider";
 import { getMealImageSrc } from "@/lib/meal-display";
 import { isValidSticker } from "@/lib/meal-stickers";
-import { COMPLIANCE_CLASS, COMPLIANCE_LABEL } from "@/lib/nutrition-compliance";
+import {
+  COMPLIANCE_CLASS,
+  COMPLIANCE_LABEL,
+  MACRO_SOFT_MAX_RATIO,
+} from "@/lib/nutrition-compliance";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
@@ -30,7 +34,8 @@ function MacroBar({
   overColorClass?: string;
 }) {
   const rawPct = Math.round((current / Math.max(target, 1)) * 100);
-  const isOver = rawPct > 100;
+  const softMaxPct = Math.round(MACRO_SOFT_MAX_RATIO * 100);
+  const isOver = rawPct > softMaxPct;
   const barPct = Math.min(100, rawPct);
   return (
     <div className="space-y-1.5">
