@@ -1,0 +1,37 @@
+services:
+  paper-bot:
+    build: .
+    container_name: crypto-trader-paper
+    command: ["paper"]
+    env_file:
+      - .env
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    container_name: crypto-trader-dashboard
+    command: ["dashboard"]
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    depends_on:
+      - paper-bot
+
+  live-bot:
+    profiles: ["live"]
+    build: .
+    container_name: crypto-trader-live
+    command: ["live"]
+    env_file:
+      - .env
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped

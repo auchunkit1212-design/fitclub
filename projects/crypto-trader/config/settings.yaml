@@ -1,0 +1,72 @@
+# Crypto Auto Trader 設定
+# 修改後重啟 bot 即可生效
+
+mode: paper  # paper | live | backtest
+
+exchange:
+  id: binance
+  sandbox: false   # 回測／模擬盤用公開行情；實盤請設 true 並用測試網 API
+  rate_limit: true
+
+trading:
+  symbol: BTC/USDT
+  # 多交易對（有值時會覆蓋上面的 symbol）
+  symbols:
+    - BTC/USDT
+    # - ETH/USDT
+  # 每個交易對資金配置上限（佔總 equity）；留空即只用 base_order_size_usd
+  symbol_allocations:
+    BTC/USDT: 0.5
+    # ETH/USDT: 0.3
+  timeframe: 1h
+  quote_currency: USDT
+  base_order_size_usd: 100
+  max_open_positions: 3
+  poll_interval_seconds: 60
+  order_type: market          # market | limit（進場）
+  exit_order_type: market      # market | limit（出場）
+  limit_buy_offset_pct: -0.001  # 限價買：略低於市價
+  limit_sell_offset_pct: 0.001  # 限價賣：略高於市價
+  oco_enabled: false            # 實盤進場後掛交易所 OCO 止損止盈
+
+strategy:
+  name: sma_crossover
+  params:
+    fast_period: 10     # sma_crossover 參數
+    slow_period: 30     # sma_crossover 參數
+    # MACD 範例（切換 strategy.name: macd 時啟用）
+    # signal_period: 9
+    # MACD+RSI 雙確認範例（切換 strategy.name: macd_rsi_filter 時啟用）
+    # rsi_period: 14
+    # rsi_buy_max: 55
+    # rsi_sell_min: 45
+
+risk:
+  max_position_pct: 0.25        # 單一持倉最多佔組合 25%
+  max_daily_loss_pct: 0.05      # 日內虧損 5% 暫停交易
+  stop_loss_pct: 0.03           # 3% 止損
+  take_profit_pct: 0.06         # 6% 止盈
+  max_slippage_pct: 0.002       # 0.2% 滑點容忍
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_capital: 10000
+  fee_rate: 0.001
+
+logging:
+  level: INFO
+  file: logs/trader.log
+
+notifications:
+  enabled: false
+  telegram: true
+  discord: false
+  notify_modes:
+    - paper
+    - live
+
+data:
+  ohlcv_cache_enabled: true
+  ohlcv_cache_dir: data/ohlcv
+  ohlcv_cache_ttl_hours: 24
