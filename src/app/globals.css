@@ -120,3 +120,41 @@ body {
     transform: translateX(320%);
   }
 }
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    top: 12%;
+    opacity: 0.2;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 82%;
+    opacity: 0.2;
+  }
+}
+
+@layer utilities {
+  .animate-fade-slide-in {
+    animation: fade-slide-in 0.28s ease-out both;
+  }
+
+  .animate-scan-line {
+    animation: scan-line 2.2s ease-in-out infinite;
+  }
+}

@@ -8,13 +8,15 @@ import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useI18n } from "@/components/I18nProvider";
 import { MultiFoodPortionPanel, type MultiFoodTotals } from "@/components/MultiFoodPortionPanel";
 import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
+import { MealLogModeSelection } from "@/components/MealLogModeSelection";
+import { NutritionLabelScanOverlay } from "@/components/NutritionLabelScanOverlay";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { LoadingView } from "@/components/LoadingView";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, Sparkles } from "@/components/icons";
+import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, ScanLine, Sparkles } from "@/components/icons";
 import { publishMealSharePostCloud } from "@/lib/community-client";
 import { estimateMealNutritionClient } from "@/lib/meal-estimate-client";
 import {
@@ -92,8 +94,16 @@ function AddMealPageContent() {
   const { t, lang } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fromCoach = searchParams.get("from") === "coach";
+  const modeParam = searchParams.get("mode");
 
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
+  const [entryStep, setEntryStep] = useState<"select" | "cooked" | "packaged">(
+    () =>
+      modeParam === "cooked" || modeParam === "packaged" ? modeParam : "select"
+  );
+  const [ocrOverlayOpen, setOcrOverlayOpen] = useState(
+    () => modeParam === "packaged"
+  );
   const [description, setDescription] = useState("");
   const [imageBase64, setImageBase64] = useState<string | undefined>();
   const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("carbsMedium");
@@ -229,9 +239,29 @@ function AddMealPageContent() {
       baseWeightG: v.servingWeightG > 0 ? v.servingWeightG : undefined,
       proNutrition: v.sodium > 0 || v.sugar > 0,
     });
+    setDescription(productName);
+    setCalories(v.calories);
+    setProtein(v.protein);
+    setCarbs(v.carbs);
+    setFats(v.fat);
     setMacrosFromSearch(true);
     setProNutrition(v.sodium > 0 || v.sugar > 0);
     setNutritionSource("ocr");
+    setOcrOverlayOpen(false);
+    setEntryStep("packaged");
+  };
+
+  const goBackToModeSelect = () => {
+    setOcrOverlayOpen(false);
+    setEntryStep("select");
+  };
+
+  const handleHeaderBack = () => {
+    if (entryStep !== "select" || ocrOverlayOpen) {
+      goBackToModeSelect();
+      return;
+    }
+    router.push(fromCoach ? "/coach" : "/");
   };
 
   useEffect(() => {
@@ -619,12 +649,63 @@ function AddMealPageContent() {
       )}
 
       <PageHeader
-        title={t("addMeal.title", "記錄飲食")}
-        onBack={() => router.push(fromCoach ? "/coach" : "/")}
+        title={
+          entryStep === "select"
+            ? t("addMeal.title", "記錄飲食")
+            : entryStep === "packaged"
+              ? t("addMeal.modeSelect.packagedTitle", "包裝食物 / 飲品")
+              : t("addMeal.modeSelect.cookedTitle", "已經煮好 / 外食")
+        }
+        onBack={handleHeaderBack}
         backLabel={t("header.back", "← 返回")}
       />
 
       <main className="px-4 py-4 space-y-4">
+        {entryStep === "select" ? (
+          <MealLogModeSelection
+            onSelect={(mode) => {
+              if (mode === "packaged") {
+                setEntryStep("packaged");
+                setOcrOverlayOpen(true);
+                return;
+              }
+              setEntryStep("cooked");
+              setOcrOverlayOpen(false);
+            }}
+          />
+        ) : (
+          <div className="space-y-4 animate-fade-slide-in">
+            {entryStep === "packaged" ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-emerald-900">
+                    {t("addMeal.packagedBanner.title", "AI 營養標籤掃描")}
+                  </p>
+                  <p className="text-xs text-emerald-800/80 leading-relaxed">
+                    {ocrPortionBase
+                      ? t(
+                          "addMeal.packagedBanner.done",
+                          "已讀取標籤，可調整份量後發布。"
+                        )
+                      : t(
+                          "addMeal.packagedBanner.hint",
+                          "對準包裝背後營養標籤，最快完成記錄。"
+                        )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOcrOverlayOpen(true)}
+                  className={`shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white ${btnClass}`}
+                >
+                  <ScanLine size={14} aria-hidden />
+                  {ocrPortionBase
+                    ? t("addMeal.packagedBanner.rescan", "再掃")
+                    : t("addMeal.packagedBanner.scan", "掃描")}
+                </button>
+              </div>
+            ) : null}
+
         <button
           type="button"
           onClick={() => setShowNutritionDash(true)}
@@ -635,6 +716,7 @@ function AddMealPageContent() {
           </IconLabel>
         </button>
 
+        {entryStep === "cooked" ? (
         <FoodSearchEngine
           onAddToMeal={(item) => {
             setDescription(item.description);
@@ -651,6 +733,7 @@ function AddMealPageContent() {
             clearMultiFoodDetection();
           }}
         />
+        ) : null}
 
         {calories > 0 && (
           <AdvancedNutritionCard
@@ -780,7 +863,7 @@ function AddMealPageContent() {
           </section>
         ) : null}
 
-        {!multiFoodMode ? (
+        {!multiFoodMode && entryStep === "cooked" ? (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
           <h2 className="font-semibold text-zinc-800">
             {t("addMeal.quickPortion", "快速份量估算")}
@@ -924,7 +1007,9 @@ function AddMealPageContent() {
               </span>
             )}
           </div>
-          <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
+          {entryStep === "cooked" ? (
+            <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
+          ) : null}
           {ocrPortionBase && (
             <ServingPortionPicker
               baseWeightG={ocrPortionBase.baseWeightG}
@@ -989,7 +1074,21 @@ function AddMealPageContent() {
               ? t("addMeal.compressingPhoto", "壓縮相片中...")
               : t("addMeal.publish", "發布記錄")}
         </button>
+          </div>
+        )}
       </main>
+
+      <NutritionLabelScanOverlay
+        open={ocrOverlayOpen}
+        onClose={() => {
+          setOcrOverlayOpen(false);
+          if (!ocrPortionBase) {
+            setEntryStep("select");
+          }
+        }}
+        onSuccess={handleOcrSuccess}
+        autoLaunch
+      />
 
       {(session?.role === "coach" || session?.role === "admin") && fromCoach && (
         <BottomNav
