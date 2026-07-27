@@ -792,7 +792,7 @@ export default function StudentDashboard() {
         <header className="w-full space-y-4">
           <div className="flex items-start justify-between gap-3 w-full">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <GorillaMascot logoUrl={branding?.logo} size="sm" />
+              <GorillaMascot logoUrl={branding?.logo} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-gray-500 text-xs leading-tight">
                   {BRAND_TAGLINE}

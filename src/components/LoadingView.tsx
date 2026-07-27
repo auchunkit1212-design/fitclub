@@ -66,7 +66,7 @@ export function LoadingView({
           aria-hidden
         />
         <div className="relative animate-gorilla-bounce">
-          <GorillaMascot size="lg" logoUrl={logoUrl} />
+          <GorillaMascot size="xl" logoUrl={logoUrl} />
         </div>
         <div className="relative w-28 h-1 rounded-full bg-emerald-100 overflow-hidden">
           <div className="h-full w-1/3 rounded-full bg-emerald-500 animate-loading-bar" />
