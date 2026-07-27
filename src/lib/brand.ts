@@ -12,7 +12,7 @@ export function themeColorToHex(theme: "emerald" | "blue" | "black"): string {
   return "#059669";
 }
 
-/** 只在使用者上傳的自訂 logo 時才疊加（排除官方 gorilla logo） */
+/** 只在使用者上傳的自訂 logo 時才取代官方大猩猩（排除官方 gorilla logo） */
 export function isCustomBrandLogo(logo?: string): boolean {
   if (!logo?.trim()) return false;
   if (logo.includes("gorilla-logo.png")) return false;
@@ -35,7 +35,7 @@ export function resolveCoachBrandLogo(logoUrl?: string): string | undefined {
   return logoUrl;
 }
 
-/** 解析可疊加在白背心上的 tenant logo */
+/** 解析可直接取代官方大猩猩嘅商戶／教練 logo（唔再疊喺背心） */
 export function resolveTenantLogoUrl(logoUrl?: string): string | undefined {
   return isCustomBrandLogo(logoUrl) ? logoUrl : undefined;
 }
