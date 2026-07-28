@@ -149,6 +149,79 @@ body {
   }
 }
 
+@keyframes streak-gorilla {
+  0% {
+    transform: scale(0.4) rotate(-8deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.12) rotate(3deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.96) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes streak-confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(320px) rotate(520deg);
+    opacity: 0;
+  }
+}
+
+@keyframes streak-glow {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.75;
+  }
+}
+
+@keyframes streak-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes streak-flame {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.12);
+  }
+}
+
+@keyframes streak-pop {
+  0% {
+    transform: translateY(12px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   .animate-fade-slide-in {
     animation: fade-slide-in 0.28s ease-out both;
@@ -156,5 +229,40 @@ body {
 
   .animate-scan-line {
     animation: scan-line 2.2s ease-in-out infinite;
+  }
+
+  .animate-streak-gorilla {
+    animation: streak-gorilla 0.85s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  }
+
+  .animate-streak-confetti {
+    animation-name: streak-confetti;
+    animation-timing-function: cubic-bezier(0.22, 0.7, 0.35, 1);
+    animation-fill-mode: both;
+    animation-iteration-count: 1;
+  }
+
+  .animate-streak-glow {
+    animation: streak-glow 1.6s ease-in-out infinite;
+  }
+
+  .animate-streak-glow-delayed {
+    animation: streak-glow 1.8s ease-in-out 0.35s infinite;
+  }
+
+  .animate-streak-orbit {
+    animation: streak-orbit 8s linear infinite;
+  }
+
+  .animate-streak-flame {
+    animation: streak-flame 1.1s ease-in-out infinite;
+  }
+
+  .animate-streak-flame-delayed {
+    animation: streak-flame 1.25s ease-in-out 0.25s infinite;
+  }
+
+  .animate-streak-pop {
+    animation: streak-pop 0.55s ease-out 0.35s both;
   }
 }

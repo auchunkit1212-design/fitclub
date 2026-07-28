@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GorillaMascot } from "@/components/GorillaMascot";
+import { StreakCelebrationAnimation } from "@/components/StreakCelebrationAnimation";
 import { StreakTemplatePicker } from "@/components/StreakTemplatePicker";
 import { Download, Flame, Smartphone, Sparkles, Users } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
@@ -29,6 +30,8 @@ interface StreakMilestoneModalProps {
   longestStreak?: number;
   onClose: () => void;
   onNotify?: (message: string) => void;
+  /** Skip gorilla intro animation (e.g. preview of share UI only) */
+  skipCelebration?: boolean;
 }
 
 export function StreakMilestoneModal({
@@ -38,8 +41,12 @@ export function StreakMilestoneModal({
   longestStreak,
   onClose,
   onNotify,
+  skipCelebration = false,
 }: StreakMilestoneModalProps) {
   const { t } = useI18n();
+  const [phase, setPhase] = useState<"celebrate" | "share">(
+    skipCelebration ? "share" : "celebrate"
+  );
   const [sharing, setSharing] = useState<"social" | "community" | "save" | null>(
     null
   );
@@ -48,6 +55,8 @@ export function StreakMilestoneModal({
   const [templateId, setTemplateId] = useState<StreakCardTemplateId>(() =>
     getStreakCardTemplate()
   );
+
+  const finishCelebration = useCallback(() => setPhase("share"), []);
 
   const template = getStreakTemplateMeta(templateId);
   const isDarkModal = templateId === "midnight";
@@ -179,6 +188,37 @@ export function StreakMilestoneModal({
 
   const titleClass = isDarkModal ? "text-amber-50" : "text-zinc-900";
   const bodyClass = isDarkModal ? "text-slate-300" : "text-zinc-600";
+
+  if (phase === "celebrate") {
+    return (
+      <div
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="streak-celebrate-title"
+      >
+        <div className="w-full max-w-md space-y-3">
+          <StreakCelebrationAnimation
+            days={days}
+            isSpecialMilestone={isSpecialMilestone}
+            autoFinishMs={3000}
+            onFinished={finishCelebration}
+            className="shadow-[0_24px_80px_rgb(0,0,0,0.28)]"
+          />
+          <p id="streak-celebrate-title" className="sr-only">
+            {title}
+          </p>
+          <button
+            type="button"
+            onClick={finishCelebration}
+            className={`w-full py-3 rounded-2xl bg-white/95 text-emerald-800 font-bold text-sm shadow-lg ${btnClass}`}
+          >
+            {t("streak.celebration.skip", "睇分享卡 →")}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
