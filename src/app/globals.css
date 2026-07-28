@@ -222,6 +222,24 @@ body {
   }
 }
 
+@keyframes streak-good {
+  0% {
+    transform: scale(0.2) rotate(-18deg) translateY(12px);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.18) rotate(8deg) translateY(-4px);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(0.94) rotate(-4deg) translateY(0);
+  }
+  100% {
+    transform: scale(1) rotate(0deg) translateY(0);
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   .animate-fade-slide-in {
     animation: fade-slide-in 0.28s ease-out both;
@@ -264,5 +282,9 @@ body {
 
   .animate-streak-pop {
     animation: streak-pop 0.55s ease-out 0.35s both;
+  }
+
+  .animate-streak-good {
+    animation: streak-good 0.7s cubic-bezier(0.22, 1.35, 0.36, 1) 0.45s both;
   }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { APP_LOGO_PATH } from "@/lib/brand";
-import { Flame, Sparkles } from "@/components/icons";
+import { Flame, Sparkles, ThumbsUp } from "@/components/icons";
 
 type Props = {
   days: number;
@@ -80,9 +80,9 @@ export function StreakCelebrationAnimation({
 
       {/* Burst glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-48 h-48 rounded-full bg-emerald-300/40 blur-3xl animate-streak-glow" />
+        <div className="w-52 h-52 rounded-full bg-emerald-300/45 blur-3xl animate-streak-glow" />
         {isSpecialMilestone ? (
-          <div className="absolute w-56 h-56 rounded-full bg-amber-300/30 blur-3xl animate-streak-glow-delayed" />
+          <div className="absolute w-60 h-60 rounded-full bg-amber-300/35 blur-3xl animate-streak-glow-delayed" />
         ) : null}
       </div>
 
@@ -105,9 +105,8 @@ export function StreakCelebrationAnimation({
         ))}
       </div>
 
-      <div className="relative z-10 flex flex-col items-center justify-center py-8 px-4 min-h-[280px]">
-        {/* Flame orbit */}
-        <div className="relative mb-2">
+      <div className="relative z-10 flex flex-col items-center justify-center py-10 px-4 min-h-[320px]">
+        <div className="relative mb-1">
           <div className="absolute -inset-6 rounded-full border-2 border-dashed border-orange-300/70 animate-streak-orbit" />
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 animate-streak-flame">
             <Flame
@@ -123,28 +122,51 @@ export function StreakCelebrationAnimation({
             <Sparkles size={16} className="text-emerald-500" aria-hidden />
           </div>
 
-          <div className="relative w-36 h-36 rounded-full bg-white shadow-[0_12px_40px_rgb(5,150,105,0.25)] ring-4 ring-emerald-200/80 overflow-hidden flex items-center justify-center animate-streak-gorilla">
+          {/* Gorilla */}
+          <div className="relative w-40 h-40 rounded-full bg-white shadow-[0_12px_40px_rgb(5,150,105,0.25)] ring-4 ring-emerald-200/80 overflow-hidden flex items-center justify-center animate-streak-gorilla">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={APP_LOGO_PATH}
               alt=""
-              className="w-[88%] h-[88%] object-contain"
+              className="w-[90%] h-[90%] object-contain"
             />
+          </div>
+
+          {/* Big GOOD thumbs-up badge */}
+          <div className="absolute -right-3 top-2 z-20 animate-streak-good">
+            <div
+              className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-2 shadow-[0_10px_28px_rgb(0,0,0,0.18)] ring-2 ring-white ${
+                isSpecialMilestone
+                  ? "bg-gradient-to-br from-amber-400 to-orange-500"
+                  : "bg-gradient-to-br from-emerald-500 to-teal-600"
+              }`}
+            >
+              <ThumbsUp
+                size={22}
+                className="text-white fill-white"
+                aria-hidden
+              />
+              <span className="text-lg font-black tracking-wide text-white leading-none">
+                GOOD
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 text-center space-y-1 animate-streak-pop">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">
+        <div className="mt-5 text-center space-y-1.5 animate-streak-pop">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
             {isSpecialMilestone ? "MILESTONE" : "STREAK"}
           </p>
-          <p className="text-5xl font-black tabular-nums text-zinc-900 leading-none">
+          <p className="text-7xl sm:text-8xl font-black tabular-nums text-zinc-900 leading-none tracking-tight">
             {days}
-            <span className="ml-1 text-2xl font-bold text-orange-500">日</span>
+            <span className="ml-1.5 text-3xl sm:text-4xl font-black text-orange-500 align-middle">
+              日
+            </span>
           </p>
-          <p className="text-sm font-semibold text-zinc-600">
+          <p className="pt-1 text-base font-bold text-zinc-700">
             {isSpecialMilestone
-              ? "大猩猩為你打氣！里程碑達成"
-              : "大猩猩慶祝你連續打卡"}
+              ? "大猩猩俾你個 GOOD！里程碑達成"
+              : "大猩猩俾你個 GOOD！"}
           </p>
         </div>
       </div>
