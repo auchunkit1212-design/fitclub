@@ -14,8 +14,8 @@ import type {
 
 export type ComplianceLevel = "met" | "partial" | "low" | "over" | "none";
 
-/** Slight overage on calories/carbs/fats is OK when cutting (≈10% buffer). */
-export const MACRO_SOFT_MAX_RATIO = 1.1;
+/** Slight overage on calories/carbs/fats is OK when cutting (≈20% buffer). */
+export const MACRO_SOFT_MAX_RATIO = 1.2;
 
 export type MacroTotals = {
   calories: number;
