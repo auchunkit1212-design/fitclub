@@ -122,7 +122,7 @@ export default function CoachPage() {
         );
         setOwnMealLogs(ownLogs);
       } catch {
-        alert("無法從 Supabase 載入教練數據。");
+        alert("暫時載唔到教練資料，請稍後再試。");
       } finally {
         silentRefreshRef.current = false;
         setLoading(false);
@@ -165,8 +165,8 @@ export default function CoachPage() {
         console.error("[coach] branding publish failed:", data);
         alert(
           data.hint
-            ? `${data.error ?? "雲端發布失敗"}\n\n${data.hint}`
-            : data.error ?? "雲端發布失敗，請稍後再試。"
+            ? `${data.error ?? "儲存失敗"}\n\n${data.hint}`
+            : data.error ?? "儲存失敗，請稍後再試。"
         );
         return;
       }
@@ -185,12 +185,12 @@ export default function CoachPage() {
       });
       alert(
         slug
-          ? `品牌已同步！你的學員邀請碼：${slug}`
-          : "品牌已同步到雲端！"
+          ? `品牌已儲存！你的學員邀請碼：${slug}`
+          : "品牌設定已儲存！"
       );
     } catch (err) {
       console.error("[coach] branding publish error:", err);
-      alert("雲端發布失敗，請稍後再試。");
+      alert("儲存失敗，請稍後再試。");
     } finally {
       setPublishing(false);
     }
@@ -206,7 +206,7 @@ export default function CoachPage() {
       const compressed = await compressFileImage(file);
       setLogo(compressed);
       await updateCoachLogo(session.email, compressed, session.tenantId);
-      alert("Logo 已上傳到 Supabase 雲端！");
+      alert("Logo 已上載成功！");
     } catch {
       alert("Logo 處理或上傳失敗。");
     }
@@ -215,7 +215,7 @@ export default function CoachPage() {
 
   if (loading) {
     return (
-      <LoadingView message="從雲端載入緊..." logoUrl={brand.logo} />
+      <LoadingView message="載入緊..." logoUrl={brand.logo} />
     );
   }
 
@@ -229,7 +229,7 @@ export default function CoachPage() {
     <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
       <PageHeader
         title={`${appTitle.trim() || brand.gymName} · 教練後台`}
-        subtitle={`${appTitle.trim() || brand.appTitle || brand.gymName} · 雲端同步`}
+        subtitle={`${appTitle.trim() || brand.appTitle || brand.gymName} · 品牌設定`}
         variant="light"
         backLabel="← 返回主頁"
         onBack={() => router.push("/")}
@@ -269,7 +269,7 @@ export default function CoachPage() {
 
         {session?.role === "coach" && (
           <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
-            <h2 className="font-semibold text-zinc-800">品牌中心（雲端）</h2>
+            <h2 className="font-semibold text-emerald-800">品牌設定</h2>
 
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-1">
@@ -310,7 +310,7 @@ export default function CoachPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-zinc-600">撳一下上傳（即時寫入雲端）</p>
+                <p className="text-sm text-zinc-600">撳一下上傳 Logo</p>
               </div>
             </div>
 
@@ -349,7 +349,7 @@ export default function CoachPage() {
               onClick={handlePublish}
               className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
             >
-              {publishing ? "發布緊..." : "發布到雲端"}
+              {publishing ? "儲存緊..." : "儲存品牌設定"}
             </button>
           </section>
         )}

@@ -76,7 +76,7 @@
       "actNow": "Do it now"
     },
     "errors": {
-      "cloudLoadFailed": "Cloud load failed. Check your network or Supabase."
+      "cloudLoadFailed": "Couldn't load data. Check your network and try again."
     },
     "targets": {
       "lockedSolo": "AI Gorilla Mandate",

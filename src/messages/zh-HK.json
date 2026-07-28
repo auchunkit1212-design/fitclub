@@ -76,7 +76,7 @@
       "actNow": "即刻做"
     },
     "errors": {
-      "cloudLoadFailed": "雲端讀取失敗，請檢查網絡或 Supabase。"
+      "cloudLoadFailed": "暫時讀唔到資料，請檢查網絡後再試。"
     },
     "targets": {
       "lockedSolo": "AI 大猩猩聖旨",

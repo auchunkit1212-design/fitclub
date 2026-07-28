@@ -95,7 +95,6 @@ export function FranchiseConsole({
           registry={registry}
           gymName={session.gym}
           onToast={onToast}
-          variant="dark"
         />
       )}
 
@@ -165,21 +164,26 @@ export function FranchiseConsole({
       )}
 
       {session.role === "coach" && (
-        <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-          <h2 className="font-semibold text-zinc-800 mb-2">
-            <IconLabel icon={Palette} iconClassName="text-zinc-600">
-              品牌設定
-            </IconLabel>
-          </h2>
+        <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
+          <div className="space-y-1">
+            <h2 className="font-semibold text-emerald-800">
+              <IconLabel icon={Palette} iconClassName="text-emerald-600">
+                品牌同廣播
+              </IconLabel>
+            </h2>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              換 Logo、改價錢同向學員發廣播訊息。
+            </p>
+          </div>
           <button
             type="button"
             onClick={onGoCoach}
-            className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-xl ${btnClass}`}
+            className={`w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl ${btnClass}`}
           >
-            進入教練後台（Logo / 廣播 → 雲端）
+            進入品牌設定
           </button>
-          <p className="text-xs text-zinc-500 mt-2 text-center">
-            學員登記同飲食紀錄請用底部「學員」分欄
+          <p className="text-xs text-zinc-500 text-center">
+            學員名單同飲食紀錄請用底部「學員」
           </p>
         </section>
       )}

@@ -134,7 +134,7 @@ export default function CoachStudentsPage() {
       setStudents(filterStudentsForSession(current, userRegistry));
     } catch (error) {
       console.error("載入學員資料失敗:", error);
-      setLoadError(errorMessage(error, "無法從 Supabase 載入學員資料"));
+      setLoadError(errorMessage(error, "暫時載唔到學員資料，請稍後再試"));
       setLogs([]);
       setStudents([]);
     } finally {

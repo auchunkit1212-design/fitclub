@@ -380,7 +380,7 @@ export default function StudentDashboard() {
         setBroadcast("");
         setLogs([]);
         setUserRegistry([]);
-        showToast(t("home.errors.cloudLoadFailed", "雲端讀取失敗，請檢查網絡或 Supabase。"));
+        showToast(t("home.errors.cloudLoadFailed", "暫時讀唔到資料，請檢查網絡後再試。"));
       } finally {
         if (!cancelled) {
           silentRefreshRef.current = false;
