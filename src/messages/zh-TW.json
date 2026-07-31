@@ -451,7 +451,8 @@
     "nutrient": "營養素",
     "recommend": "建議",
     "todayVsRecommend": "今日攝取 vs 建議",
-    "cholesterol": "膽固醇"
+    "cholesterol": "膽固醇",
+    "noMealsYet": "今日尚未打卡，暫無估算攝取。記下第一餐後才會顯示。"
   },
   "ai": {
     "roast": {

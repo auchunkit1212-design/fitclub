@@ -76,14 +76,21 @@ export function MicronutrientGuideSection({
   const { t } = useI18n();
   const locked = useProLocked();
 
-  const effectiveCalories = locked ? 1450 : calories;
-  const effectiveProtein = locked ? 92 : protein;
-  const effectiveCarbs = locked ? 138 : carbs;
-  const effectiveFats = locked ? 46 : fats;
+  // Locked Pro preview: show guideline targets only — never invent "today" intake.
+  const effectiveCalories = locked ? 0 : calories;
+  const effectiveProtein = locked ? 0 : protein;
+  const effectiveCarbs = locked ? 0 : carbs;
+  const effectiveFats = locked ? 0 : fats;
   const effectiveTargetCalories = locked ? 2200 : targetCalories;
   const effectiveTargetCarbs = locked ? 200 : targetCarbs;
   const effectiveTargetFats = locked ? 65 : targetFats;
   const effectiveWeightKg = locked ? 68 : weightKg;
+
+  const hasIntake =
+    effectiveCalories > 0 ||
+    effectiveProtein > 0 ||
+    effectiveCarbs > 0 ||
+    effectiveFats > 0;
 
   const micro = estimateMicronutrients(
     effectiveCalories,
@@ -182,17 +189,26 @@ export function MicronutrientGuideSection({
         <p className="text-xs font-semibold text-zinc-700">
           {t("microGuide.todayVsRecommend", "今日攝取 vs 建議")}
         </p>
-        {rows.map((r) => (
-          <MicroBar
-            key={r.label}
-            label={r.label}
-            current={r.current}
-            target={r.target}
-            unit={r.unit}
-            color={r.color}
-            mode={r.mode}
-          />
-        ))}
+        {!hasIntake ? (
+          <p className="rounded-xl bg-zinc-50 border border-zinc-100 px-3 py-3 text-xs text-zinc-500 leading-relaxed">
+            {t(
+              "microGuide.noMealsYet",
+              "今日未打卡，暫無估算攝取。記低第一餐後先會顯示。"
+            )}
+          </p>
+        ) : (
+          rows.map((r) => (
+            <MicroBar
+              key={r.label}
+              label={r.label}
+              current={r.current}
+              target={r.target}
+              unit={r.unit}
+              color={r.color}
+              mode={r.mode}
+            />
+          ))
+        )}
         <p className="text-[10px] text-zinc-400">
           {t(
             "nutritionDash.micro.disclaimer",

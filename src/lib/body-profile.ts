@@ -149,12 +149,29 @@ export function estimateMicronutrients(
   fats: number,
   protein: number
 ) {
-  const fiberG = Math.round(Math.min(38, Math.max(8, calories * 0.014 + carbs * 0.08)));
-  const sugarG = Math.round(Math.max(0, carbs * 0.35));
-  const satFatG = Math.round(Math.max(0, fats * 0.42));
-  const sodiumMg = Math.round(Math.max(800, calories * 1.8));
+  const cal = Math.max(0, calories || 0);
+  const c = Math.max(0, carbs || 0);
+  const f = Math.max(0, fats || 0);
+  const p = Math.max(0, protein || 0);
+
+  // No intake → no estimated micros (avoid fake floors like fiber≥8g).
+  if (cal <= 0 && c <= 0 && f <= 0 && p <= 0) {
+    return {
+      fiberG: 0,
+      sugarG: 0,
+      satFatG: 0,
+      sodiumMg: 0,
+      cholesterolMg: 0,
+      protein: 0,
+    };
+  }
+
+  const fiberG = Math.round(Math.min(38, Math.max(0, cal * 0.014 + c * 0.08)));
+  const sugarG = Math.round(Math.max(0, c * 0.35));
+  const satFatG = Math.round(Math.max(0, f * 0.42));
+  const sodiumMg = Math.round(Math.max(0, cal * 1.8));
   const cholesterolMg = Math.round(
-    Math.min(500, Math.max(80, fats * 3.2 + protein * 0.2))
+    Math.min(500, Math.max(0, f * 3.2 + p * 0.2))
   );
-  return { fiberG, sugarG, satFatG, sodiumMg, cholesterolMg, protein };
+  return { fiberG, sugarG, satFatG, sodiumMg, cholesterolMg, protein: p };
 }

@@ -451,7 +451,8 @@
     "nutrient": "Nutrient",
     "recommend": "Guideline",
     "todayVsRecommend": "Today vs guideline",
-    "cholesterol": "Cholesterol"
+    "cholesterol": "Cholesterol",
+    "noMealsYet": "No meals logged today — estimates appear after your first check-in."
   },
   "ai": {
     "roast": {
