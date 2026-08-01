@@ -8,6 +8,7 @@ import {
   complianceRate,
   DEFAULT_TARGETS,
   type CoachReportStats,
+  type DayMacroIssue,
 } from "@/lib/coach-report-stats";
 import {
   fetchMealLogsForSession,
@@ -20,6 +21,7 @@ import type {
   StudentNutritionTargets,
   UserSession,
 } from "@/lib/types";
+import type { MacroTargets } from "@/lib/nutrition-compliance";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -66,7 +68,7 @@ function IssueList({
 }: {
   title: string;
   empty: string;
-  items: Array<{ date: string; label: string; current: number; target: number }>;
+  items: DayMacroIssue[];
   tone: "over" | "low";
 }) {
   return (
@@ -84,10 +86,14 @@ function IssueList({
         <ul className="space-y-1.5">
           {items.map((item, idx) => (
             <li
-              key={`${item.date}-${item.label}-${idx}`}
+              key={`${item.studentEmail}-${item.date}-${item.label}-${idx}`}
               className="text-xs leading-relaxed text-zinc-700"
             >
-              <span className="font-semibold">{item.date}</span>
+              <span className="font-semibold text-emerald-800">
+                {item.studentName}
+              </span>
+              {" · "}
+              <span className="font-medium text-zinc-500">{item.date}</span>
               {" · "}
               {item.label}{" "}
               <span className="tabular-nums">
@@ -104,6 +110,30 @@ function IssueList({
   );
 }
 
+async function fetchTargetsForStudent(
+  studentEmail: string
+): Promise<MacroTargets | null> {
+  try {
+    const res = await fetch(
+      `/api/coach/student-targets?studentEmail=${encodeURIComponent(studentEmail)}`,
+      { credentials: "include", headers: getSessionRequestHeaders() }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      targets?: StudentNutritionTargets | null;
+    };
+    if (!data.targets) return null;
+    return {
+      calories: data.targets.targetCalories,
+      protein: data.targets.targetProtein,
+      carbs: data.targets.targetCarbs,
+      fats: data.targets.targetFats,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function CoachAiReportPanel({
   session,
   registry,
@@ -114,6 +144,18 @@ export function CoachAiReportPanel({
     () => filterStudentsForSession(session, registry),
     [session, registry]
   );
+  const nameByEmail = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of students) {
+      map[s.email.trim().toLowerCase()] = s.name;
+    }
+    return map;
+  }, [students]);
+  const studentEmailSet = useMemo(
+    () => new Set(Object.keys(nameByEmail)),
+    [nameByEmail]
+  );
+
   const [selectedEmail, setSelectedEmail] = useState<string>("all");
   const [aiNotes, setAiNotes] = useState<string | null>(null);
   const [stats, setStats] = useState<CoachReportStats | null>(null);
@@ -132,25 +174,8 @@ export function CoachAiReportPanel({
     }
     let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch(
-          `/api/coach/student-targets?studentEmail=${encodeURIComponent(selectedEmail)}`,
-          { credentials: "include", headers: getSessionRequestHeaders() }
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          targets?: StudentNutritionTargets | null;
-        };
-        if (cancelled || !data.targets) return;
-        setTargets({
-          calories: data.targets.targetCalories,
-          protein: data.targets.targetProtein,
-          carbs: data.targets.targetCarbs,
-          fats: data.targets.targetFats,
-        });
-      } catch {
-        // keep defaults
-      }
+      const next = await fetchTargetsForStudent(selectedEmail);
+      if (!cancelled && next) setTargets(next);
     })();
     return () => {
       cancelled = true;
@@ -165,25 +190,59 @@ export function CoachAiReportPanel({
     setStats(null);
     try {
       const logs: MealLog[] = await fetchMealLogsForSession(session, registry);
+
+      // Only count this coach's roster students — never merge unrelated logs.
+      const rosterLogs = logs.filter((l) =>
+        studentEmailSet.has(l.email.trim().toLowerCase())
+      );
+
       const filtered =
         selectedEmail === "all"
-          ? logs
-          : logs.filter(
+          ? rosterLogs
+          : rosterLogs.filter(
               (l) =>
                 l.email.trim().toLowerCase() ===
                 selectedEmail.trim().toLowerCase()
             );
 
-      if (selectedEmail !== "all" && filtered.length === 0) {
-        onToast?.(`${selectedStudent?.name ?? "此學員"}暫無飲食記錄`);
-        setStats(buildCoachReportStats([], targets));
+      if (filtered.length === 0) {
+        const who =
+          selectedEmail === "all"
+            ? "全部學員"
+            : (selectedStudent?.name ?? "此學員");
+        onToast?.(`${who}暫無飲食記錄`);
+        setStats(
+          buildCoachReportStats([], targets, { nameByEmail })
+        );
         setAiNotes(
-          `${selectedStudent?.name ?? "此學員"}暫無飲食打卡，等佢記低第一餐後再整理。`
+          selectedEmail === "all"
+            ? "暫無學員打卡記錄，等有人記低第一餐後再整理。"
+            : `${selectedStudent?.name ?? "此學員"}暫無飲食打卡，等佢記低第一餐後再整理。`
         );
         return;
       }
 
-      const nextStats = buildCoachReportStats(filtered, targets);
+      let targetsByEmail: Record<string, MacroTargets> | undefined;
+      if (selectedEmail === "all") {
+        const emails = Array.from(
+          new Set(filtered.map((l) => l.email.trim().toLowerCase()))
+        );
+        const pairs = await Promise.all(
+          emails.map(async (email) => {
+            const t = await fetchTargetsForStudent(email);
+            return [email, t] as const;
+          })
+        );
+        targetsByEmail = {};
+        for (const [email, t] of pairs) {
+          if (t) targetsByEmail[email] = t;
+        }
+      }
+
+      const nextStats = buildCoachReportStats(filtered, targets, {
+        nameByEmail,
+        targetsByEmail,
+      });
       setStats(nextStats);
 
       const report = await fetchAiCoachReport({
@@ -195,7 +254,7 @@ export function CoachAiReportPanel({
       setAiNotes(report);
       onToast?.(
         selectedEmail === "all"
-          ? "已整理全部學員飲食報告！"
+          ? `已整理 ${nextStats.studentCount} 位學員飲食報告！`
           : `已整理 ${selectedStudent?.name ?? "學員"} 嘅飲食報告！`
       );
     } catch {
@@ -210,6 +269,8 @@ export function CoachAiReportPanel({
       ? "整理全部學員飲食報告"
       : `整理 ${selectedStudent?.name ?? "學員"} 嘅飲食報告`;
 
+  const isAll = selectedEmail === "all";
+
   return (
     <section className="bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm space-y-3">
       <div className="space-y-1">
@@ -219,7 +280,7 @@ export function CoachAiReportPanel({
           </IconLabel>
         </h2>
         <p className="text-xs text-zinc-500 leading-relaxed pl-0.5">
-          揀一位學員，或者一次過睇晒全部人嘅打卡同達標情況。
+          揀一位學員，或者一次過睇晒全部人嘅打卡同達標情況（每位學員分開計）。
         </p>
       </div>
 
@@ -230,7 +291,7 @@ export function CoachAiReportPanel({
           onChange={(e) => setSelectedEmail(e.target.value)}
           className="w-full mt-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900"
         >
-          <option value="all">全部學員</option>
+          <option value="all">全部學員（{students.length} 人）</option>
           {students.map((s) => (
             <option key={s.email} value={s.email}>
               {s.name}
@@ -280,9 +341,9 @@ export function CoachAiReportPanel({
             </p>
           </div>
           <ul className="text-xs space-y-1.5 leading-relaxed text-emerald-800/80">
-            <li>· 統計打卡日數同達標日</li>
+            <li>· 按每位學員每日分開統計</li>
             <li>· 找出超標同不足嘅營養素</li>
-            <li>· 整理教練跟進重點</li>
+            <li>· 列出需要跟進嘅學員名</li>
           </ul>
         </div>
       ) : null}
@@ -290,26 +351,42 @@ export function CoachAiReportPanel({
       {stats ? (
         <div className="space-y-3 animate-fade-slide-in">
           <div className="grid grid-cols-2 gap-2">
-            <StatChip label="打卡日數" value={stats.loggedDays} tone="slate" />
             <StatChip
-              label="達標日數"
+              label={isAll ? "打卡人次（人×日）" : "打卡日數"}
+              value={stats.loggedDays}
+              tone="slate"
+            />
+            <StatChip
+              label={isAll ? "達標人次" : "達標日數"}
               value={`${stats.metDays}（${complianceRate(stats)}%）`}
               tone="green"
             />
-            <StatChip label="超標日數" value={stats.overDays} tone="orange" />
-            <StatChip label="未達日數" value={stats.lowDays} tone="rose" />
+            <StatChip
+              label={isAll ? "超標人次" : "超標日數"}
+              value={stats.overDays}
+              tone="orange"
+            />
+            <StatChip
+              label={isAll ? "未達人次" : "未達日數"}
+              value={stats.lowDays}
+              tone="rose"
+            />
           </div>
 
           <p className="text-[11px] text-zinc-500">
-            共 {stats.mealCount} 餐 · 平均 {stats.avgCalories} kcal/餐 · 對照目標{" "}
-            {stats.targets.calories} kcal / P{stats.targets.protein}g / C
-            {stats.targets.carbs}g / F{stats.targets.fats}g
-            {stats.partialDays > 0 ? ` · 注意日 ${stats.partialDays}` : ""}
+            {isAll ? `${stats.studentCount} 位學員 · ` : ""}
+            共 {stats.mealCount} 餐 · 平均 {stats.avgCalories} kcal/餐
+            {!isAll
+              ? ` · 對照目標 ${stats.targets.calories} kcal / P${stats.targets.protein}g / C${stats.targets.carbs}g / F${stats.targets.fats}g`
+              : " · 每位學員用自己嘅目標對照"}
+            {stats.partialDays > 0
+              ? ` · 注意${isAll ? "人次" : "日"} ${stats.partialDays}`
+              : ""}
           </p>
 
           <IssueList
             title="超標（需要收一收）"
-            empty="近期未見明顯超標日。"
+            empty="近期未見明顯超標。"
             items={stats.overIssues}
             tone="over"
           />

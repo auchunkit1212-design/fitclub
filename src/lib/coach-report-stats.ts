@@ -20,6 +20,8 @@ export { DEFAULT_TARGETS };
 
 export type DayMacroIssue = {
   date: string;
+  studentEmail: string;
+  studentName: string;
   macro: "calories" | "protein" | "carbs" | "fats";
   label: string;
   current: number;
@@ -29,6 +31,7 @@ export type DayMacroIssue = {
 
 export type CoachReportStats = {
   mealCount: number;
+  /** Distinct student-days with at least one meal */
   loggedDays: number;
   metDays: number;
   partialDays: number;
@@ -36,8 +39,16 @@ export type CoachReportStats = {
   overDays: number;
   avgCalories: number;
   targets: MacroTargets;
+  studentCount: number;
   overIssues: DayMacroIssue[];
   lowIssues: DayMacroIssue[];
+};
+
+export type BuildCoachReportOptions = {
+  /** email (lowercase) → display name */
+  nameByEmail?: Record<string, string>;
+  /** email (lowercase) → personal targets; falls back to `targets` */
+  targetsByEmail?: Record<string, MacroTargets>;
 };
 
 const MACRO_LABEL: Record<DayMacroIssue["macro"], string> = {
@@ -51,16 +62,37 @@ function dayKey(date: string): string {
   return date.slice(0, 10);
 }
 
+function emailKey(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function emptyTotals(): MacroTotals {
   return { calories: 0, protein: 0, carbs: 0, fats: 0 };
 }
 
-function groupLogsByDay(logs: MealLog[]): Map<string, MacroTotals & { mealCount: number }> {
-  const map = new Map<string, MacroTotals & { mealCount: number }>();
+type StudentDayBucket = MacroTotals & {
+  mealCount: number;
+  email: string;
+  date: string;
+};
+
+/** Group by student + calendar day — never sum multiple students into one day. */
+function groupLogsByStudentDay(logs: MealLog[]): Map<string, StudentDayBucket> {
+  const map = new Map<string, StudentDayBucket>();
   for (const log of logs) {
-    const key = dayKey(log.date);
-    const prev = map.get(key) ?? { ...emptyTotals(), mealCount: 0 };
+    const email = emailKey(log.email);
+    if (!email) continue;
+    const date = dayKey(log.date);
+    const key = `${email}|${date}`;
+    const prev = map.get(key) ?? {
+      ...emptyTotals(),
+      mealCount: 0,
+      email,
+      date,
+    };
     map.set(key, {
+      email,
+      date,
       calories: prev.calories + (log.calories || 0),
       protein: prev.protein + (log.protein || 0),
       carbs: prev.carbs + (log.carbs || 0),
@@ -71,11 +103,19 @@ function groupLogsByDay(logs: MealLog[]): Map<string, MacroTotals & { mealCount:
   return map;
 }
 
+function resolveName(
+  email: string,
+  nameByEmail?: Record<string, string>
+): string {
+  return nameByEmail?.[email]?.trim() || email || "學員";
+}
+
 export function buildCoachReportStats(
   logs: MealLog[],
-  targets: MacroTargets = DEFAULT_TARGETS
+  targets: MacroTargets = DEFAULT_TARGETS,
+  options?: BuildCoachReportOptions
 ): CoachReportStats {
-  const byDay = groupLogsByDay(logs);
+  const byStudentDay = groupLogsByStudentDay(logs);
   let metDays = 0;
   let partialDays = 0;
   let lowDays = 0;
@@ -84,14 +124,28 @@ export function buildCoachReportStats(
   const lowIssues: DayMacroIssue[] = [];
 
   const softCap = { maxRatio: MACRO_SOFT_MAX_RATIO };
-  const dates = Array.from(byDay.keys()).sort();
+  const buckets = Array.from(byStudentDay.values()).sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.email.localeCompare(b.email);
+  });
 
-  for (const date of dates) {
-    const day = byDay.get(date)!;
-    const calories = macroComplianceLevel(day.calories, targets.calories, softCap);
-    const protein = macroComplianceLevel(day.protein, targets.protein);
-    const carbs = macroComplianceLevel(day.carbs, targets.carbs, softCap);
-    const fats = macroComplianceLevel(day.fats, targets.fats, softCap);
+  for (const day of buckets) {
+    const studentTargets =
+      options?.targetsByEmail?.[day.email] ?? targets;
+    const studentName = resolveName(day.email, options?.nameByEmail);
+
+    const calories = macroComplianceLevel(
+      day.calories,
+      studentTargets.calories,
+      softCap
+    );
+    const protein = macroComplianceLevel(day.protein, studentTargets.protein);
+    const carbs = macroComplianceLevel(
+      day.carbs,
+      studentTargets.carbs,
+      softCap
+    );
+    const fats = macroComplianceLevel(day.fats, studentTargets.fats, softCap);
     const overall = overallMacroLevel(
       calories,
       protein,
@@ -105,17 +159,21 @@ export function buildCoachReportStats(
     else if (overall === "low") lowDays += 1;
     else if (overall === "over") overDays += 1;
 
-    const macros: Array<[DayMacroIssue["macro"], number, number, ComplianceLevel]> = [
-      ["calories", day.calories, targets.calories, calories],
-      ["protein", day.protein, targets.protein, protein],
-      ["carbs", day.carbs, targets.carbs, carbs],
-      ["fats", day.fats, targets.fats, fats],
+    const macros: Array<
+      [DayMacroIssue["macro"], number, number, ComplianceLevel]
+    > = [
+      ["calories", day.calories, studentTargets.calories, calories],
+      ["protein", day.protein, studentTargets.protein, protein],
+      ["carbs", day.carbs, studentTargets.carbs, carbs],
+      ["fats", day.fats, studentTargets.fats, fats],
     ];
 
     for (const [macro, current, target, level] of macros) {
       if (level === "over") {
         overIssues.push({
-          date,
+          date: day.date,
+          studentEmail: day.email,
+          studentName,
           macro,
           label: MACRO_LABEL[macro],
           current,
@@ -125,7 +183,9 @@ export function buildCoachReportStats(
       }
       if (level === "low" || (macro === "protein" && level === "partial")) {
         lowIssues.push({
-          date,
+          date: day.date,
+          studentEmail: day.email,
+          studentName,
           macro,
           label: MACRO_LABEL[macro],
           current,
@@ -137,20 +197,24 @@ export function buildCoachReportStats(
   }
 
   const totalCalories = logs.reduce((s, l) => s + (l.calories || 0), 0);
+  const studentCount = new Set(
+    logs.map((l) => emailKey(l.email)).filter(Boolean)
+  ).size;
 
   return {
     mealCount: logs.length,
-    loggedDays: byDay.size,
+    loggedDays: byStudentDay.size,
     metDays,
     partialDays,
     lowDays,
     overDays,
     avgCalories: logs.length > 0 ? Math.round(totalCalories / logs.length) : 0,
     targets,
-    overIssues: overIssues.slice(-12).reverse(),
+    studentCount,
+    overIssues: overIssues.slice(-16).reverse(),
     lowIssues: lowIssues
       .filter((i) => i.macro === "protein" || i.level === "low")
-      .slice(-12)
+      .slice(-16)
       .reverse(),
   };
 }
