@@ -157,12 +157,12 @@
     "mealType": "Meal type",
     "description": "Food description",
     "descriptionPlaceholder": "e.g. char siu ramen, fried noodles...",
-    "quickPortion": "Quick portion estimate",
-    "quickPortionHint": "AI adjusts hidden calories for dining out (broth, chili oil, cooking oil)",
+    "quickPortion": "Portion adjust",
+    "quickPortionHint": "Trust AI by default. Only use palm/fist sizes when the AI portion looks wrong.",
     "carbsPortion": "Carbs (fist size)",
     "proteinPortion": "Protein (palm size)",
     "veggies": "Vegetables",
-    "autoEstimateHint": "Calories and macros are estimated automatically when you save",
+    "autoEstimateHint": "AI rechecks nutrition before save (and uses the photo when available).",
     "perPieceCalories": "Calories per piece",
     "applyTotalCalories": "Apply total calories",
     "manualMacros": "Adjust macros manually",
@@ -193,7 +193,11 @@
       "loginRequired": "Please log in before logging a meal.",
       "compressFailed": "Photo compression failed. Try a smaller image.",
       "saveFailed": "Save failed. Please try again."
-    }
+    },
+    "portionOverrideOpen": "AI portion wrong? Adjust with palm/fist",
+    "portionOverrideTitle": "Manual portion (palm / fist)",
+    "portionOverrideCancel": "Use AI again",
+    "portionOverrideHint": "No protein? Choose None — don’t pick medium palm. No rice/noodles? Choose carbs None."
   },
   "foodSearch": {
     "title": "Food Search",

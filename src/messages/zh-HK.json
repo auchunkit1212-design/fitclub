@@ -157,12 +157,12 @@
     "mealType": "餐別",
     "description": "食物描述",
     "descriptionPlaceholder": "例如：牛肉叉燒拉麵、茶餐廳乾炒牛河...",
-    "quickPortion": "快速份量估算",
-    "quickPortionHint": "AI 已啟用外食隱形熱量修正（湯底、紅油、用油）",
+    "quickPortion": "份量調整",
+    "quickPortionHint": "預設信 AI 估算。只有覺得份量唔啱，先用手掌／拳頭改。",
     "carbsPortion": "碳水（拳頭大小）",
     "proteinPortion": "蛋白質（手掌大小）",
     "veggies": "蔬菜",
-    "autoEstimateHint": "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）",
+    "autoEstimateHint": "儲存前會由 AI 覆核營養數值（有相片會一併分析）",
     "perPieceCalories": "每件卡路里",
     "applyTotalCalories": "套用總卡路里",
     "manualMacros": "手動調整營養素",
@@ -193,7 +193,11 @@
       "loginRequired": "請先登入再記錄飲食。",
       "compressFailed": "相片壓縮失敗，請換一張較細的相片或再試一次。",
       "saveFailed": "儲存失敗，請稍後再試。"
-    }
+    },
+    "portionOverrideOpen": "AI 份量唔啱？用手掌／拳頭改",
+    "portionOverrideTitle": "手動份量（手掌／拳頭）",
+    "portionOverrideCancel": "用返 AI",
+    "portionOverrideHint": "冇蛋白就揀「無」，唔好隨便揀中掌；冇飯／粉亦揀碳水「無」。"
   },
   "foodSearch": {
     "title": "巨型食物搜尋引擎",

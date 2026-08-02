@@ -23,6 +23,8 @@ import {
   CARBS_PORTION_KEYS,
   MEAL_TYPE_KEYS,
   PROTEIN_PORTION_KEYS,
+  carbsPortionKeyToLegacy,
+  proteinPortionKeyToLegacy,
   type CarbsPortionKey,
   type MealTypeKey,
   type ProteinPortionKey,
@@ -38,6 +40,7 @@ import {
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
 import type { MealBaselineSource } from "@/lib/meal-ai-verify";
+import { parsePortionHintsFromDescription } from "@/lib/portion-hints";
 import {
   scaleAdvancedNutrients,
   scaleMacros,
@@ -62,30 +65,46 @@ import type {
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
+/** Clean food name only — no fist/palm tags unless user opts into correction. */
+function mealDescriptionBase(description: string): string {
+  return parsePortionHintsFromDescription(description).foodBase.trim() || description.trim();
+}
+
+/**
+ * Append fist/palm markers only when the student explicitly corrects AI portion.
+ * Uses Chinese legacy labels so the estimator always parses consistently.
+ */
 function buildMealDescriptionWithPortions(
   description: string,
   carbsPortionKey: CarbsPortionKey,
   proteinPortionKey: ProteinPortionKey,
   hasVeggies: boolean,
-  t: (key: string, fallback?: string) => string
+  includePortions: boolean
 ): string {
-  const base = description.trim();
-  if (!base) return base;
+  const base = mealDescriptionBase(description);
+  if (!base || !includePortions) return base;
 
-  const hints: string[] = [];
-  if (carbsPortionKey !== "none") {
-    hints.push(
-      `澱粉${t(`addMeal.portions.${carbsPortionKey}`, carbsPortionKey)}`
-    );
-  }
-  if (proteinPortionKey !== "none") {
-    hints.push(
-      `蛋白${t(`addMeal.portions.${proteinPortionKey}`, proteinPortionKey)}`
-    );
-  }
-  hints.push(hasVeggies ? "有蔬菜" : "無蔬菜");
+  const hints = [
+    `澱粉${carbsPortionKeyToLegacy(carbsPortionKey)}`,
+    `蛋白${proteinPortionKeyToLegacy(proteinPortionKey)}`,
+    hasVeggies ? "有蔬菜" : "無蔬菜",
+  ];
 
   return `${base}（${hints.join("；")}）`;
+}
+
+function suggestCarbsPortionKey(carbsG: number): CarbsPortionKey {
+  if (carbsG < 12) return "none";
+  if (carbsG < 40) return "carbsSmall";
+  if (carbsG < 65) return "carbsMedium";
+  return "carbsLarge";
+}
+
+function suggestProteinPortionKey(proteinG: number): ProteinPortionKey {
+  if (proteinG < 8) return "none";
+  if (proteinG < 22) return "proteinSmall";
+  if (proteinG < 35) return "proteinMedium";
+  return "proteinLarge";
 }
 
 function AddMealPageContent() {
@@ -106,10 +125,12 @@ function AddMealPageContent() {
   );
   const [description, setDescription] = useState("");
   const [imageBase64, setImageBase64] = useState<string | undefined>();
-  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("carbsMedium");
+  /** Off by default — trust AI; only open when fist/palm needs correction. */
+  const [portionOverride, setPortionOverride] = useState(false);
+  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("none");
   const [proteinPortionKey, setProteinPortionKey] =
-    useState<ProteinPortionKey>("proteinMedium");
-  const [hasVeggies, setHasVeggies] = useState(true);
+    useState<ProteinPortionKey>("none");
+  const [hasVeggies, setHasVeggies] = useState(false);
   const [calories, setCalories] = useState(0);
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
@@ -345,7 +366,7 @@ function AddMealPageContent() {
             carbsPortionKey,
             proteinPortionKey,
             hasVeggies,
-            t
+            portionOverride
           );
           const result = await estimateMealNutritionClient({
             description: descForAi,
@@ -363,6 +384,11 @@ function AddMealPageContent() {
           setCarbs(result.macros.carbs);
           setFats(result.macros.fats);
           setNutritionSource("openrouter");
+          // Strip any accidental fist/palm tags from the editable description.
+          if (/[（(]/.test(description)) {
+            const cleaned = mealDescriptionBase(description);
+            if (cleaned && cleaned !== description) setDescription(cleaned);
+          }
         } catch (err) {
           if (!cancelled) {
             setAiEstimateError(
@@ -379,21 +405,18 @@ function AddMealPageContent() {
       cancelled = true;
       clearTimeout(timer);
     };
+    // Portion keys only affect AI when override is on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- macros omitted to avoid re-estimate loops
   }, [
     description,
-    carbsPortionKey,
-    proteinPortionKey,
-    hasVeggies,
+    portionOverride,
+    portionOverride ? carbsPortionKey : "off",
+    portionOverride ? proteinPortionKey : "off",
+    portionOverride ? hasVeggies : "off",
     imageBase64,
     multiFoodMode,
     macrosLockedFromPicker,
     ocrPortionBase,
-    calories,
-    protein,
-    carbs,
-    fats,
-    nutritionSource,
-    searchAdvanced,
     t,
   ]);
 
@@ -460,13 +483,13 @@ function AddMealPageContent() {
 
     const descTrim = description.trim();
     const descForAi = multiFoodMode
-      ? descTrim
+      ? mealDescriptionBase(descTrim)
       : buildMealDescriptionWithPortions(
           descTrim,
           carbsPortionKey,
           proteinPortionKey,
           hasVeggies,
-          t
+          portionOverride
         );
 
     const finalCalories = calories;
@@ -865,77 +888,127 @@ function AddMealPageContent() {
 
         {!multiFoodMode && entryStep === "cooked" ? (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">
-            {t("addMeal.quickPortion", "快速份量估算")}
-          </h2>
-          <p className="text-xs text-zinc-500">
-            {t(
-              "addMeal.quickPortionHint",
-              "選好份量後會由 AI 估算熱量（含外食隱形熱量：湯底、紅油、用油）"
-            )}
-          </p>
+          <div className="space-y-1">
+            <h2 className="font-semibold text-zinc-800">
+              {t("addMeal.quickPortion", "份量調整")}
+            </h2>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              {t(
+                "addMeal.quickPortionHint",
+                "預設信 AI 估算。只有覺得份量唔啱，先用手掌／拳頭改。"
+              )}
+            </p>
+          </div>
+
           {aiEstimating ? (
-            <p className="text-xs text-violet-600 font-medium">
+            <p className="text-xs text-emerald-700 font-medium">
               {t("addMeal.aiEstimating", "AI 估算緊...")}
             </p>
           ) : null}
           {aiEstimateError ? (
             <p className="text-xs text-amber-700">{aiEstimateError}</p>
           ) : null}
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
-              </label>
-              <select
-                value={carbsPortionKey}
-                onChange={(e) => setCarbsPortionKey(e.target.value as CarbsPortionKey)}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {CARBS_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(`addMeal.portions.${key}`, key)}
-                  </option>
-                ))}
-              </select>
+
+          {!portionOverride ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCarbsPortionKey(suggestCarbsPortionKey(carbs));
+                setProteinPortionKey(suggestProteinPortionKey(protein));
+                setPortionOverride(true);
+              }}
+              className={`w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-900 ${btnClass}`}
+            >
+              {t(
+                "addMeal.portionOverrideOpen",
+                "AI 份量唔啱？用手掌／拳頭改"
+              )}
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-amber-900">
+                  {t("addMeal.portionOverrideTitle", "手動份量（手掌／拳頭）")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPortionOverride(false);
+                    setCarbsPortionKey("none");
+                    setProteinPortionKey("none");
+                    setHasVeggies(false);
+                  }}
+                  className={`text-xs font-semibold text-emerald-700 ${btnClass}`}
+                >
+                  {t("addMeal.portionOverrideCancel", "用返 AI")}
+                </button>
+              </div>
+              <p className="text-[11px] text-amber-800/80 leading-relaxed">
+                {t(
+                  "addMeal.portionOverrideHint",
+                  "冇蛋白就揀「無」，唔好隨便揀中掌；冇飯／粉亦揀碳水「無」。"
+                )}
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
+                  </label>
+                  <select
+                    value={carbsPortionKey}
+                    onChange={(e) =>
+                      setCarbsPortionKey(e.target.value as CarbsPortionKey)
+                    }
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    {CARBS_PORTION_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`addMeal.portions.${key}`, key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
+                  </label>
+                  <select
+                    value={proteinPortionKey}
+                    onChange={(e) =>
+                      setProteinPortionKey(e.target.value as ProteinPortionKey)
+                    }
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    {PROTEIN_PORTION_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`addMeal.portions.${key}`, key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.veggies", "蔬菜")}
+                  </label>
+                  <select
+                    value={hasVeggies ? "yes" : "none"}
+                    onChange={(e) => setHasVeggies(e.target.value === "yes")}
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    <option value="none">
+                      {t("addMeal.portions.none", "無 / 冇食 (0)")}
+                    </option>
+                    <option value="yes">{t("common.yes", "有")}</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
-              </label>
-              <select
-                value={proteinPortionKey}
-                onChange={(e) =>
-                  setProteinPortionKey(e.target.value as ProteinPortionKey)
-                }
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {PROTEIN_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(`addMeal.portions.${key}`, key)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.veggies", "蔬菜")}
-              </label>
-              <select
-                value={hasVeggies ? "yes" : "none"}
-                onChange={(e) => setHasVeggies(e.target.value === "yes")}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                <option value="none">{t("addMeal.portions.none", "無 / 冇食 (0)")}</option>
-                <option value="yes">{t("common.yes", "有")}</option>
-              </select>
-            </div>
-          </div>
+          )}
 
           <p className="text-xs text-zinc-500">
             {t(
               "addMeal.autoEstimateHint",
-              "儲存前會由 AI 覆核所有營養數值（有相片會一併分析）"
+              "儲存前會由 AI 覆核營養數值（有相片會一併分析）"
             )}
           </p>
         </section>
