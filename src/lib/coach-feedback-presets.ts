@@ -22,6 +22,11 @@ export const COACH_FEEDBACK_PRESETS: CoachFeedbackPreset[] = [
     message: "蛋白質稍為偏低，下餐可以加多啲肉、蛋或豆製品。",
   },
   {
+    id: "more_carbs",
+    label: "食多啲碳水",
+    message: "碳水稍為偏低，下餐可以加多啲飯、粉、薯仔或全穀物補充能量。",
+  },
+  {
     id: "less_carbs",
     label: "碳水偏高",
     message: "碳水偏高，下次可以少啲飯或麵，多啲菜。",

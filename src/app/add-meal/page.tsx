@@ -742,7 +742,7 @@ function AddMealPageContent() {
         {entryStep === "cooked" ? (
         <FoodSearchEngine
           onAddToMeal={(item) => {
-            setDescription(item.description);
+            setDescription(mealDescriptionBase(item.description));
             setCalories(item.calories);
             setProtein(item.protein);
             setCarbs(item.carbs);
@@ -753,6 +753,10 @@ function AddMealPageContent() {
             setProNutrition(Boolean(item.proNutrition));
             setNutritionSource(item.nutritionSource);
             setOcrPortionBase(null);
+            setPortionOverride(false);
+            setCarbsPortionKey(suggestCarbsPortionKey(item.carbs));
+            setProteinPortionKey(suggestProteinPortionKey(item.protein));
+            setHasVeggies(false);
             clearMultiFoodDetection();
           }}
         />
@@ -799,6 +803,10 @@ function AddMealPageContent() {
                 setProNutrition(false);
                 setNutritionSource(undefined);
                 setOcrPortionBase(null);
+                setPortionOverride(false);
+                setCarbsPortionKey("none");
+                setProteinPortionKey("none");
+                setHasVeggies(false);
                 clearMultiFoodDetection();
               }}
               placeholder={t(
