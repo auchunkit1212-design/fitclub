@@ -34,7 +34,17 @@ export function PwaShell() {
       navigator.serviceWorker
         .register("/sw.js")
         .then((registration) => {
+          // Activate updated SW ASAP so Safari doesn't keep a broken respondWith handler.
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
           registration.update().catch(() => undefined);
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            // One reload after SW takeover is enough to clear null-response failures.
+            if (sessionStorage.getItem("sw-reloaded") === "1") return;
+            sessionStorage.setItem("sw-reloaded", "1");
+            window.location.reload();
+          });
         })
         .catch(() => {
           // Service worker registration can fail on insecure contexts
