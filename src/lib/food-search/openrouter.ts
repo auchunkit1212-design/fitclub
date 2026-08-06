@@ -1,4 +1,5 @@
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
+import { getAppUrl } from "@/lib/site-url";
 import type { FoodSearchItem } from "@/lib/types";
 import {
   FoodSearchError,
@@ -59,11 +60,7 @@ export function getOpenRouterKeyHint(): {
 }
 
 export function getOpenRouterReferer(): string {
-  return (
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk"
-  );
+  return getAppUrl();
 }
 
 function sanitizeOpenRouterDetail(detail: string): string {

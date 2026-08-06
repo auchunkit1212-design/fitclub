@@ -3,6 +3,7 @@ import {
   isOpenRouterConfigured,
 } from "@/lib/food-search/openrouter";
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
+import { getAppUrl } from "@/lib/site-url";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -319,10 +320,7 @@ export async function generateCoachMealSuggestion(
 
   const apiKey = process.env.OPENROUTER_API_KEY!.trim();
   const model = getOpenRouterModel();
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk";
+  const referer = getAppUrl();
 
   const avoidTitles = (input.avoidTitles ?? [])
     .map((t) => t.trim())

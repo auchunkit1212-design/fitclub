@@ -8,6 +8,7 @@ import {
   isOpenRouterConfigured,
 } from "@/lib/food-search/openrouter";
 import { getLanguageInstruction, type AppLanguage } from "@/lib/i18n";
+import { getAppUrl } from "@/lib/site-url";
 import type { MealLog } from "@/lib/types";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -49,14 +50,10 @@ const MEAL_COMMENT_SYSTEM_PROMPT = `你是香港健身營養教練。根據【�
 必須點名該餐的 description，評論要與其卡路里／蛋白質數字吻合，禁止虛構其他食物。`;
 
 function getOpenRouterHeaders(apiKey: string): Record<string, string> {
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk";
   return {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": referer,
+    "HTTP-Referer": getAppUrl(),
     "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
   };
 }

@@ -6,6 +6,7 @@ import {
   normalizeImageBase64,
 } from "@/lib/ocr-nutrition";
 import { isOpenRouterConfigured } from "@/lib/food-search/openrouter";
+import { getAppUrl } from "@/lib/site-url";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -51,14 +52,10 @@ function readMacro(value: unknown): number {
 }
 
 function getOpenRouterHeaders(apiKey: string): Record<string, string> {
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "https://fitclub.hk";
   return {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": referer,
+    "HTTP-Referer": getAppUrl(),
     "X-Title": process.env.OPENROUTER_APP_TITLE?.trim() || "Nutrition Coach",
   };
 }

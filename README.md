@@ -4,7 +4,8 @@
 
 Next.js 14 App Router · Tailwind CSS · Supabase · PWA · Web Push · AI（OpenRouter）
 
-**正式站範例：** https://fitclub-pearl.vercel.app
+**正式站：** https://fitclub-pearl.vercel.app  
+（`fitclub.hk` 目前無 DNS／NXDOMAIN，請用上面 Vercel 網址）
 
 ## 功能概覽
 
