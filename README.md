@@ -7,6 +7,8 @@ Next.js 14 App Router · Tailwind CSS · Supabase · PWA · Web Push · AI（Ope
 **正式站：** https://fitclub-pearl.vercel.app  
 （`fitclub.hk` 目前無 DNS／NXDOMAIN，請用上面 Vercel 網址）
 
+> **部分 Wi‑Fi 開唔到 `*.vercel.app`？** 關 Wi‑Fi 用流動數據通常得。長遠請綁定自訂域名（例如 `fitclub.hk`），見 [docs/CUSTOM_DOMAIN.md](docs/CUSTOM_DOMAIN.md)。
+
 ## 功能概覽
 
 ### 學員端
