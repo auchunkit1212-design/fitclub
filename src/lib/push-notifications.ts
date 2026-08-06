@@ -57,6 +57,7 @@ async function ensureServiceWorkerRegistration(): Promise<ServiceWorkerRegistrat
   if (!registration) {
     registration = await navigator.serviceWorker.register(SW_URL, {
       scope: SW_SCOPE,
+      updateViaCache: "none",
     });
   }
 

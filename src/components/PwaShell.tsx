@@ -30,27 +30,81 @@ export function PwaShell() {
   };
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((registration) => {
-          // Activate updated SW ASAP so Safari doesn't keep a broken respondWith handler.
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          }
-          registration.update().catch(() => undefined);
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            // One reload after SW takeover is enough to clear null-response failures.
-            if (sessionStorage.getItem("sw-reloaded") === "1") return;
-            sessionStorage.setItem("sw-reloaded", "1");
-            window.location.reload();
-          });
-        })
-        .catch(() => {
-          // Service worker registration can fail on insecure contexts
-        });
+    let cancelled = false;
+    let removeVisibilityListener: (() => void) | undefined;
+
+    if (!("serviceWorker" in navigator)) {
+      return undefined;
     }
 
+    const askWaitingToActivate = (
+      registration: ServiceWorkerRegistration
+    ) => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        registration.waiting.postMessage({ type: "CLEAR_CACHES" });
+      }
+    };
+
+    const onControllerChange = () => {
+      // One reload after SW takeover clears stale HTML (old header without「選單」).
+      if (sessionStorage.getItem("sw-reloaded-v12") === "1") return;
+      sessionStorage.setItem("sw-reloaded-v12", "1");
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      onControllerChange
+    );
+
+    navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((registration) => {
+        if (cancelled) return;
+        // Activate updated SW ASAP so Safari doesn't keep a broken / stale handler.
+        askWaitingToActivate(registration);
+        registration.update().catch(() => undefined);
+
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", () => {
+            if (
+              worker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              worker.postMessage({ type: "SKIP_WAITING" });
+              worker.postMessage({ type: "CLEAR_CACHES" });
+            }
+          });
+        });
+
+        // Re-check for updates when app returns to foreground (common on iPhone PWA).
+        const onVisible = () => {
+          if (document.visibilityState === "visible") {
+            registration.update().catch(() => undefined);
+          }
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        removeVisibilityListener = () => {
+          document.removeEventListener("visibilitychange", onVisible);
+        };
+      })
+      .catch(() => {
+        // Service worker registration can fail on insecure contexts
+      });
+
+    return () => {
+      cancelled = true;
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        onControllerChange
+      );
+      removeVisibilityListener?.();
+    };
+  }, []);
+
+  useEffect(() => {
     const standalone = isStandaloneDisplay();
     if (standalone) {
       setInstalled(true);

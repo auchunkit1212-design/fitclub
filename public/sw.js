@@ -1,5 +1,5 @@
-const CACHE_VERSION = "nutrition-coach-pwa-v11";
-const STATIC_CACHE = "nutrition-coach-static-v11";
+const CACHE_VERSION = "nutrition-coach-pwa-v12";
+const STATIC_CACHE = "nutrition-coach-static-v12";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
 const PRECACHE_URLS = ["/gorilla-logo.png", "/manifest.json"];
@@ -17,6 +17,11 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+    );
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -26,7 +31,9 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== STATIC_CACHE && key !== CACHE_VERSION)
+            // Drop every cache that is not the current static cache.
+            // Especially drop any old HTML/page caches (nutrition-coach-pwa-v*).
+            .filter((key) => key !== STATIC_CACHE)
             .map((key) => caches.delete(key))
         )
       )
@@ -47,8 +54,7 @@ function isStaticAsset(pathname) {
     pathname.startsWith("/_next/static/") ||
     pathname === "/gorilla-logo.png" ||
     pathname === "/logo.png" ||
-    pathname === "/manifest.json" ||
-    pathname === "/sw.js"
+    pathname === "/manifest.json"
   );
 }
 
@@ -77,11 +83,24 @@ async function networkFirst(request, cacheName, offlineMessage) {
   }
 }
 
+/** HTML 只行網絡，唔快取 — 避免主畫面開到舊版（冇「選單」） */
+async function networkOnlyNavigation(request, offlineMessage) {
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    return response || offlineResponse(offlineMessage);
+  } catch {
+    return offlineResponse(offlineMessage);
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // 唔攔截 SW 本身，等瀏覽器正常檢查更新
+  if (url.pathname === "/sw.js") return;
 
   // API / RSC / data：唔攔截，交返瀏覽器，避免 SW 令載入失敗
   if (
@@ -92,19 +111,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML / 頁面導航：網絡優先，避免主畫面開到舊版空白頁
+  // HTML / 頁面導航：只行網絡，唔用舊快取
   if (isNavigationRequest(event.request)) {
     event.respondWith(
-      networkFirst(
+      networkOnlyNavigation(
         event.request,
-        CACHE_VERSION,
         "暫時無法連線，請檢查網絡後用主畫面圖示重新開啟。"
       )
     );
     return;
   }
 
-  // Next 靜態資源：網絡優先，避免 PWA 長期使用舊版 JS
+  // Next 靜態資源：網絡優先（hash 檔名，舊 chunk 唔會被新 HTML 引用）
   if (isStaticAsset(url.pathname)) {
     event.respondWith(
       networkFirst(

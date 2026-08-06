@@ -165,7 +165,29 @@ export default function CoachStudentsPage() {
   };
 
   if (loading) {
-    return <LoadingView message="載入學員資料中..." logoUrl={brand.logo} />;
+    return (
+      <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
+        <PageHeader
+          title="學員"
+          subtitle={brand.gymName}
+          variant="dark"
+          leftSlot={
+            <CoachStudentsSectionPicker
+              activeSection={section}
+              onSectionChange={setSection}
+              unreviewedCount={0}
+              isCoach={true}
+              onBack={() => router.push("/")}
+            />
+          }
+        />
+        <LoadingView
+          variant="section"
+          message="載入學員資料中..."
+          logoUrl={brand.logo}
+        />
+      </div>
+    );
   }
 
   const hasStudents = students.length > 0;
