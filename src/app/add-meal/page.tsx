@@ -496,7 +496,9 @@ function AddMealPageContent() {
     const finalProtein = protein;
     const finalCarbs = carbs;
     const finalFats = fats;
-    const verifySource = nutritionSource ?? "openrouter";
+    // 冇明確來源但已有數值 → 當手動確認，避免 AI 覆核改名／改數
+    const verifySource =
+      nutritionSource ?? (calories > 0 ? "manual" : "openrouter");
 
     let imageToUpload = imageBase64;
     if (imageBase64) {
@@ -1112,7 +1114,12 @@ function AddMealPageContent() {
                 <input
                   type="number"
                   value={val}
-                  onChange={(e) => setter(Number(e.target.value))}
+                  onChange={(e) => {
+                    setter(Number(e.target.value));
+                    setNutritionSource("manual");
+                    setMacrosFromSearch(false);
+                    setMacrosLockedFromPicker(false);
+                  }}
                   className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
                 />
               </div>
