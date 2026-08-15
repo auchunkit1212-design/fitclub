@@ -26,6 +26,11 @@ yarn-error.log*
 # env files
 .env*.local
 
+# what-to-eat nested app
+/what-to-eat/node_modules
+/what-to-eat/.next
+/what-to-eat/out
+
 # typescript
 *.tsbuildinfo
 .vercel
