@@ -97,8 +97,20 @@ function parseVerifyJson(text: string, fallbackName: string): {
   };
 }
 
-function mergeVerifiedDescription(original: string, aiName: string): string {
+/** 學員已明確確認嘅來源：唔好改寫食物名／亂覆寫數值 */
+function isUserTrustedSource(source?: MealBaselineSource): boolean {
+  return source === "manual" || source === "ocr";
+}
+
+function mergeVerifiedDescription(
+  original: string,
+  aiName: string,
+  baselineSource?: MealBaselineSource
+): string {
   const trimmed = original.trim();
+  // 手動／OCR：永遠保留學員描述，避免 Vision 誤判改成「白飯」等
+  if (isUserTrustedSource(baselineSource)) return trimmed;
+
   const portionMatch = trimmed.match(/^(.+?)（(.+)）$/);
   const name = aiName.trim();
   if (!name) return trimmed;
@@ -116,6 +128,8 @@ function baselineSourceLabel(source?: MealBaselineSource): string {
       return "AI 聯想";
     case "ocr":
       return "標籤 OCR";
+    case "manual":
+      return "學員手動確認";
     case "rules":
       return "本地規則估算";
     default:
@@ -129,19 +143,31 @@ function buildVerifyPrompt(input: MealVerifyInput): string {
   const portionBlock = buildPortionGuidanceBlock(portionHints);
   const baseline = input.baseline;
   const sourceLabel = baselineSourceLabel(input.baselineSource);
+  const trusted = isUserTrustedSource(input.baselineSource);
 
   let baselineBlock =
     "目前尚無參考數值，請【完全依描述同相片】用 AI 專業估算，不可憑空假設未提及的食物";
   if (baseline && baseline.calories > 0) {
-    baselineBlock = `${sourceLabel}參考：${baseline.calories} kcal，蛋白 ${baseline.protein}g，碳水 ${baseline.carbs}g，脂肪 ${baseline.fats}g（僅作輔助，你必須獨立判斷是否正確）`;
-    if (input.baselineSource === "local_db") {
+    if (trusted) {
+      baselineBlock = `${sourceLabel}數值（最高優先，必須尊重）：${baseline.calories} kcal，蛋白 ${baseline.protein}g，碳水 ${baseline.carbs}g，脂肪 ${baseline.fats}g。`;
       baselineBlock +=
-        "（本地資料庫可能與實際品牌、份量或烹調方式不符，請務必核实）";
+        "禁止因為相片相似就改寫成其他食物（尤其禁止擅自改成白飯／米飯）。food_name 必須沿用學員描述中的食物名稱。macros 以學員輸入為準；只有熱量與 P×4+C×4+F×9 嚴重不符（誤差 >25%）時先可微調 macros，並在 note 說明。";
+    } else {
+      baselineBlock = `${sourceLabel}參考：${baseline.calories} kcal，蛋白 ${baseline.protein}g，碳水 ${baseline.carbs}g，脂肪 ${baseline.fats}g（僅作輔助，你必須獨立判斷是否正確）`;
+      if (input.baselineSource === "local_db") {
+        baselineBlock +=
+          "（本地資料庫可能與實際品牌、份量或烹調方式不符，請務必核实）";
+      }
     }
   }
-  baselineBlock += input.imageBase64
-    ? "；請結合相片確認食物種類、每樣份量、是否與描述一致"
-    : "；描述括號內的拳頭／手掌份量為學員實際進食量，優先於菜式名稱的默認整碗份量";
+  if (!trusted) {
+    baselineBlock += input.imageBase64
+      ? "；請結合相片確認食物種類、每樣份量、是否與描述一致"
+      : "；描述括號內的拳頭／手掌份量為學員實際進食量，優先於菜式名稱的默認整碗份量";
+  } else if (input.imageBase64) {
+    baselineBlock +=
+      "；有相片時只可用來輔助檢查份量／油脂，不可推翻學員已確認的食物名稱";
+  }
 
   const advanced = input.advanced;
   const advancedBlock =
@@ -150,13 +176,26 @@ function buildVerifyPrompt(input: MealVerifyInput): string {
       ? `\n參考微量營養：鈉 ${advanced.sodiumMg ?? 0} mg，糖 ${advanced.sugarG ?? 0} g，纖維 ${advanced.fiberG ?? 0} g，飽和脂肪 ${advanced.saturatedFatG ?? 0} g。`
       : "";
 
+  const actionLine = trusted
+    ? "請輸出 JSON。food_name 必須等於學員描述的食物名（可去掉份量括號），macros 優先用學員數值。"
+    : "請輸出整餐最合理的總營養（整數）。若參考值與描述/相片明顯不符，必須修正。";
+
   return `學員飲食描述：「${description}」
 ${baselineBlock}${portionBlock}${advancedBlock}
 
-請輸出整餐最合理的總營養（整數）。若參考值與描述/相片明顯不符，必須修正。
-${portionBlock ? "有學員份量標記時：蛋白質只計對應手掌大小的肉量，碳水只計對應拳頭大小的澱粉，不可按整碗拉麵／整碟餸默認值。" : ""}
+${actionLine}
+${portionBlock && !trusted ? "有學員份量標記時：蛋白質只計對應手掌大小的肉量，碳水只計對應拳頭大小的澱粉，不可按整碗拉麵／整碟餸默認值。" : ""}
 只回傳 JSON：
 {"food_name":"食物名稱","calories":數字,"protein":數字,"carbs":數字,"fat":數字,"fiber_g":數字,"sugar_g":數字,"saturated_fat_g":數字,"sodium_mg":數字,"cholesterol_mg":數字,"note":"一句話說明修正原因（可選）"}`;
+}
+
+/** 熱量同三大營養素公式是否嚴重不符（>25%） */
+function macrosFormulaSeverelyInconsistent(macros: MacroEstimate): boolean {
+  if (macros.calories <= 0) return true;
+  const fromMacros = macros.protein * 4 + macros.carbs * 4 + macros.fats * 9;
+  if (fromMacros <= 0) return true;
+  const diff = Math.abs(fromMacros - macros.calories) / macros.calories;
+  return diff > 0.25;
 }
 
 function macrosAdjusted(before: MacroEstimate | undefined, after: MacroEstimate): boolean {
@@ -279,20 +318,61 @@ async function requestOpenRouterVerify(
   };
 
   const portionHints = parsePortionHintsFromDescription(input.description);
-  const portionConstrained = constrainMacrosToPortionHints(macros, portionHints);
-  macros = portionConstrained.macros;
+  let portionNote: string | undefined;
+  let portionAdjusted = false;
 
-  const notes = [parsed.note, portionConstrained.note].filter(Boolean);
+  // 手動／OCR：預設信任學員 macros；只有公式嚴重不符先接受 AI 微調
+  if (
+    isUserTrustedSource(input.baselineSource) &&
+    input.baseline &&
+    input.baseline.calories > 0
+  ) {
+    const userOk = !macrosFormulaSeverelyInconsistent(input.baseline);
+    const aiWorseOrSimilar =
+      macrosFormulaSeverelyInconsistent(macros) ||
+      Math.abs(macros.calories - input.baseline.calories) <
+        Math.max(15, input.baseline.calories * 0.05);
+    if (userOk || aiWorseOrSimilar) {
+      macros = { ...input.baseline };
+    } else {
+      const portionConstrained = constrainMacrosToPortionHints(
+        macros,
+        portionHints
+      );
+      macros = portionConstrained.macros;
+      portionNote = portionConstrained.note;
+      portionAdjusted = portionConstrained.adjusted;
+    }
+  } else {
+    const portionConstrained = constrainMacrosToPortionHints(
+      macros,
+      portionHints
+    );
+    macros = portionConstrained.macros;
+    portionNote = portionConstrained.note;
+    portionAdjusted = portionConstrained.adjusted;
+  }
+
+  const notes = [parsed.note, portionNote].filter(Boolean);
   const combinedNote = notes.length > 0 ? notes.join("；") : undefined;
+  const description = mergeVerifiedDescription(
+    input.description,
+    parsed.food_name,
+    input.baselineSource
+  );
 
   return {
     macros,
-    advanced: parsed.advanced,
-    description: mergeVerifiedDescription(input.description, parsed.food_name),
+    advanced: isUserTrustedSource(input.baselineSource)
+      ? input.advanced ?? parsed.advanced
+      : parsed.advanced,
+    description,
     source: useVision ? "openrouter_vision" : "openrouter",
     note: combinedNote,
     adjusted:
-      macrosAdjusted(input.baseline, macros) || portionConstrained.adjusted,
+      macrosAdjusted(input.baseline, macros) ||
+      portionAdjusted ||
+      description.trim() !== input.description.trim(),
   };
 }
 
@@ -324,6 +404,23 @@ export async function estimateMealNutritionWithAi(
   const description = input.description.trim();
   if (!description) {
     throw new MealAiEstimateError("請填寫食物描述", 400);
+  }
+
+  // 學員已手動／OCR 確認且公式合理：直接採用，唔再俾 Vision 改成白飯
+  if (
+    isUserTrustedSource(input.baselineSource) &&
+    input.baseline &&
+    input.baseline.calories > 0 &&
+    !macrosFormulaSeverelyInconsistent(input.baseline)
+  ) {
+    return {
+      macros: input.baseline,
+      advanced: input.advanced,
+      description,
+      source: "baseline",
+      note: undefined,
+      adjusted: false,
+    };
   }
 
   const image = input.imageBase64?.trim();

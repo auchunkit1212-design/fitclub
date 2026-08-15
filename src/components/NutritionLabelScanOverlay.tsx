@@ -110,6 +110,8 @@ export function NutritionLabelScanOverlay({
 
       setLabelResult(data);
       setStep("barcode");
+      // 即時帶入表單，唔使等條碼先見到標籤數值
+      onSuccess(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : blurMessage);
     } finally {

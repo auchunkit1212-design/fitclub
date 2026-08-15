@@ -245,7 +245,10 @@ export function FoodSearchEngine({
         },
         nutritionSource: base.nutritionSource,
       });
-      setQuery(description);
+      // OCR 結果唔寫入搜尋框，避免 AI 聯想蓋過標籤數值
+      if (base.nutritionSource !== "ocr") {
+        setQuery(description);
+      }
       if (base.itemMeta) {
         setSelectedItem({
           ...base.itemMeta,
@@ -343,11 +346,16 @@ export function FoodSearchEngine({
         v.servingWeightG > 0
           ? `約 ${v.servingWeightG}g`
           : t("nutritionOcr.perServing", "每份"),
-      source: "openrouter",
+      // 標籤／條碼結果唔好標成 AI 聯想，避免後續當成 openrouter 覆寫
+      source: "local",
       sodiumMg: v.sodium > 0 ? v.sodium : undefined,
       sugarG: v.sugar > 0 ? v.sugar : undefined,
     };
     beginPortionSelection(item, productName, v.sodium > 0 || v.sugar > 0);
+    // 唔好把產品名寫入搜尋框，避免觸發 AI 食物搜尋蓋過 OCR
+    setQuery("");
+    setDropdownOpen(false);
+    setResults([]);
   };
 
   const trimmedQuery = query.trim();
