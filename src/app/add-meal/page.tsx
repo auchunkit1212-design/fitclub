@@ -266,6 +266,7 @@ function AddMealPageContent() {
     setCarbs(v.carbs);
     setFats(v.fat);
     setMacrosFromSearch(true);
+    setMacrosLockedFromPicker(true);
     setProNutrition(v.sodium > 0 || v.sugar > 0);
     setNutritionSource("ocr");
     setOcrOverlayOpen(false);
@@ -349,6 +350,8 @@ function AddMealPageContent() {
       multiFoodMode ||
       macrosLockedFromPicker ||
       ocrPortionBase ||
+      nutritionSource === "ocr" ||
+      nutritionSource === "manual" ||
       !description.trim() ||
       description.trim().length < 2
     ) {
@@ -417,6 +420,7 @@ function AddMealPageContent() {
     multiFoodMode,
     macrosLockedFromPicker,
     ocrPortionBase,
+    nutritionSource,
     t,
   ]);
 
@@ -750,11 +754,23 @@ function AddMealPageContent() {
             setCarbs(item.carbs);
             setFats(item.fats);
             setMacrosFromSearch(item.fromSearch);
-            setMacrosLockedFromPicker(item.fromSearch);
+            setMacrosLockedFromPicker(
+              item.fromSearch || item.nutritionSource === "ocr"
+            );
             setSearchAdvanced(item.advanced);
             setProNutrition(Boolean(item.proNutrition));
             setNutritionSource(item.nutritionSource);
-            setOcrPortionBase(null);
+            if (item.nutritionSource === "ocr" && item.portionBase) {
+              setOcrPortionBase({
+                productName: item.portionBase.productName,
+                macros: item.portionBase.macros,
+                advanced: item.portionBase.advanced,
+                baseWeightG: item.portionBase.baseWeightG,
+                proNutrition: item.portionBase.proNutrition,
+              });
+            } else {
+              setOcrPortionBase(null);
+            }
             setPortionOverride(false);
             setCarbsPortionKey(suggestCarbsPortionKey(item.carbs));
             setProteinPortionKey(suggestProteinPortionKey(item.protein));
