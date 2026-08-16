@@ -473,7 +473,11 @@ export async function fetchMealLogs(options?: {
 }
 
 export async function insertMealLog(
-  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string },
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & {
+    email: string;
+    /** Optional ISO created_at override (backdated meal). */
+    createdAt?: string;
+  },
   options?: { useServiceRole?: boolean }
 ): Promise<MealLog> {
   const client = options?.useServiceRole
@@ -481,7 +485,24 @@ export async function insertMealLog(
     : supabase;
 
   const email = log.email.trim().toLowerCase();
+  const createdAtOverride = log.createdAt?.trim() || undefined;
+  const baseRow: Record<string, unknown> = {
+    email,
+    meal_type: log.mealType,
+    description: log.description,
+    calories: log.calories,
+    protein: log.protein,
+    carbs: log.carbs,
+    fats: log.fats,
+    image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+    image_url: log.imageUrl ?? null,
+  };
+  if (createdAtOverride) {
+    baseRow.created_at = createdAtOverride;
+  }
+
   const attempts: Record<string, unknown>[] = [
+    { ...baseRow },
     {
       email,
       meal_type: log.mealType,
@@ -491,23 +512,14 @@ export async function insertMealLog(
       carbs: log.carbs,
       fats: log.fats,
       image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-      image_url: log.imageUrl ?? null,
+      ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
     },
     {
       email,
       meal_type: log.mealType,
       description: log.description,
       calories: log.calories,
-      protein: log.protein,
-      carbs: log.carbs,
-      fats: log.fats,
-      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-    },
-    {
-      email,
-      meal_type: log.mealType,
-      description: log.description,
-      calories: log.calories,
+      ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
     },
   ];
 

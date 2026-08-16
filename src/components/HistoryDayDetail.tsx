@@ -69,10 +69,13 @@ export function HistoryDayDetailPanel({
   detail,
   loading,
   onSelectMeal,
+  onAddMealForDate,
 }: {
   detail: DayDetail | null;
   loading: boolean;
   onSelectMeal?: (meal: MealLog) => void;
+  /** Open add-meal for this day (backfill). */
+  onAddMealForDate?: (date: string) => void;
 }) {
   const { t } = useI18n();
 
@@ -102,6 +105,16 @@ export function HistoryDayDetailPanel({
     detail.aiReviews.length > 0 ||
     stickerReactions.length > 0;
 
+  const addMealButton = onAddMealForDate ? (
+    <button
+      type="button"
+      onClick={() => onAddMealForDate(detail.date)}
+      className="mt-4 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white active:scale-95 active:opacity-80 transition-all"
+    >
+      {t("history.day.addMeal", "補記呢日飲食")}
+    </button>
+  ) : null;
+
   if (!hasContent) {
     return (
       <div className={`${SOFT_CARD} p-6 text-center`}>
@@ -111,6 +124,7 @@ export function HistoryDayDetailPanel({
         <p className="text-xs text-gray-400 mt-1">
           {detail.date}
         </p>
+        {addMealButton}
       </div>
     );
   }
@@ -118,16 +132,29 @@ export function HistoryDayDetailPanel({
   return (
     <div className={`${SOFT_CARD} p-5 space-y-5`}>
       <div>
-        <h3 className="text-base font-bold text-gray-900">
-          {t("history.day.title", "{date} 詳情", { date: detail.date })}
-        </h3>
-        <p className="text-xs text-gray-500 mt-0.5">
-          {t("history.day.mealCount", "共 {count} 餐", {
-            count: detail.meals.length,
-          })}
-          {" · "}
-          {detail.totals.calories} kcal
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-gray-900">
+              {t("history.day.title", "{date} 詳情", { date: detail.date })}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {t("history.day.mealCount", "共 {count} 餐", {
+                count: detail.meals.length,
+              })}
+              {" · "}
+              {detail.totals.calories} kcal
+            </p>
+          </div>
+          {onAddMealForDate ? (
+            <button
+              type="button"
+              onClick={() => onAddMealForDate(detail.date)}
+              className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white active:scale-95 active:opacity-80 transition-all"
+            >
+              {t("history.day.addMeal", "補記呢日飲食")}
+            </button>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2 mt-3">
           <span
             className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.overall]}`}

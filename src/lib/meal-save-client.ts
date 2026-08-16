@@ -16,6 +16,8 @@ export type SaveMealPayload = {
   imageBase64?: string;
   nutritionSource?: MealBaselineSource;
   advanced?: FoodAdvancedNutrients;
+  /** Optional YYYY-MM-DD to backfill a past day */
+  date?: string;
 };
 
 export type SaveMealResult = {

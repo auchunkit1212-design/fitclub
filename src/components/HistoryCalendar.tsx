@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   addMonths,
   eachDayOfInterval,
@@ -73,11 +74,15 @@ function historyStudentQuery(studentEmail?: string): string {
 export function HistoryCalendar({
   embedded = false,
   studentEmail,
+  onSelectedDateChange,
 }: {
   embedded?: boolean;
   /** When set (coach view), loads that student's nutrition history. */
   studentEmail?: string;
+  /** Notifies parent when the selected calendar day changes (for FAB backfill). */
+  onSelectedDateChange?: (date: string | null) => void;
 }) {
+  const router = useRouter();
   const { t, lang } = useI18n();
   const dateLocale = localeForTag(lang);
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -88,6 +93,15 @@ export function HistoryCalendar({
   const [dayDetail, setDayDetail] = useState<HistoryDayDetail | null>(null);
   const [dayLoading, setDayLoading] = useState(false);
   const [selectedMealLog, setSelectedMealLog] = useState<MealLog | null>(null);
+
+  const canBackfill = !studentEmail;
+
+  const goAddMealForDate = useCallback(
+    (date: string) => {
+      router.push(`/add-meal?date=${encodeURIComponent(date)}`);
+    },
+    [router]
+  );
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth() + 1;
@@ -116,6 +130,10 @@ export function HistoryCalendar({
     setDayDetail(null);
     void loadMonth();
   }, [loadMonth]);
+
+  useEffect(() => {
+    onSelectedDateChange?.(selectedDate);
+  }, [selectedDate, onSelectedDateChange]);
 
   const loadDay = useCallback(async (date: string) => {
     setDayLoading(true);
@@ -315,6 +333,7 @@ export function HistoryCalendar({
         detail={dayDetail}
         loading={dayLoading}
         onSelectMeal={setSelectedMealLog}
+        onAddMealForDate={canBackfill ? goAddMealForDate : undefined}
       />
 
       {selectedMealLog && (
