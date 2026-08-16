@@ -197,7 +197,10 @@
     "portionOverrideOpen": "AI portion wrong? Adjust with palm/fist",
     "portionOverrideTitle": "Manual portion (palm / fist)",
     "portionOverrideCancel": "Use AI again",
-    "portionOverrideHint": "No protein? Choose None — don’t pick medium palm. No rice/noodles? Choose carbs None."
+    "portionOverrideHint": "No protein? Choose None — don’t pick medium palm. No rice/noodles? Choose carbs None.",
+    "logDate": "Log date",
+    "logDateTodayHint": "Defaults to today. Change the date to backfill a missed meal.",
+    "logDateBackfillHint": "Backfilling {date} (won't count toward today's streak)"
   },
   "foodSearch": {
     "title": "Food Search",
@@ -680,7 +683,8 @@
       "mealCount": "{count} meals",
       "macros": "P / C / F progress",
       "meals": "Meals",
-      "aiReviews": "Gorilla AI reviews"
+      "aiReviews": "Gorilla AI reviews",
+      "addMeal": "Add meal for this day"
     }
   },
   "appGuide": {

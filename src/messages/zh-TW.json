@@ -197,7 +197,10 @@
     "portionOverrideOpen": "AI 份量不對？用手掌／拳頭改",
     "portionOverrideTitle": "手動份量（手掌／拳頭）",
     "portionOverrideCancel": "改回 AI",
-    "portionOverrideHint": "沒有蛋白就選「無」，不要隨便選中掌；沒有飯／粉也請選碳水「無」。"
+    "portionOverrideHint": "沒有蛋白就選「無」，不要隨便選中掌；沒有飯／粉也請選碳水「無」。",
+    "logDate": "記錄日期",
+    "logDateTodayHint": "預設今天。漏記可以改日子補記。",
+    "logDateBackfillHint": "補記 {date} 的飲食（不會計入今日 streak）"
   },
   "foodSearch": {
     "title": "食物搜尋引擎",
@@ -680,7 +683,8 @@
       "mealCount": "共 {count} 餐",
       "macros": "P / C / F 達成率",
       "meals": "飲食清單",
-      "aiReviews": "大猩猩 AI 點評"
+      "aiReviews": "大猩猩 AI 點評",
+      "addMeal": "補記這天飲食"
     }
   },
   "appGuide": {

@@ -55,6 +55,11 @@ import { getMealLogs, getOwnMealLogs, isToday } from "@/lib/storage";
 import { detectMealFoodsFromPhoto } from "@/lib/meal-photo-detect-client";
 import type { DetectedMealFood } from "@/lib/meal-photo-detect";
 import { saveMealViaApi } from "@/lib/meal-save-client";
+import {
+  MEAL_LOG_MAX_BACKDATE_DAYS,
+  mealLogTodayKey,
+  validateMealLogDate,
+} from "@/lib/meal-log-date";
 import type {
   FoodAdvancedNutrients,
   MealLog,
@@ -114,7 +119,12 @@ function AddMealPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fromCoach = searchParams.get("from") === "coach";
   const modeParam = searchParams.get("mode");
+  const dateParam = searchParams.get("date");
 
+  const [logDate, setLogDate] = useState(() => {
+    const checked = validateMealLogDate(dateParam ?? undefined);
+    return checked.ok ? checked.dateKey : mealLogTodayKey();
+  });
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
   const [entryStep, setEntryStep] = useState<"select" | "cooked" | "packaged">(
     () =>
@@ -546,6 +556,7 @@ function AddMealPageContent() {
       protein: finalProtein,
       carbs: finalCarbs,
       fats: finalFats,
+      date: logDate,
     };
 
     const finishAfterSave = async (
@@ -612,7 +623,11 @@ function AddMealPageContent() {
         );
       }
 
-      const homePath = fromCoach ? "/coach" : "/";
+      const homePath = fromCoach
+        ? "/coach"
+        : logDate !== mealLogTodayKey()
+          ? "/history"
+          : "/";
       router.push(shareToCommunity ? "/community" : homePath);
     } catch (err) {
       console.error("[add-meal] save failed", err);
@@ -790,6 +805,37 @@ function AddMealPageContent() {
         )}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
+              {t("addMeal.logDate", "記錄日期")}
+            </label>
+            <input
+              type="date"
+              value={logDate}
+              max={mealLogTodayKey()}
+              min={(() => {
+                const d = new Date(`${mealLogTodayKey()}T12:00:00Z`);
+                d.setUTCDate(d.getUTCDate() - MEAL_LOG_MAX_BACKDATE_DAYS);
+                return d.toISOString().slice(0, 10);
+              })()}
+              onChange={(e) => {
+                const next = e.target.value;
+                const checked = validateMealLogDate(next);
+                if (checked.ok) setLogDate(checked.dateKey);
+              }}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base bg-white"
+            />
+            <p className="mt-1.5 text-xs text-zinc-500">
+              {logDate === mealLogTodayKey()
+                ? t("addMeal.logDateTodayHint", "預設今日。漏咗可以改日子補記。")
+                : t(
+                    "addMeal.logDateBackfillHint",
+                    "補記 {date} 嘅飲食（唔會計入今日 streak）",
+                    { date: logDate }
+                  )}
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
               {t("addMeal.mealType", "餐別")}

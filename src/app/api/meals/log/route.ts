@@ -18,6 +18,7 @@ import {
   verifyMealNutrition,
   type MealBaselineSource,
 } from "@/lib/meal-ai-verify";
+import { validateMealLogDate } from "@/lib/meal-log-date";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
     imageUrl?: string;
     imageBase64?: string;
     nutritionSource?: MealBaselineSource;
+    /** Optional YYYY-MM-DD — backfill a past day */
+    date?: string;
     calories: number;
     protein: number;
     carbs: number;
@@ -67,6 +70,11 @@ export async function POST(request: Request) {
 
   if (!body.description?.trim()) {
     return NextResponse.json({ error: "請填寫食物描述" }, { status: 400 });
+  }
+
+  const dateCheck = validateMealLogDate(body.date);
+  if (!dateCheck.ok) {
+    return NextResponse.json({ error: dateCheck.error }, { status: 400 });
   }
 
   try {
@@ -95,6 +103,7 @@ export async function POST(request: Request) {
         protein: verified.macros.protein,
         carbs: verified.macros.carbs,
         fats: verified.macros.fats,
+        createdAt: dateCheck.isToday ? undefined : dateCheck.createdAt,
       },
       { useServiceRole: true }
     );
@@ -143,19 +152,22 @@ export async function POST(request: Request) {
       milestoneTriggered: false as boolean,
       milestoneDays: undefined as number | undefined,
     };
-    try {
-      const streakResult = await applyMealLogStreak(email);
-      streak = {
-        currentStreak: streakResult.currentStreak,
-        longestStreak: streakResult.longestStreak,
-        celebrationTriggered: streakResult.celebrationTriggered,
-        celebrationDays: streakResult.celebrationDays,
-        isSpecialMilestone: streakResult.isSpecialMilestone,
-        milestoneTriggered: streakResult.milestoneTriggered,
-        milestoneDays: streakResult.milestoneDays,
-      };
-    } catch (streakErr) {
-      console.warn("[meals/log] streak update failed:", streakErr);
+    // 補記舊日唔郁 streak（streak 只計香港「今日」）
+    if (dateCheck.isToday) {
+      try {
+        const streakResult = await applyMealLogStreak(email);
+        streak = {
+          currentStreak: streakResult.currentStreak,
+          longestStreak: streakResult.longestStreak,
+          celebrationTriggered: streakResult.celebrationTriggered,
+          celebrationDays: streakResult.celebrationDays,
+          isSpecialMilestone: streakResult.isSpecialMilestone,
+          milestoneTriggered: streakResult.milestoneTriggered,
+          milestoneDays: streakResult.milestoneDays,
+        };
+      } catch (streakErr) {
+        console.warn("[meals/log] streak update failed:", streakErr);
+      }
     }
 
     return NextResponse.json({
@@ -167,6 +179,8 @@ export async function POST(request: Request) {
         adjusted: verified.adjusted,
         note: verified.note,
       },
+      logDate: dateCheck.dateKey,
+      backdated: !dateCheck.isToday,
     });
   } catch (error) {
     if (error instanceof MealAiEstimateError) {

@@ -13,6 +13,7 @@ export default function HistoryPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     const session = getSession();
@@ -48,10 +49,19 @@ export default function HistoryPage() {
       </header>
 
       <main className="px-4 py-5">
-        <HistoryCalendar />
+        <HistoryCalendar onSelectedDateChange={setSelectedDate} />
       </main>
 
-      <BottomNav role="student" onFabClick={() => router.push("/add-meal")} />
+      <BottomNav
+        role="student"
+        onFabClick={() =>
+          router.push(
+            selectedDate
+              ? `/add-meal?date=${encodeURIComponent(selectedDate)}`
+              : "/add-meal"
+          )
+        }
+      />
     </div>
   );
 }
