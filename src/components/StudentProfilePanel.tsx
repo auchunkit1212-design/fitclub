@@ -5,6 +5,7 @@ import {
   bodyProfileToFormValues,
 } from "@/components/BodyProfileFields";
 import { WeightTrendChart } from "@/components/WeightTrendChart";
+import { InBodyScanPanel } from "@/components/InBodyScanPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import {
   Flame,
@@ -51,6 +52,7 @@ import type {
   StudentNutritionTargets,
   UserSession,
   WeightLog,
+  BodyCompositionLog,
 } from "@/lib/types";
 
 const SOFT_CARD =
@@ -81,6 +83,10 @@ type Props = {
   onWeightInputChange: (value: string) => void;
   onSaveWeight: () => void;
   weightSaving: boolean;
+  bodyCompositionLogs: BodyCompositionLog[];
+  bodyCompositionLoading: boolean;
+  onBodyCompositionLogsChange: (logs: BodyCompositionLog[]) => void;
+  onInBodyWeightSynced?: (weightKg: number) => void;
   currentStreak: number;
   longestStreak: number;
   targetCalories: number;
@@ -107,6 +113,10 @@ export function StudentProfilePanel({
   onWeightInputChange,
   onSaveWeight,
   weightSaving,
+  bodyCompositionLogs,
+  bodyCompositionLoading,
+  onBodyCompositionLogsChange,
+  onInBodyWeightSynced,
   currentStreak,
   longestStreak,
   targetCalories,
@@ -411,6 +421,15 @@ export function StudentProfilePanel({
           </button>
         </div>
       </section>
+
+      <InBodyScanPanel
+        email={session.email}
+        logs={bodyCompositionLogs}
+        loading={bodyCompositionLoading}
+        onLogsChange={onBodyCompositionLogsChange}
+        onToast={onSaved}
+        onWeightSynced={onInBodyWeightSynced}
+      />
 
       <section className={`${SOFT_CARD} p-5`}>
         <h2 className="font-semibold text-gray-900 mb-3">

@@ -31,6 +31,7 @@ import {
   fetchWeightLogsLastDays,
   upsertWeightLog,
 } from "@/lib/weight-logs";
+import { fetchBodyCompositionLogsLastDays } from "@/lib/body-composition-logs";
 import type {
   MealLog,
   MealLogFeedback,
@@ -39,6 +40,7 @@ import type {
   StudentNutritionTargets,
   UserSession,
   WeightLog,
+  BodyCompositionLog,
 } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -62,6 +64,10 @@ export default function ProfilePage() {
   const [weightLogsLoading, setWeightLogsLoading] = useState(true);
   const [weightInput, setWeightInput] = useState("");
   const [weightSaving, setWeightSaving] = useState(false);
+  const [bodyCompositionLogs, setBodyCompositionLogs] = useState<
+    BodyCompositionLog[]
+  >([]);
+  const [bodyCompositionLoading, setBodyCompositionLoading] = useState(true);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [targetCalories, setTargetCalories] = useState(2000);
@@ -146,6 +152,7 @@ export default function ProfilePage() {
     }
 
     setWeightLogsLoading(true);
+    setBodyCompositionLoading(true);
     try {
       const weights = await fetchWeightLogsLastDays(parsed.email, 7);
       setWeightLogs(weights);
@@ -158,6 +165,15 @@ export default function ProfilePage() {
       setWeightLogs([]);
     } finally {
       setWeightLogsLoading(false);
+    }
+
+    try {
+      const composition = await fetchBodyCompositionLogsLastDays(parsed.email, 90);
+      setBodyCompositionLogs(composition);
+    } catch {
+      setBodyCompositionLogs([]);
+    } finally {
+      setBodyCompositionLoading(false);
     }
 
     setReady(true);
@@ -234,7 +250,7 @@ export default function ProfilePage() {
           </IconLabel>
         </h1>
         <p className="text-sm text-gray-500 mt-2">
-          {t("profile.subtitle", "個人資料、體重趨勢同飲食記錄")}
+          {t("profile.subtitle", "個人資料、體重、InBody 進度同飲食記錄")}
         </p>
       </header>
 
@@ -286,6 +302,13 @@ export default function ProfilePage() {
           onWeightInputChange={setWeightInput}
           onSaveWeight={() => void handleSaveWeight()}
           weightSaving={weightSaving}
+          bodyCompositionLogs={bodyCompositionLogs}
+          bodyCompositionLoading={bodyCompositionLoading}
+          onBodyCompositionLogsChange={setBodyCompositionLogs}
+          onInBodyWeightSynced={(weightKg) => {
+            setWeightInput(String(weightKg));
+            void fetchWeightLogsLastDays(session.email, 7).then(setWeightLogs);
+          }}
           currentStreak={currentStreak}
           longestStreak={longestStreak}
           targetCalories={targetCalories}

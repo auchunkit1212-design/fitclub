@@ -16,6 +16,7 @@
 | 3 | `phase3-student-profiles.sql` | 學員身體資料 | 2 |
 | 4 | `phase4-social-ai.sql` | 教練目標、`meal_log_reactions`、收藏 | 1 |
 | 5 | `phase5-weight-logs.sql` | 體重記錄 | 1 |
+| 5b | `body-composition-logs.sql` | InBody／身體組成進度 | 1 |
 | 6 | `user-plan.sql` | Pro 會員方案 | 1 |
 | 7 | `student-streak.sql` | 打卡 streak | 1 |
 | 8 | `student-reminder-settings.sql` | 朝早／飲水提醒設定 | 1 |
@@ -35,8 +36,9 @@
 | 13 | `community-post-comments.sql` | 貼文留言 | 留言失敗 / 500 |
 | 14 | `storage-community-media.sql` | 社群相片／影片 Storage | 上傳媒體失敗 |
 | 15 | `meal-log-feedback.sql` | 教練文字評語 | 教練批閱評語無法儲存 |
+| 16 | `body-composition-logs.sql` | InBody 身體組成記錄 | 「我的」影相上傳 InBody 無法儲存 |
 
-執行順序：**12 → 13 → 14 → 15**（13 依賴 12；15 依賴 `meal_logs`）。
+執行順序：**12 → 13 → 14 → 15 → 16**（13 依賴 12；15 依賴 `meal_logs`）。
 
 ---
 

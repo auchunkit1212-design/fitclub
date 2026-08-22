@@ -33,6 +33,24 @@ export interface WeightLog {
   createdAt: string;
 }
 
+/** InBody／體脂報告身體組成記錄（每日最多一筆） */
+export interface BodyCompositionLog {
+  id: string;
+  email: string;
+  /** YYYY-MM-DD */
+  logDate: string;
+  weightKg: number | null;
+  bodyFatPct: number | null;
+  muscleMassKg: number | null;
+  skeletalMuscleKg: number | null;
+  visceralFatLevel: number | null;
+  bmrKcal: number | null;
+  bodyWaterPct: number | null;
+  imageUrl: string | null;
+  source: string;
+  createdAt: string;
+}
+
 export interface CoachBranding {
   appTitle: string;
   themeColor: ThemeColor;

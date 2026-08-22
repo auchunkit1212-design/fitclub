@@ -380,7 +380,7 @@
     "morningTimeAt": "{time}"
   },
   "profile": {
-    "subtitle": "Personal info, weight trend, and meal history",
+    "subtitle": "Personal info, weight, InBody progress, and meal history",
     "targetCalories": "Daily calorie goal",
     "targetProtein": "Protein goal",
     "personalTitle": "Personal info",
@@ -405,6 +405,44 @@
     "proCoachHint": "Coach Pro: unlimited students + micro-nutrient analysis and AI meal plans for your roster.",
     "proFeatureDefault": "This advanced feature",
     "proPreviewBadge": "Preview"
+  },
+  "inbody": {
+    "title": "InBody body composition",
+    "subtitle": "Photograph an InBody / body-fat report. AI reads fat, muscle, and visceral fat so you can track real progress.",
+    "last90Days": "Last 90 days",
+    "loading": "Loading body composition…",
+    "emptyTitle": "No InBody progress yet",
+    "emptyHint": "Upload a report photo to see body-fat and muscle trends here",
+    "scanButton": "Scan InBody photo",
+    "scanning": "Reading your report…",
+    "scanOk": "Report read — review the numbers, then save",
+    "scanFailed": "Could not read the report. Retake a clearer photo.",
+    "reviewTitle": "Review scan results",
+    "reviewHint": "Edit any wrong numbers before saving.",
+    "deviceHint": "Device: {device}",
+    "cancel": "Cancel",
+    "confirmSave": "Save progress",
+    "saving": "Saving…",
+    "saved": "InBody progress saved",
+    "saveFailed": "Could not save. Please try again.",
+    "needMetrics": "Enter at least weight, body fat, or muscle mass",
+    "vsPrev": "vs last",
+    "metric": {
+      "bodyFat": "Body fat",
+      "muscle": "Muscle",
+      "visceral": "Visceral fat",
+      "weight": "Weight"
+    },
+    "field": {
+      "date": "Date",
+      "weight": "Weight (kg)",
+      "bodyFat": "Body fat (%)",
+      "muscle": "Muscle mass (kg)",
+      "smm": "Skeletal muscle (kg)",
+      "visceral": "Visceral fat",
+      "bmr": "BMR (kcal)",
+      "water": "Body water (%)"
+    }
   },
   "community": {
     "badge": "Community",

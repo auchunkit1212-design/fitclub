@@ -380,7 +380,7 @@
     "morningTimeAt": "朝早 {time}"
   },
   "profile": {
-    "subtitle": "個人資料、體重趨勢同飲食記錄",
+    "subtitle": "個人資料、體重、InBody 進度同飲食記錄",
     "targetCalories": "每日熱量目標",
     "targetProtein": "蛋白目標",
     "personalTitle": "個人資料",
@@ -405,6 +405,44 @@
     "proCoachHint": "教練升 Pro：無限學員 + 旗下學員享有微營養分析同 AI 推薦菜單。",
     "proFeatureDefault": "此進階功能",
     "proPreviewBadge": "預覽"
+  },
+  "inbody": {
+    "title": "InBody 身體組成",
+    "subtitle": "影張 InBody／體脂報告，AI 自動讀取體脂、肌肉同內臟脂肪，追蹤真正進度。",
+    "last90Days": "過去 90 日",
+    "loading": "載入身體組成數據中...",
+    "emptyTitle": "尚未有 InBody 進度",
+    "emptyHint": "影張報告上傳後，體脂同肌肉趨勢會顯示喺呢度",
+    "scanButton": "影相上傳 InBody",
+    "scanning": "大猩猩讀緊報告...",
+    "scanOk": "已讀取報告，請核對數字後儲存",
+    "scanFailed": "辨識失敗，請影清楚成張報告再試",
+    "reviewTitle": "核對讀取結果",
+    "reviewHint": "數字唔啱可以改，確認後先儲存。",
+    "deviceHint": "儀器：{device}",
+    "cancel": "取消",
+    "confirmSave": "確認儲存進度",
+    "saving": "儲存中...",
+    "saved": "InBody 進度已記錄",
+    "saveFailed": "儲存失敗，請稍後再試",
+    "needMetrics": "請至少填寫體重、體脂或肌肉量其中一項",
+    "vsPrev": "較上次",
+    "metric": {
+      "bodyFat": "體脂率",
+      "muscle": "肌肉量",
+      "visceral": "內臟脂肪",
+      "weight": "體重"
+    },
+    "field": {
+      "date": "日期",
+      "weight": "體重 (kg)",
+      "bodyFat": "體脂率 (%)",
+      "muscle": "肌肉量 (kg)",
+      "smm": "骨骼肌 (kg)",
+      "visceral": "內臟脂肪",
+      "bmr": "BMR (kcal)",
+      "water": "體水分 (%)"
+    }
   },
   "community": {
     "badge": "Community",
