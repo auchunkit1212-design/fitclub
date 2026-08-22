@@ -449,7 +449,28 @@
     "title": "探索",
     "subtitle": "分享想法、相片同影片，或者將飲食記錄同步到社群。",
     "hub": {
-      "title": "新功能探索"
+      "title": "新功能探索",
+      "comingSoon": "呢個功能即將推出，敬請期待！",
+      "inbody-scan": {
+        "title": "InBody 影相分析",
+        "subtitle": "自動讀體脂同肌肉進度"
+      },
+      "coach-suggest": {
+        "title": "教練！食咩好？",
+        "subtitle": "按剩餘宏量配餐"
+      },
+      "fat-loss-challenge": {
+        "title": "減脂挑戰賽",
+        "subtitle": "即將開放"
+      },
+      "smart-grocery": {
+        "title": "智能買餸清單",
+        "subtitle": "依目標自動建議"
+      },
+      "nutrition-quiz": {
+        "title": "營養小測驗",
+        "subtitle": "玩住學宏量"
+      }
     },
     "feed": {
       "title": "大家都在吃什麼",

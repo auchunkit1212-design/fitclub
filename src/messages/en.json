@@ -449,7 +449,28 @@
     "title": "Explore",
     "subtitle": "Share thoughts, photos, and videos, or sync meal logs to the community.",
     "hub": {
-      "title": "New features"
+      "title": "Discover features",
+      "comingSoon": "This feature is coming soon!",
+      "inbody-scan": {
+        "title": "InBody photo scan",
+        "subtitle": "Auto-read body fat and muscle progress"
+      },
+      "coach-suggest": {
+        "title": "What should I eat?",
+        "subtitle": "Meal ideas from remaining macros"
+      },
+      "fat-loss-challenge": {
+        "title": "Fat-loss challenge",
+        "subtitle": "Coming soon"
+      },
+      "smart-grocery": {
+        "title": "Smart grocery list",
+        "subtitle": "Suggestions based on your goals"
+      },
+      "nutrition-quiz": {
+        "title": "Nutrition quiz",
+        "subtitle": "Learn macros while you play"
+      }
     },
     "feed": {
       "title": "Community feed",

@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
+import { CommunityHubStrip } from "@/components/CommunityHubStrip";
 import { LoadingView } from "@/components/LoadingView";
 import { Globe, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
@@ -23,6 +24,12 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true);
   const [feedSource, setFeedSource] = useState<"cloud" | "local">("cloud");
   const [loadError, setLoadError] = useState("");
+  const [toast, setToast] = useState("");
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(""), 3000);
+  };
 
   const refreshFeed = useCallback(async () => {
     setLoading(true);
@@ -88,6 +95,8 @@ export default function CommunityPage() {
 
       <main className="px-4 py-5 space-y-6 min-w-0">
         <CommunityComposer session={session} onPosted={() => void refreshFeed()} />
+
+        <CommunityHubStrip onToast={showToast} />
 
         <section className="space-y-4 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -155,6 +164,12 @@ export default function CommunityPage() {
       </main>
 
       <BottomNav role={session.role ?? "student"} />
+
+      {toast && (
+        <div className="fixed bottom-28 left-4 right-4 max-w-lg mx-auto bg-zinc-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
     </PullToRefresh>
   );
