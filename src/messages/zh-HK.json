@@ -117,6 +117,32 @@
       "quickSavedAi": "AI 覆核後已記錄：{name}",
       "quickSaveFailed": "{message}"
     },
+    "today": {
+      "hello": "今日好，{name}",
+      "status": {
+        "warmingUp": "熱身中",
+        "inProgress": "進行中",
+        "balanced": "均衡",
+        "onTrack": "達標",
+        "over": "超標"
+      },
+      "weightPlan": "體重計劃",
+      "viewPlan": "睇計劃",
+      "newPlan": "新計劃",
+      "targetWeight": "目標 {kg} kg",
+      "loggedToday": "今日已記錄",
+      "notLoggedToday": "今日未記錄",
+      "updatedOn": "更新於 {date}",
+      "noWeight": "未有體重",
+      "activity": "今日動態",
+      "fastingLeft": "斷食剩餘",
+      "eatingLeft": "進食剩餘",
+      "calorieBudget": "熱量預算",
+      "nutrients": "營養素",
+      "weight": "體重",
+      "addWeight": "記錄體重",
+      "lockedHint": "目標已由教練鎖定"
+    },
     "profileHint": "體重、飲食記錄同個人資料請到「我的」分頁查看",
     "coachStudentsCta": "學員管理同飲食紀錄",
     "coachStudentsHint": "登記學員、查看名單同打卡分析 — 亦可撳底部「學員」分欄"
@@ -758,7 +784,7 @@
       },
       "home": {
         "title": "主頁儀表板",
-        "body": "主頁顯示你今日嘅：\n· 熱量同 Macros 環形進度\n· 詳細營養分析同 AI 吐槽\n· 教練廣播訊息\n· 連續打卡天數（Streak）\n\n撳「高級營養分析」睇更詳細嘅數據。"
+        "body": "主頁而家係今日儀表板：\n· 最頂吉祥物同今日狀態\n· 體重計劃同趨勢\n· 斷食倒數、熱量預算、營養進度\n· 教練廣播同 AI 吐槽\n\n撳體重卡「+」可以記今日體重，撳「高級營養分析」睇更詳細數據。"
       },
       "community": {
         "title": "探索社群",

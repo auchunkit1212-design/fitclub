@@ -117,6 +117,32 @@
       "quickSavedAi": "Logged after AI review: {name}",
       "quickSaveFailed": "{message}"
     },
+    "today": {
+      "hello": "Hey {name}",
+      "status": {
+        "warmingUp": "Warming Up",
+        "inProgress": "In Progress",
+        "balanced": "Balanced",
+        "onTrack": "On Track",
+        "over": "Over"
+      },
+      "weightPlan": "Weight plan",
+      "viewPlan": "View plan",
+      "newPlan": "New plan",
+      "targetWeight": "Goal {kg} kg",
+      "loggedToday": "Logged today",
+      "notLoggedToday": "Not logged today",
+      "updatedOn": "Updated {date}",
+      "noWeight": "No weight yet",
+      "activity": "Activity",
+      "fastingLeft": "Fasting time left",
+      "eatingLeft": "Eating time left",
+      "calorieBudget": "Calorie Budget",
+      "nutrients": "Nutrient",
+      "weight": "Weight",
+      "addWeight": "Log weight",
+      "lockedHint": "Targets are locked by your coach"
+    },
     "profileHint": "Weight, meal history, and personal info are in the Profile tab.",
     "coachStudentsCta": "Student management & meal logs",
     "coachStudentsHint": "Register students, view roster and meal analysis — or use the Students tab below"
@@ -758,7 +784,7 @@
       },
       "home": {
         "title": "Home dashboard",
-        "body": "Your home screen shows:\n· Calorie and macro ring progress\n· Detailed nutrition analysis and AI roast\n· Coach broadcast messages\n· Logging streak\n\nTap \"Advanced nutrition\" for deeper stats."
+        "body": "Home is now today's dashboard:\n· Mascot and daily status up top\n· Weight plan and trend\n· Fasting countdown, calorie budget, nutrients\n· Coach alerts and AI roast\n\nTap + on the weight card to log today's weight, or Advanced nutrition for deeper stats."
       },
       "community": {
         "title": "Explore community",
