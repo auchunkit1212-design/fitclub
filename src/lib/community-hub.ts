@@ -34,11 +34,11 @@ export const COMMUNITY_HUB_ITEMS: CommunityHubItem[] = [
   {
     id: "fat-loss-challenge",
     title: "減脂挑戰賽",
-    subtitle: "即將開放",
+    subtitle: "每月排行榜，一齊打卡",
     icon: Flame,
     accent: "from-orange-50 to-amber-50 border-amber-100",
-    badge: "Soon",
-    comingSoon: true,
+    badge: "New",
+    href: "/leaderboard",
   },
   {
     id: "smart-grocery",

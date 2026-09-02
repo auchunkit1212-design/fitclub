@@ -444,6 +444,29 @@
       "water": "體水分 (%)"
     }
   },
+  "leaderboard": {
+    "title": "減脂挑戰賽",
+    "subtitle": "每月排行榜",
+    "back": "← 探索",
+    "introTitle": "一齊打卡，比下邊個穩陣",
+    "introBody": "每月重新計分。有打卡就有分，達標加倍。唔使同全世界比，只同自己教練旗下／同分店學員玩。",
+    "ruleCheckin": "打卡一日 +1 分（有記錄飲食就算）",
+    "rulePartial": "部分達標 +2 分（蛋白／宏量差少少）",
+    "ruleMet": "達標一日 +3 分（宏量整體達標）",
+    "ruleWhy": "中間加「部分達標」2 分，等你努力過都有回報，唔會得「完美先有分」。",
+    "prevMonth": "上個月",
+    "nextMonth": "下個月",
+    "yourRank": "你嘅排名",
+    "yourScore": "本月分數",
+    "yourMet": "達標日",
+    "loading": "計緊本月分數…",
+    "loadFailed": "載入排行榜失敗",
+    "emptyTitle": "暫時未有同學一齊玩",
+    "emptyHint": "綁定教練或分店之後，同學員就會出現喺呢度。",
+    "you": "（你）",
+    "rowStats": "打卡 {logged} 日 · 達標 {met} 日",
+    "points": "分"
+  },
   "community": {
     "badge": "Community",
     "title": "探索",
@@ -461,7 +484,7 @@
       },
       "fat-loss-challenge": {
         "title": "減脂挑戰賽",
-        "subtitle": "即將開放"
+        "subtitle": "每月排行榜，一齊打卡"
       },
       "smart-grocery": {
         "title": "智能買餸清單",

@@ -444,6 +444,29 @@
       "water": "Body water (%)"
     }
   },
+  "leaderboard": {
+    "title": "Fat-loss challenge",
+    "subtitle": "Monthly leaderboard",
+    "back": "← Explore",
+    "introTitle": "Check in together — stay consistent",
+    "introBody": "Scores reset every month. Logging earns points; hitting targets earns more. You only compete with classmates from the same coach or gym.",
+    "ruleCheckin": "+1 for a check-in day (any meal logged)",
+    "rulePartial": "+2 for a near-target day",
+    "ruleMet": "+3 for a full on-target day",
+    "ruleWhy": "The middle +2 tier rewards effort so you don’t only score on perfect days.",
+    "prevMonth": "Previous",
+    "nextMonth": "Next",
+    "yourRank": "Your rank",
+    "yourScore": "This month",
+    "yourMet": "On-target days",
+    "loading": "Scoring this month…",
+    "loadFailed": "Could not load the leaderboard",
+    "emptyTitle": "No classmates on the board yet",
+    "emptyHint": "Bind a coach or gym and teammates will show up here.",
+    "you": "(you)",
+    "rowStats": "{logged} logged · {met} on target",
+    "points": "pts"
+  },
   "community": {
     "badge": "Community",
     "title": "Explore",
@@ -461,7 +484,7 @@
       },
       "fat-loss-challenge": {
         "title": "Fat-loss challenge",
-        "subtitle": "Coming soon"
+        "subtitle": "Monthly leaderboard — check in together"
       },
       "smart-grocery": {
         "title": "Smart grocery list",

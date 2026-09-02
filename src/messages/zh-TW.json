@@ -444,12 +444,56 @@
       "water": "體水分 (%)"
     }
   },
+  "leaderboard": {
+    "title": "減脂挑戰賽",
+    "subtitle": "每月排行榜",
+    "back": "← 探索",
+    "introTitle": "一起打卡，比比誰比較穩",
+    "introBody": "每月重新計分。有打卡就有分，達標加倍。不用跟全世界比，只跟自己教練旗下／同分店學員玩。",
+    "ruleCheckin": "打卡一天 +1 分（有記錄飲食就算）",
+    "rulePartial": "部分達標 +2 分（蛋白／巨量營養差一點）",
+    "ruleMet": "達標一天 +3 分（巨量營養整體達標）",
+    "ruleWhy": "中間加「部分達標」2 分，讓你努力過也有回報，不會只有完美才得分。",
+    "prevMonth": "上個月",
+    "nextMonth": "下個月",
+    "yourRank": "你的排名",
+    "yourScore": "本月分數",
+    "yourMet": "達標日",
+    "loading": "計算本月分數中…",
+    "loadFailed": "載入排行榜失敗",
+    "emptyTitle": "暫時沒有同學一起玩",
+    "emptyHint": "綁定教練或分店之後，同學員就會出現在這裡。",
+    "you": "（你）",
+    "rowStats": "打卡 {logged} 日 · 達標 {met} 日",
+    "points": "分"
+  },
   "community": {
     "badge": "Community",
     "title": "探索",
     "subtitle": "分享想法、相片與影片，或將飲食記錄同步到社群。",
     "hub": {
-      "title": "新功能探索"
+      "title": "新功能探索",
+      "comingSoon": "此功能即將推出，敬請期待！",
+      "inbody-scan": {
+        "title": "InBody 拍照分析",
+        "subtitle": "自動讀取體脂與肌肉進度"
+      },
+      "coach-suggest": {
+        "title": "教練！吃什麼好？",
+        "subtitle": "依剩餘宏量配餐"
+      },
+      "fat-loss-challenge": {
+        "title": "減脂挑戰賽",
+        "subtitle": "每月排行榜，一起打卡"
+      },
+      "smart-grocery": {
+        "title": "智能買菜清單",
+        "subtitle": "依目標自動建議"
+      },
+      "nutrition-quiz": {
+        "title": "營養小測驗",
+        "subtitle": "邊玩邊學宏量"
+      }
     },
     "feed": {
       "title": "大家都在吃什麼",

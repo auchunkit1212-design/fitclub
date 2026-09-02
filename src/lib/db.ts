@@ -864,6 +864,32 @@ export async function fetchStudentBodyProfile(
   return readLocalBodyProfile(normalized);
 }
 
+export async function fetchStudentBodyProfilesForEmails(
+  emails: string[]
+): Promise<Map<string, StudentBodyProfile>> {
+  const normalized = Array.from(
+    new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+  const map = new Map<string, StudentBodyProfile>();
+  if (normalized.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("student_body_profiles")
+    .select("*")
+    .in("email", normalized);
+
+  if (error) {
+    console.warn("[body-profile] batch fetch failed:", error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const profile = mapBodyProfile(row as BodyProfileRow);
+    map.set(profile.email.trim().toLowerCase(), profile);
+  }
+  return map;
+}
+
 export async function upsertStudentBodyProfile(
   profile: Omit<StudentBodyProfile, "updatedAt">,
   options?: { useServiceRole?: boolean }

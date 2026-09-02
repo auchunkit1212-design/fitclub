@@ -89,7 +89,8 @@ export function BottomNav({
   const isCoachOrAdmin =
     effectiveRole === "coach" || effectiveRole === "admin";
 
-  const communityActive = pathname === "/community";
+  const communityActive =
+    pathname === "/community" || pathname.startsWith("/leaderboard");
   const homeActive = pathname === "/";
   const profileActive = pathname === "/profile";
   const settingsActive = pathname === "/settings";
