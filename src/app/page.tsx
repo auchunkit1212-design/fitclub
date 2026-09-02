@@ -31,6 +31,7 @@ import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
+import { StudentFeatureGrid } from "@/components/StudentFeatureGrid";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LoadingView } from "@/components/LoadingView";
 import { useI18n } from "@/components/I18nProvider";
@@ -929,6 +930,13 @@ export default function StudentDashboard() {
               {session.gym}
             </p>
         </section>
+
+        {isStudent && (
+          <StudentFeatureGrid
+            onLogMeal={() => setMealSearchOpen(true)}
+            onOpenNutrition={() => setShowNutritionDash(true)}
+          />
+        )}
 
         {(session.role === "admin" || session.role === "coach") && (
           <>

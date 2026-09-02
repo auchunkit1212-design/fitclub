@@ -69,6 +69,35 @@
     "healthMgmt": "Health management",
     "welcome": "Welcome, {name}",
     "advancedNutrition": "Advanced Nutrition",
+    "features": {
+      "title": "Health tools",
+      "exploreAll": "Explore all →",
+      "newBadge": "NEW",
+      "logMeal": {
+        "title": "Log a meal",
+        "subtitle": "Snap or search for a quick check-in"
+      },
+      "nutrition": {
+        "title": "Today's nutrition",
+        "subtitle": "Calories, macros, and target progress"
+      },
+      "suggest": {
+        "title": "What should I eat?",
+        "subtitle": "Next-meal ideas from remaining macros"
+      },
+      "challenge": {
+        "title": "Fat-loss challenge",
+        "subtitle": "Monthly leaderboard and check-ins"
+      },
+      "inbody": {
+        "title": "InBody analysis",
+        "subtitle": "Scan a report to track fat and muscle"
+      },
+      "history": {
+        "title": "History",
+        "subtitle": "Review meals and coach feedback"
+      }
+    },
     "notifications": {
       "logMeal": "⏰ Time to log your last meal — don't miss a check-in!",
       "hydration": "Hydration reminder: drink a big glass of water now!",

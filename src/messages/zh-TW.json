@@ -69,6 +69,35 @@
     "healthMgmt": "健康管理",
     "welcome": "歡迎，{name}",
     "advancedNutrition": "進階營養分析",
+    "features": {
+      "title": "健康工具",
+      "exploreAll": "探索全部 →",
+      "newBadge": "NEW",
+      "logMeal": {
+        "title": "記錄飲食",
+        "subtitle": "拍照或搜尋，快速打卡"
+      },
+      "nutrition": {
+        "title": "今日營養",
+        "subtitle": "查看熱量、巨量營養與達標進度"
+      },
+      "suggest": {
+        "title": "教練！吃什麼好？",
+        "subtitle": "依剩餘巨量營養建議下一餐"
+      },
+      "challenge": {
+        "title": "減脂挑戰賽",
+        "subtitle": "每月排行榜，一起打卡"
+      },
+      "inbody": {
+        "title": "InBody 分析",
+        "subtitle": "拍報告，追蹤體脂與肌肉"
+      },
+      "history": {
+        "title": "歷史記錄",
+        "subtitle": "從日曆查看飲食與教練回覆"
+      }
+    },
     "notifications": {
       "logMeal": "⏰ 該記錄上一餐了，別漏打卡！",
       "hydration": "補水提醒：現在喝一大杯水吧！",
