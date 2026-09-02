@@ -21,7 +21,7 @@ export const COMMUNITY_HUB_ITEMS: CommunityHubItem[] = [
     icon: Scale,
     accent: "from-sky-50 to-cyan-50 border-sky-100",
     badge: "New",
-    href: "/profile",
+    href: "/profile#inbody",
   },
   {
     id: "coach-suggest",
@@ -29,7 +29,7 @@ export const COMMUNITY_HUB_ITEMS: CommunityHubItem[] = [
     subtitle: "按剩餘宏量配餐",
     icon: UtensilsCrossed,
     accent: "from-emerald-50 to-teal-50 border-emerald-100",
-    href: "/",
+    href: "/suggest",
   },
   {
     id: "fat-loss-challenge",
@@ -46,6 +46,8 @@ export const COMMUNITY_HUB_ITEMS: CommunityHubItem[] = [
     subtitle: "依目標自動建議",
     icon: ShoppingCart,
     accent: "from-lime-50 to-green-50 border-lime-100",
+    badge: "Soon",
+    href: "/grocery",
     comingSoon: true,
   },
   {
@@ -54,6 +56,8 @@ export const COMMUNITY_HUB_ITEMS: CommunityHubItem[] = [
     subtitle: "玩住學宏量",
     icon: Sparkles,
     accent: "from-violet-50 to-indigo-50 border-violet-100",
+    badge: "Soon",
+    href: "/quiz",
     comingSoon: true,
   },
 ];

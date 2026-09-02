@@ -90,7 +90,11 @@ export function BottomNav({
     effectiveRole === "coach" || effectiveRole === "admin";
 
   const communityActive =
-    pathname === "/community" || pathname.startsWith("/leaderboard");
+    pathname === "/community" ||
+    pathname.startsWith("/leaderboard") ||
+    pathname.startsWith("/suggest") ||
+    pathname.startsWith("/grocery") ||
+    pathname.startsWith("/quiz");
   const homeActive = pathname === "/";
   const profileActive = pathname === "/profile";
   const settingsActive = pathname === "/settings";

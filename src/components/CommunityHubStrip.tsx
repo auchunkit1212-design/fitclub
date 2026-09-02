@@ -16,13 +16,13 @@ export function CommunityHubStrip({ onToast }: CommunityHubStripProps) {
   const { t } = useI18n();
 
   const handleClick = (item: (typeof COMMUNITY_HUB_ITEMS)[number]) => {
-    if (item.comingSoon || !item.href) {
-      onToast?.(
-        t("community.hub.comingSoon", "呢個功能即將推出，敬請期待！")
-      );
+    if (item.href) {
+      router.push(item.href);
       return;
     }
-    router.push(item.href);
+    onToast?.(
+      t("community.hub.comingSoon", "呢個功能即將推出，敬請期待！")
+    );
   };
 
   return (

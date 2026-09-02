@@ -18,7 +18,7 @@ import {
 } from "@/lib/body-profile";
 import { fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
-import { getMealLogs } from "@/lib/storage";
+import { getMealLogs, getOwnMealLogs } from "@/lib/storage";
 import {
   DEFAULT_PERSONAL_SETTINGS,
   normalizePersonalSettings,
@@ -83,8 +83,8 @@ export default function ProfilePage() {
 
   const load = useCallback(async () => {
     const parsed = getSession();
-    if (!parsed || parsed.role !== "student") {
-      router.replace(parsed ? "/" : "/register");
+    if (!parsed) {
+      router.replace("/register");
       return;
     }
     const synced = (await syncSessionPlan()) ?? parsed;
@@ -108,7 +108,10 @@ export default function ProfilePage() {
 
     await initUserRegistry();
     const registry = await fetchUsersForSession(synced);
-    const mealLogs = await getMealLogs(synced, registry);
+    const mealLogs =
+      synced.role === "student"
+        ? await getMealLogs(synced, registry)
+        : await getOwnMealLogs(synced);
     setLogs(mealLogs);
 
     try {
@@ -182,6 +185,18 @@ export default function ProfilePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!ready || typeof window === "undefined") return;
+    if (window.location.hash !== "#inbody") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("inbody")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
 
   useEffect(() => {
     if (!session?.email || logs.length === 0) return;
@@ -336,7 +351,14 @@ export default function ProfilePage() {
         />
       )}
 
-      <BottomNav role="student" onFabClick={() => router.push("/add-meal")} />
+      <BottomNav
+        role={session.role === "admin" ? "admin" : session.role}
+        onFabClick={() =>
+          router.push(
+            session.role === "student" ? "/add-meal" : "/add-meal?from=coach"
+          )
+        }
+      />
 
       {toast && (
         <div className="fixed bottom-28 left-4 right-4 max-w-lg mx-auto bg-gray-900 text-white text-sm text-center py-3 rounded-xl z-50 shadow-lg">

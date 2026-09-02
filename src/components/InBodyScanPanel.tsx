@@ -266,7 +266,10 @@ export function InBodyScanPanel({
   };
 
   return (
-    <section className="w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-5 space-y-4 overflow-hidden min-w-0">
+    <section
+      id="inbody"
+      className="w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-5 space-y-4 overflow-hidden min-w-0"
+    >
       <div className="flex justify-between items-start gap-2 min-w-0">
         <div className="min-w-0">
           <h2 className="font-semibold text-gray-900">

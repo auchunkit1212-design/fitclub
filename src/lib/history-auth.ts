@@ -19,8 +19,9 @@ export async function resolveHistorySubjectEmail(
   }
 
   if (session.role === "coach" || session.role === "admin") {
-    if (!requested) {
-      return { ok: false, status: 400, error: "請指定學員 Email" };
+    const self = session.email.trim().toLowerCase();
+    if (!requested || requested === self) {
+      return { ok: true, email: self };
     }
     const auth = await authorizeCoachForStudent(session, requested);
     if (!auth.ok) {

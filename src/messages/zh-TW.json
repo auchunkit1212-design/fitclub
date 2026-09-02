@@ -467,6 +467,9 @@
     "rowStats": "打卡 {logged} 日 · 達標 {met} 日",
     "points": "分"
   },
+  "suggest": {
+    "intro": "根據你今天已吃與剩餘額度，大猩猩建議下一餐。教練與學員都可以用。"
+  },
   "community": {
     "badge": "Community",
     "title": "探索",
@@ -474,6 +477,9 @@
     "hub": {
       "title": "新功能探索",
       "comingSoon": "此功能即將推出，敬請期待！",
+      "comingSoonBadge": "即將開放",
+      "comingSoonPage": "此功能即將推出。教練與學員現在都可以從探索進入查看預告，正式版會依營養目標自動建議買菜。",
+      "comingSoonQuiz": "此功能即將推出。教練與學員現在都可以從探索進入查看預告，正式版會用小測驗邊玩邊學巨量營養。",
       "inbody-scan": {
         "title": "InBody 拍照分析",
         "subtitle": "自動讀取體脂與肌肉進度"

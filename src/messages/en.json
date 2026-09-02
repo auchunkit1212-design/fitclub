@@ -467,6 +467,9 @@
     "rowStats": "{logged} logged · {met} on target",
     "points": "pts"
   },
+  "suggest": {
+    "intro": "Based on what you already ate today and what’s left, the gorilla suggests your next meal. Coaches and students can both use this."
+  },
   "community": {
     "badge": "Community",
     "title": "Explore",
@@ -474,6 +477,9 @@
     "hub": {
       "title": "Discover features",
       "comingSoon": "This feature is coming soon!",
+      "comingSoonBadge": "Coming soon",
+      "comingSoonPage": "This feature is coming soon. Coaches and students can already open it from Explore. The full version will suggest groceries from your nutrition targets.",
+      "comingSoonQuiz": "This feature is coming soon. Coaches and students can already open it from Explore. The full version will teach macros with a short quiz.",
       "inbody-scan": {
         "title": "InBody photo scan",
         "subtitle": "Auto-read body fat and muscle progress"
