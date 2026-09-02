@@ -465,7 +465,15 @@
     "emptyHint": "綁定教練或分店之後，同學員就會出現喺呢度。",
     "you": "（你）",
     "rowStats": "打卡 {logged} 日 · 達標 {met} 日",
-    "points": "分"
+    "points": "分",
+    "players": "參加者",
+    "metDaysShort": "達標日",
+    "fullRanking": "完整排名",
+    "howToScore": "點樣攞分？",
+    "resetsMonthly": "每月 1 號自動重新開始",
+    "checkinShort": "打卡",
+    "partialShort": "部分達標",
+    "metShort": "全面達標"
   },
   "suggest": {
     "intro": "根據你今日已食同剩餘額度，大猩猩建議下一餐。教練同學員都可以用。"

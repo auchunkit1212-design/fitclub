@@ -465,7 +465,15 @@
     "emptyHint": "Bind a coach or gym and teammates will show up here.",
     "you": "(you)",
     "rowStats": "{logged} logged · {met} on target",
-    "points": "pts"
+    "points": "pts",
+    "players": "players",
+    "metDaysShort": "on-target days",
+    "fullRanking": "Full ranking",
+    "howToScore": "How scoring works",
+    "resetsMonthly": "Resets automatically on the 1st",
+    "checkinShort": "Check-in",
+    "partialShort": "Near target",
+    "metShort": "On target"
   },
   "suggest": {
     "intro": "Based on what you already ate today and what’s left, the gorilla suggests your next meal. Coaches and students can both use this."
