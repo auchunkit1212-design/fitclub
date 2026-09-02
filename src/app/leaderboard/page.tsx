@@ -202,7 +202,7 @@ export default function LeaderboardPage() {
                     Monthly challenge
                   </span>
                   <h2 className="mt-3 text-2xl font-black leading-tight">
-                    {t("leaderboard.introTitle", "一齊打卡，比下邊個穩陣")}
+                    {t("leaderboard.introTitle", "一齊打卡，健康進步齊上榜")}
                   </h2>
                 </div>
                 <span className="text-5xl drop-shadow-lg" aria-hidden>🏆</span>
