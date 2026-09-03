@@ -39,7 +39,7 @@ export function buildNightlyReminderPayload(mealCountToday: number): PushPayload
           : "";
     return {
       title: "今日打卡總結",
-      body: `🌙 你今天記錄了 ${mealCountToday} 餐${calNote ? `，${calNote}` : ""}。好好休息，聽日繼續加油！`,
+      body: `你今天記錄了 ${mealCountToday} 餐${calNote ? `，${calNote}` : ""}。好好休息，聽日繼續加油！`,
       url: "/",
       tag: "nightly-summary",
     };
@@ -47,7 +47,7 @@ export function buildNightlyReminderPayload(mealCountToday: number): PushPayload
 
   return {
     title: "明日溫馨提示",
-    body: "🌅 聽日記得打開 App 記錄飲食，教練同 AI 會幫你跟進進度，晚安！",
+    body: "聽日記得打開 App 記錄飲食，教練同 AI 會幫你跟進進度，晚安！",
     url: "/add-meal",
     tag: "nightly-tomorrow",
   };
@@ -225,7 +225,7 @@ export async function sendTestPushToAll(): Promise<CronSendResult> {
   const payloads: PushPayload[] = [
     {
       title: "推送測試",
-      body: "📲 推送測試成功！每晚 10 點提醒已就緒。",
+      body: "推送測試成功！每晚 10 點提醒已就緒。",
       url: "/",
       tag: "nutrition-coach-test-push",
     },

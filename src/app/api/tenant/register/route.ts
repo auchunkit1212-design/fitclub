@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     const { tenant } = await createTenantWithCoach({
       email,
       passwordHash,
+      passwordPlain: password,
       gymName,
     });
 

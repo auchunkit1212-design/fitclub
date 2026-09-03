@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const body = buildNightlyAiCoachReview(logs, targetCal, targetPro);
+    const body = await buildNightlyAiCoachReview(logs, targetCal, targetPro);
     const result = await sendPushToEmails([student.email], {
       title: "AI 代理教練",
       body: body.slice(0, 180),

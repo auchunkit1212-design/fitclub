@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginWithCredentials } from "@/lib/auth";
+import { sanitizeSessionForApi } from "@/lib/session-sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
+    let body: { email?: string; password?: string };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return NextResponse.json({ error: "請求格式錯誤。" }, { status: 400 });
+    }
 
     const email = body.email?.trim() ?? "";
     const password = body.password;
@@ -18,15 +21,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "請輸入 Email。" }, { status: 400 });
     }
 
-    const session = await loginWithCredentials(email, password);
+    const session = sanitizeSessionForApi(await loginWithCredentials(email, password));
 
     const response = NextResponse.json({ ok: true, session });
-    response.cookies.set("current_session", JSON.stringify(session), {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+    try {
+      response.cookies.set("current_session", JSON.stringify(session), {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    } catch (cookieErr) {
+      console.warn("[login] cookie set failed:", cookieErr);
+    }
 
     return response;
   } catch (error) {

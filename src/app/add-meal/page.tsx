@@ -1,21 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
+import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useI18n } from "@/components/I18nProvider";
+import { MultiFoodPortionPanel, type MultiFoodTotals } from "@/components/MultiFoodPortionPanel";
+import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
+import { MealLogModeSelection } from "@/components/MealLogModeSelection";
+import { NutritionLabelScanOverlay } from "@/components/NutritionLabelScanOverlay";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { LoadingView } from "@/components/LoadingView";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
+import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
-import { estimateMacros } from "@/lib/ai-mock";
+import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, ScanLine, Sparkles } from "@/components/icons";
+import { publishMealSharePostCloud } from "@/lib/community-client";
+import { estimateMealNutritionClient } from "@/lib/meal-estimate-client";
 import {
   CARBS_PORTION_KEYS,
   MEAL_TYPE_KEYS,
   PROTEIN_PORTION_KEYS,
   carbsPortionKeyToLegacy,
   proteinPortionKeyToLegacy,
-  veggiesKeyToLegacy,
   type CarbsPortionKey,
   type MealTypeKey,
   type ProteinPortionKey,
@@ -29,29 +38,109 @@ import {
   fetchUsersForSession,
 } from "@/lib/db";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
+import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import type { MealBaselineSource } from "@/lib/meal-ai-verify";
+import { parsePortionHintsFromDescription } from "@/lib/portion-hints";
+import {
+  scaleAdvancedNutrients,
+  scaleMacros,
+} from "@/lib/portion-scale";
 import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
 import { initUserRegistry } from "@/lib/registry";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
-import { getMealLogs, isToday, saveMealLog } from "@/lib/storage";
-import type { MealLog, StudentBodyProfile, UserSession } from "@/lib/types";
+import { storePendingStreakCelebration } from "@/lib/streak";
+import { getMealLogs, getOwnMealLogs, isToday } from "@/lib/storage";
+import { detectMealFoodsFromPhoto } from "@/lib/meal-photo-detect-client";
+import type { DetectedMealFood } from "@/lib/meal-photo-detect";
+import { saveMealViaApi } from "@/lib/meal-save-client";
+import {
+  MEAL_LOG_MAX_BACKDATE_DAYS,
+  mealLogTodayKey,
+  validateMealLogDate,
+} from "@/lib/meal-log-date";
+import type {
+  FoodAdvancedNutrients,
+  MealLog,
+  StudentBodyProfile,
+  UserSession,
+} from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-export default function AddMealPage() {
-  const router = useRouter();
-  const { t } = useI18n();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+/** Clean food name only — no fist/palm tags unless user opts into correction. */
+function mealDescriptionBase(description: string): string {
+  return parsePortionHintsFromDescription(description).foodBase.trim() || description.trim();
+}
 
+/**
+ * Append fist/palm markers only when the student explicitly corrects AI portion.
+ * Uses Chinese legacy labels so the estimator always parses consistently.
+ */
+function buildMealDescriptionWithPortions(
+  description: string,
+  carbsPortionKey: CarbsPortionKey,
+  proteinPortionKey: ProteinPortionKey,
+  hasVeggies: boolean,
+  includePortions: boolean
+): string {
+  const base = mealDescriptionBase(description);
+  if (!base || !includePortions) return base;
+
+  const hints = [
+    `澱粉${carbsPortionKeyToLegacy(carbsPortionKey)}`,
+    `蛋白${proteinPortionKeyToLegacy(proteinPortionKey)}`,
+    hasVeggies ? "有蔬菜" : "無蔬菜",
+  ];
+
+  return `${base}（${hints.join("；")}）`;
+}
+
+function suggestCarbsPortionKey(carbsG: number): CarbsPortionKey {
+  if (carbsG < 12) return "none";
+  if (carbsG < 40) return "carbsSmall";
+  if (carbsG < 65) return "carbsMedium";
+  return "carbsLarge";
+}
+
+function suggestProteinPortionKey(proteinG: number): ProteinPortionKey {
+  if (proteinG < 8) return "none";
+  if (proteinG < 22) return "proteinSmall";
+  if (proteinG < 35) return "proteinMedium";
+  return "proteinLarge";
+}
+
+function AddMealPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { t, lang } = useI18n();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fromCoach = searchParams.get("from") === "coach";
+  const modeParam = searchParams.get("mode");
+  const dateParam = searchParams.get("date");
+
+  const [logDate, setLogDate] = useState(() => {
+    const checked = validateMealLogDate(dateParam ?? undefined);
+    return checked.ok ? checked.dateKey : mealLogTodayKey();
+  });
   const [mealTypeKey, setMealTypeKey] = useState<MealTypeKey>("lunch");
+  const [entryStep, setEntryStep] = useState<"select" | "cooked" | "packaged">(
+    () =>
+      modeParam === "cooked" || modeParam === "packaged" ? modeParam : "select"
+  );
+  const [ocrOverlayOpen, setOcrOverlayOpen] = useState(
+    () => modeParam === "packaged"
+  );
   const [description, setDescription] = useState("");
   const [imageBase64, setImageBase64] = useState<string | undefined>();
-  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("carbsMedium");
+  /** Off by default — trust AI; only open when fist/palm needs correction. */
+  const [portionOverride, setPortionOverride] = useState(false);
+  const [carbsPortionKey, setCarbsPortionKey] = useState<CarbsPortionKey>("none");
   const [proteinPortionKey, setProteinPortionKey] =
-    useState<ProteinPortionKey>("proteinMedium");
-  const [hasVeggies, setHasVeggies] = useState(true);
+    useState<ProteinPortionKey>("none");
+  const [hasVeggies, setHasVeggies] = useState(false);
   const [calories, setCalories] = useState(0);
   const [protein, setProtein] = useState(0);
   const [carbs, setCarbs] = useState(0);
@@ -71,6 +160,141 @@ export default function AddMealPage() {
   const [showNutritionDash, setShowNutritionDash] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
   const [macrosFromSearch, setMacrosFromSearch] = useState(false);
+  const [macrosLockedFromPicker, setMacrosLockedFromPicker] = useState(false);
+  const [searchAdvanced, setSearchAdvanced] = useState<
+    FoodAdvancedNutrients | undefined
+  >();
+  const [proNutrition, setProNutrition] = useState(false);
+  const [nutritionSource, setNutritionSource] = useState<
+    MealBaselineSource | undefined
+  >();
+  const [shareToCommunity, setShareToCommunity] = useState(false);
+  const [ocrPortionBase, setOcrPortionBase] = useState<{
+    productName: string;
+    macros: { calories: number; protein: number; carbs: number; fats: number };
+    advanced?: FoodAdvancedNutrients;
+    baseWeightG?: number;
+    proNutrition?: boolean;
+  } | null>(null);
+  const [detectedFoods, setDetectedFoods] = useState<DetectedMealFood[]>([]);
+  const [foodDetecting, setFoodDetecting] = useState(false);
+  const [multiFoodMode, setMultiFoodMode] = useState(false);
+  const [foodDetectError, setFoodDetectError] = useState("");
+  const [aiEstimating, setAiEstimating] = useState(false);
+  const [aiEstimateError, setAiEstimateError] = useState("");
+
+  const applyOcrPortionedNutrition = useCallback(
+    (ratio: number, _portionLabel: string, description: string) => {
+      if (!ocrPortionBase) return;
+      const scaled = scaleMacros(ocrPortionBase.macros, ratio);
+      const scaledAdvanced = scaleAdvancedNutrients(
+        ocrPortionBase.advanced,
+        ratio
+      );
+      setDescription(description);
+      setCalories(scaled.calories);
+      setProtein(scaled.protein);
+      setCarbs(scaled.carbs);
+      setFats(scaled.fats);
+      setSearchAdvanced(scaledAdvanced);
+      setMacrosFromSearch(true);
+      setProNutrition(Boolean(ocrPortionBase.proNutrition));
+    },
+    [ocrPortionBase]
+  );
+
+  const clearMultiFoodDetection = useCallback(() => {
+    setDetectedFoods([]);
+    setMultiFoodMode(false);
+    setFoodDetectError("");
+  }, []);
+
+  const applyMultiFoodTotals = useCallback((totals: MultiFoodTotals) => {
+    setDescription(totals.description);
+    setCalories(totals.calories);
+    setProtein(totals.protein);
+    setCarbs(totals.carbs);
+    setFats(totals.fats);
+    setMacrosFromSearch(true);
+    setNutritionSource("openrouter");
+    setOcrPortionBase(null);
+    setSearchAdvanced(undefined);
+    setProNutrition(false);
+  }, []);
+
+  const runFoodDetection = useCallback(
+    async (imageData: string) => {
+      setFoodDetecting(true);
+      setFoodDetectError("");
+      clearMultiFoodDetection();
+
+      const result = await detectMealFoodsFromPhoto(imageData, lang);
+      if (!result.ok || !result.foods.length) {
+        setFoodDetectError(
+          !result.ok
+            ? result.error
+            : t(
+                "addMeal.errors.foodDetectFailed",
+                "AI 未能分拆食物，請手動輸入描述同份量。"
+              )
+        );
+        setFoodDetecting(false);
+        return;
+      }
+
+      setDetectedFoods(result.foods);
+      setMultiFoodMode(true);
+      setFoodDetecting(false);
+    },
+    [clearMultiFoodDetection, lang, t]
+  );
+
+  const handleOcrSuccess = (v: OcrNutritionResult) => {
+    clearMultiFoodDetection();
+    const productName =
+      v.brand && v.productName
+        ? `${v.brand} ${v.productName}`.trim()
+        : v.productName;
+    setOcrPortionBase({
+      productName,
+      macros: {
+        calories: v.calories,
+        protein: v.protein,
+        carbs: v.carbs,
+        fats: v.fat,
+      },
+      advanced: {
+        sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+        sugarG: v.sugar > 0 ? v.sugar : undefined,
+      },
+      baseWeightG: v.servingWeightG > 0 ? v.servingWeightG : undefined,
+      proNutrition: v.sodium > 0 || v.sugar > 0,
+    });
+    setDescription(productName);
+    setCalories(v.calories);
+    setProtein(v.protein);
+    setCarbs(v.carbs);
+    setFats(v.fat);
+    setMacrosFromSearch(true);
+    setMacrosLockedFromPicker(true);
+    setProNutrition(v.sodium > 0 || v.sugar > 0);
+    setNutritionSource("ocr");
+    setOcrOverlayOpen(false);
+    setEntryStep("packaged");
+  };
+
+  const goBackToModeSelect = () => {
+    setOcrOverlayOpen(false);
+    setEntryStep("select");
+  };
+
+  const handleHeaderBack = () => {
+    if (entryStep !== "select" || ocrOverlayOpen) {
+      goBackToModeSelect();
+      return;
+    }
+    router.push(fromCoach ? "/coach" : "/");
+  };
 
   useEffect(() => {
     const parsed = getSession();
@@ -92,7 +316,12 @@ export default function AddMealPage() {
       try {
         await initUserRegistry();
         const registry = await fetchUsersForSession(active);
-        const logs = await getMealLogs(active, registry);
+        const isCoachSelf =
+          fromCoach &&
+          (active.role === "coach" || active.role === "admin");
+        const logs = isCoachSelf
+          ? await getOwnMealLogs(active)
+          : await getMealLogs(active, registry);
         setTodayLogs(logs.filter((l) => isToday(l.date)));
 
         if (active.role === "student") {
@@ -124,7 +353,86 @@ export default function AddMealPage() {
         setProfileChecked(true);
       }
     })();
-  }, [router]);
+  }, [router, fromCoach]);
+
+  useEffect(() => {
+    if (
+      multiFoodMode ||
+      macrosLockedFromPicker ||
+      ocrPortionBase ||
+      nutritionSource === "ocr" ||
+      nutritionSource === "manual" ||
+      !description.trim() ||
+      description.trim().length < 2
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        setAiEstimating(true);
+        setAiEstimateError("");
+        try {
+          const descForAi = buildMealDescriptionWithPortions(
+            description,
+            carbsPortionKey,
+            proteinPortionKey,
+            hasVeggies,
+            portionOverride
+          );
+          const result = await estimateMealNutritionClient({
+            description: descForAi,
+            imageBase64,
+            baseline:
+              calories > 0
+                ? { calories, protein, carbs, fats }
+                : undefined,
+            baselineSource: nutritionSource,
+            advanced: searchAdvanced,
+          });
+          if (cancelled) return;
+          setCalories(result.macros.calories);
+          setProtein(result.macros.protein);
+          setCarbs(result.macros.carbs);
+          setFats(result.macros.fats);
+          setNutritionSource("openrouter");
+          // Strip any accidental fist/palm tags from the editable description.
+          if (/[（(]/.test(description)) {
+            const cleaned = mealDescriptionBase(description);
+            if (cleaned && cleaned !== description) setDescription(cleaned);
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setAiEstimateError(
+              err instanceof Error ? err.message : t("addMeal.errors.aiEstimateFailed", "AI 估算失敗")
+            );
+          }
+        } finally {
+          if (!cancelled) setAiEstimating(false);
+        }
+      })();
+    }, 900);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // Portion keys only affect AI when override is on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- macros omitted to avoid re-estimate loops
+  }, [
+    description,
+    portionOverride,
+    portionOverride ? carbsPortionKey : "off",
+    portionOverride ? proteinPortionKey : "off",
+    portionOverride ? hasVeggies : "off",
+    imageBase64,
+    multiFoodMode,
+    macrosLockedFromPicker,
+    ocrPortionBase,
+    nutritionSource,
+    t,
+  ]);
 
   const needsOnboarding =
     session?.role === "student" &&
@@ -144,6 +452,8 @@ export default function AddMealPage() {
     try {
       const compressed = await compressFileImage(file);
       setImageBase64(compressed);
+      void runFoodDetection(compressed);
+      setFoodDetectError("");
     } catch (err) {
       console.error("[add-meal] image compress failed", err);
       alert(t("addMeal.errors.compressFailed", "相片壓縮失敗，請換一張較細的相片或再試一次。"));
@@ -185,30 +495,24 @@ export default function AddMealPage() {
     const currentSession = getSession();
     if (currentSession) saveSession(currentSession);
 
-    let finalCalories = calories;
-    let finalProtein = protein;
-    let finalCarbs = carbs;
-    let finalFats = fats;
+    const descTrim = description.trim();
+    const descForAi = multiFoodMode
+      ? mealDescriptionBase(descTrim)
+      : buildMealDescriptionWithPortions(
+          descTrim,
+          carbsPortionKey,
+          proteinPortionKey,
+          hasVeggies,
+          portionOverride
+        );
 
-    if (macrosFromSearch && calories > 0) {
-      // 巨型食物搜尋引擎已帶入 AI 估算，直接沿用表單數值
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const aiEst = estimateMacros(
-        description.trim(),
-        carbsPortionKeyToLegacy(carbsPortionKey),
-        proteinPortionKeyToLegacy(proteinPortionKey),
-        veggiesKeyToLegacy(hasVeggies)
-      );
-      finalCalories = aiEst.calories;
-      finalProtein = aiEst.protein;
-      finalCarbs = aiEst.carbs;
-      finalFats = aiEst.fats;
-      setCalories(aiEst.calories);
-      setProtein(aiEst.protein);
-      setCarbs(aiEst.carbs);
-      setFats(aiEst.fats);
-    }
+    const finalCalories = calories;
+    const finalProtein = protein;
+    const finalCarbs = carbs;
+    const finalFats = fats;
+    // 冇明確來源但已有數值 → 當手動確認，避免 AI 覆核改名／改數
+    const verifySource =
+      nutritionSource ?? (calories > 0 ? "manual" : "openrouter");
 
     let imageToUpload = imageBase64;
     if (imageBase64) {
@@ -244,101 +548,97 @@ export default function AddMealPage() {
 
     const mealTypeLabel = t(`addMeal.mealTypes.${mealTypeKey}`, mealTypeKey);
 
-    const basePayload = {
+    const mealPayload = {
       email,
       mealType: mealTypeLabel,
-      description: description.trim(),
+      description: descForAi,
       calories: finalCalories,
       protein: finalProtein,
       carbs: finalCarbs,
       fats: finalFats,
+      date: logDate,
     };
 
-    const mealPayload = {
-      email,
-      mealType: basePayload.mealType,
-      description: basePayload.description,
-      calories: basePayload.calories,
-      protein: basePayload.protein,
-      carbs: basePayload.carbs,
-      fats: basePayload.fats,
-    };
-
-    const saveDirect = async (imageUrl?: string) => {
-      await saveMealLog({ ...mealPayload, imageUrl }, { notifyCoach: true });
-    };
-
-    const trySave = async (imageUrl?: string) => {
-      let res: Response | null = null;
-      try {
-        res = await fetch("/api/meals/log", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...getSessionRequestHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify({ ...basePayload, imageUrl }),
-        });
-      } catch (networkErr) {
-        console.warn("[add-meal] API network error, fallback direct save", networkErr);
-        await saveDirect(imageUrl);
-        router.push("/");
-        return;
-      }
-
-      if (res.ok) {
-        router.push("/");
-        return;
-      }
-
-      let errBody: {
-        error?: string;
-        code?: string;
-        detail?: string;
-        hint?: string;
-      } = {};
-      try {
-        errBody = (await res.json()) as typeof errBody;
-      } catch {
-        errBody = { error: `HTTP ${res.status}` };
-      }
-      console.error("[add-meal] API error", { status: res.status, ...errBody });
-
-      try {
-        console.warn("[add-meal] fallback direct Supabase save");
-        await saveDirect(imageUrl);
-        router.push("/");
-      } catch (directErr) {
-        console.error("[add-meal] direct save failed", directErr);
-        throw new Error(
-          errorMessage(
-            directErr,
-            errBody.error ??
-              (errBody.code === "DB_ERROR"
-                ? `資料庫錯誤：${errBody.hint ?? "請執行 storage-food-images.sql"}`
-                : `儲存失敗 (HTTP ${res.status})`)
-          )
-        );
+    const finishAfterSave = async (
+      saved: {
+        description: string;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+      },
+      imageUrl?: string
+    ) => {
+      if (shareToCommunity && currentSession) {
+        try {
+          await publishMealSharePostCloud({
+            session: currentSession,
+            mealType: mealTypeLabel,
+            description: saved.description,
+            calories: saved.calories,
+            protein: saved.protein,
+            carbs: saved.carbs,
+            fats: saved.fats,
+            imageUrl: imageUrl ?? uploadedImageUrl,
+          });
+        } catch (shareErr) {
+          console.warn("[add-meal] community share failed", shareErr);
+        }
       }
     };
 
     try {
-      await trySave(uploadedImageUrl);
+      const result = await saveMealViaApi({
+        ...mealPayload,
+        imageUrl: uploadedImageUrl,
+        imageBase64: imageToUpload,
+        nutritionSource: verifySource,
+        advanced: searchAdvanced,
+      });
+
+      if (result.streak?.celebrationTriggered || result.streak?.milestoneTriggered) {
+        const days =
+          result.streak.celebrationDays ?? result.streak.milestoneDays;
+        if (days && days >= 1) {
+          storePendingStreakCelebration({
+            days,
+            isSpecialMilestone:
+              result.streak.isSpecialMilestone ??
+              [3, 7, 14, 30].includes(days),
+          });
+        }
+      }
+
+      await finishAfterSave(result.log, uploadedImageUrl);
+
+      if (result.nutritionVerified?.adjusted) {
+        const note = result.nutritionVerified.note?.trim();
+        alert(
+          note
+            ? t("addMeal.aiAdjusted", "AI 已覆核並修正營養：{note}", { note })
+            : t(
+                "addMeal.aiAdjustedShort",
+                "AI 已覆核並修正營養數值後儲存。"
+              )
+        );
+      }
+
+      const homePath = fromCoach
+        ? "/coach"
+        : logDate !== mealLogTodayKey()
+          ? "/history"
+          : "/";
+      router.push(shareToCommunity ? "/community" : homePath);
     } catch (err) {
       console.error("[add-meal] save failed", err);
-      alert(errorMessage(err, "上傳失敗，請檢查 Supabase 連線"));
+      alert(errorMessage(err, t("addMeal.errors.saveFailed", "儲存失敗，請稍後再試")));
     } finally {
       setSaveLoading(false);
     }
   };
 
   if (!profileChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        {t("common.loading", "載入中...")}
-      </div>
-    );
+    return <LoadingView message={t("common.loading", "載入中...")} />;
   }
 
   if (needsOnboarding && session?.email) {
@@ -356,7 +656,13 @@ export default function AddMealPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
+    <div
+      className={`min-h-screen bg-white max-w-lg mx-auto ${
+        fromCoach && (session?.role === "coach" || session?.role === "admin")
+          ? "pb-32"
+          : "pb-safe"
+      }`}
+    >
       {showNutritionDash && (
         <NutritionDashboard
           logs={todayLogs}
@@ -387,32 +693,149 @@ export default function AddMealPage() {
       )}
 
       <PageHeader
-        title={t("addMeal.title", "記錄飲食")}
-        onBack={() => router.push("/")}
+        title={
+          entryStep === "select"
+            ? t("addMeal.title", "記錄飲食")
+            : entryStep === "packaged"
+              ? t("addMeal.modeSelect.packagedTitle", "包裝食物 / 飲品")
+              : t("addMeal.modeSelect.cookedTitle", "已經煮好 / 外食")
+        }
+        onBack={handleHeaderBack}
         backLabel={t("header.back", "← 返回")}
       />
 
       <main className="px-4 py-4 space-y-4">
+        {entryStep === "select" ? (
+          <MealLogModeSelection
+            onSelect={(mode) => {
+              if (mode === "packaged") {
+                setEntryStep("packaged");
+                setOcrOverlayOpen(true);
+                return;
+              }
+              setEntryStep("cooked");
+              setOcrOverlayOpen(false);
+            }}
+          />
+        ) : (
+          <div className="space-y-4 animate-fade-slide-in">
+            {entryStep === "packaged" ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-emerald-900">
+                    {t("addMeal.packagedBanner.title", "AI 營養標籤掃描")}
+                  </p>
+                  <p className="text-xs text-emerald-800/80 leading-relaxed">
+                    {ocrPortionBase
+                      ? t(
+                          "addMeal.packagedBanner.done",
+                          "已讀取標籤，可調整份量後發布。"
+                        )
+                      : t(
+                          "addMeal.packagedBanner.hint",
+                          "對準包裝背後營養標籤，最快完成記錄。"
+                        )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOcrOverlayOpen(true)}
+                  className={`shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white ${btnClass}`}
+                >
+                  <ScanLine size={14} aria-hidden />
+                  {ocrPortionBase
+                    ? t("addMeal.packagedBanner.rescan", "再掃")
+                    : t("addMeal.packagedBanner.scan", "掃描")}
+                </button>
+              </div>
+            ) : null}
+
         <button
           type="button"
           onClick={() => setShowNutritionDash(true)}
           className={`w-full bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-md ${btnClass}`}
         >
-          📊 {t("addMeal.advancedNutrition", "高級營養分析")}
+          <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
+            {t("addMeal.advancedNutrition", "高級營養分析")}
+          </IconLabel>
         </button>
 
+        {entryStep === "cooked" ? (
         <FoodSearchEngine
           onAddToMeal={(item) => {
-            setDescription(item.description);
+            setDescription(mealDescriptionBase(item.description));
             setCalories(item.calories);
             setProtein(item.protein);
             setCarbs(item.carbs);
             setFats(item.fats);
             setMacrosFromSearch(item.fromSearch);
+            setMacrosLockedFromPicker(
+              item.fromSearch || item.nutritionSource === "ocr"
+            );
+            setSearchAdvanced(item.advanced);
+            setProNutrition(Boolean(item.proNutrition));
+            setNutritionSource(item.nutritionSource);
+            if (item.nutritionSource === "ocr" && item.portionBase) {
+              setOcrPortionBase({
+                productName: item.portionBase.productName,
+                macros: item.portionBase.macros,
+                advanced: item.portionBase.advanced,
+                baseWeightG: item.portionBase.baseWeightG,
+                proNutrition: item.portionBase.proNutrition,
+              });
+            } else {
+              setOcrPortionBase(null);
+            }
+            setPortionOverride(false);
+            setCarbsPortionKey(suggestCarbsPortionKey(item.carbs));
+            setProteinPortionKey(suggestProteinPortionKey(item.protein));
+            setHasVeggies(false);
+            clearMultiFoodDetection();
           }}
         />
+        ) : null}
+
+        {calories > 0 && (
+          <AdvancedNutritionCard
+            name={description.trim() || undefined}
+            macros={{ calories, protein, carbs, fats }}
+            advanced={searchAdvanced}
+            proSource={proNutrition}
+          />
+        )}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
+              {t("addMeal.logDate", "記錄日期")}
+            </label>
+            <input
+              type="date"
+              value={logDate}
+              max={mealLogTodayKey()}
+              min={(() => {
+                const d = new Date(`${mealLogTodayKey()}T12:00:00Z`);
+                d.setUTCDate(d.getUTCDate() - MEAL_LOG_MAX_BACKDATE_DAYS);
+                return d.toISOString().slice(0, 10);
+              })()}
+              onChange={(e) => {
+                const next = e.target.value;
+                const checked = validateMealLogDate(next);
+                if (checked.ok) setLogDate(checked.dateKey);
+              }}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-3 text-base bg-white"
+            />
+            <p className="mt-1.5 text-xs text-zinc-500">
+              {logDate === mealLogTodayKey()
+                ? t("addMeal.logDateTodayHint", "預設今日。漏咗可以改日子補記。")
+                : t(
+                    "addMeal.logDateBackfillHint",
+                    "補記 {date} 嘅飲食（唔會計入今日 streak）",
+                    { date: logDate }
+                  )}
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1">
               {t("addMeal.mealType", "餐別")}
@@ -439,6 +862,16 @@ export default function AddMealPage() {
               onChange={(e) => {
                 setDescription(e.target.value);
                 setMacrosFromSearch(false);
+                setMacrosLockedFromPicker(false);
+                setSearchAdvanced(undefined);
+                setProNutrition(false);
+                setNutritionSource(undefined);
+                setOcrPortionBase(null);
+                setPortionOverride(false);
+                setCarbsPortionKey("none");
+                setProteinPortionKey("none");
+                setHasVeggies(false);
+                clearMultiFoodDetection();
               }}
               placeholder={t(
                 "addMeal.descriptionPlaceholder",
@@ -482,75 +915,176 @@ export default function AddMealPage() {
                   className="max-h-40 mx-auto rounded-xl object-contain"
                 />
               ) : (
-                <p className="text-zinc-500">
-                  📷 {t("addMeal.uploadPhotoHint", "撳一下拍照或選擇相片（自動壓縮至 1MB 內）")}
+                <p className="text-zinc-500 flex items-center justify-center gap-2">
+                  <Camera size={20} strokeWidth={2} className="shrink-0 text-zinc-400" aria-hidden />
+                  {t("addMeal.uploadPhotoHint", "撳一下拍照或選擇相片（自動壓縮至 1MB 內）")}
                 </p>
               )}
             </div>
+            {imageBase64 ? (
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  disabled={foodDetecting}
+                  onClick={() => void runFoodDetection(imageBase64)}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-sm font-semibold text-violet-800 ${btnClass} disabled:opacity-60`}
+                >
+                  {foodDetecting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" aria-hidden />
+                      {t("addMeal.detectingFoods", "AI 分拆食物緊...")}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} aria-hidden />
+                      {t("addMeal.detectFoods", "AI 分拆相片入面嘅食物")}
+                    </>
+                  )}
+                </button>
+                {foodDetectError ? (
+                  <p className="text-xs text-amber-700">{foodDetectError}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
 
+        {multiFoodMode && detectedFoods.length > 0 ? (
+          <section className="bg-white rounded-2xl border border-violet-100 p-4 shadow-sm">
+            <MultiFoodPortionPanel
+              foods={detectedFoods}
+              onTotalsChange={applyMultiFoodTotals}
+            />
+          </section>
+        ) : null}
+
+        {!multiFoodMode && entryStep === "cooked" ? (
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3 shadow-sm">
-          <h2 className="font-semibold text-zinc-800">
-            {t("addMeal.quickPortion", "快速份量估算")}
-          </h2>
-          <p className="text-xs text-zinc-500">
-            {t("addMeal.quickPortionHint", "AI 已啟用外食隱形熱量修正（湯底、紅油、用油）")}
-          </p>
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
-              </label>
-              <select
-                value={carbsPortionKey}
-                onChange={(e) => setCarbsPortionKey(e.target.value as CarbsPortionKey)}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {CARBS_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(`addMeal.portions.${key}`, key)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
-              </label>
-              <select
-                value={proteinPortionKey}
-                onChange={(e) =>
-                  setProteinPortionKey(e.target.value as ProteinPortionKey)
-                }
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {PROTEIN_PORTION_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(`addMeal.portions.${key}`, key)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-zinc-500">
-                {t("addMeal.veggies", "蔬菜")}
-              </label>
-              <select
-                value={hasVeggies ? "yes" : "none"}
-                onChange={(e) => setHasVeggies(e.target.value === "yes")}
-                className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                <option value="none">{t("addMeal.portions.none", "無 / 冇食 (0)")}</option>
-                <option value="yes">{t("common.yes", "有")}</option>
-              </select>
-            </div>
+          <div className="space-y-1">
+            <h2 className="font-semibold text-zinc-800">
+              {t("addMeal.quickPortion", "份量調整")}
+            </h2>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              {t(
+                "addMeal.quickPortionHint",
+                "預設信 AI 估算。只有覺得份量唔啱，先用手掌／拳頭改。"
+              )}
+            </p>
           </div>
 
+          {aiEstimating ? (
+            <p className="text-xs text-emerald-700 font-medium">
+              {t("addMeal.aiEstimating", "AI 估算緊...")}
+            </p>
+          ) : null}
+          {aiEstimateError ? (
+            <p className="text-xs text-amber-700">{aiEstimateError}</p>
+          ) : null}
+
+          {!portionOverride ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCarbsPortionKey(suggestCarbsPortionKey(carbs));
+                setProteinPortionKey(suggestProteinPortionKey(protein));
+                setPortionOverride(true);
+              }}
+              className={`w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-900 ${btnClass}`}
+            >
+              {t(
+                "addMeal.portionOverrideOpen",
+                "AI 份量唔啱？用手掌／拳頭改"
+              )}
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-amber-900">
+                  {t("addMeal.portionOverrideTitle", "手動份量（手掌／拳頭）")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPortionOverride(false);
+                    setCarbsPortionKey("none");
+                    setProteinPortionKey("none");
+                    setHasVeggies(false);
+                  }}
+                  className={`text-xs font-semibold text-emerald-700 ${btnClass}`}
+                >
+                  {t("addMeal.portionOverrideCancel", "用返 AI")}
+                </button>
+              </div>
+              <p className="text-[11px] text-amber-800/80 leading-relaxed">
+                {t(
+                  "addMeal.portionOverrideHint",
+                  "冇蛋白就揀「無」，唔好隨便揀中掌；冇飯／粉亦揀碳水「無」。"
+                )}
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.carbsPortion", "碳水（拳頭大小）")}
+                  </label>
+                  <select
+                    value={carbsPortionKey}
+                    onChange={(e) =>
+                      setCarbsPortionKey(e.target.value as CarbsPortionKey)
+                    }
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    {CARBS_PORTION_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`addMeal.portions.${key}`, key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.proteinPortion", "蛋白質（手掌大小）")}
+                  </label>
+                  <select
+                    value={proteinPortionKey}
+                    onChange={(e) =>
+                      setProteinPortionKey(e.target.value as ProteinPortionKey)
+                    }
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    {PROTEIN_PORTION_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`addMeal.portions.${key}`, key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500">
+                    {t("addMeal.veggies", "蔬菜")}
+                  </label>
+                  <select
+                    value={hasVeggies ? "yes" : "none"}
+                    onChange={(e) => setHasVeggies(e.target.value === "yes")}
+                    className="w-full mt-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5"
+                  >
+                    <option value="none">
+                      {t("addMeal.portions.none", "無 / 冇食 (0)")}
+                    </option>
+                    <option value="yes">{t("common.yes", "有")}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-zinc-500">
-            {t("addMeal.autoEstimateHint", "儲存時會自動 AI 估算熱量同 Macros（無需再撳下面掣）")}
+            {t(
+              "addMeal.autoEstimateHint",
+              "儲存前會由 AI 覆核營養數值（有相片會一併分析）"
+            )}
           </p>
         </section>
+        ) : null}
 
         <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
           <button
@@ -558,7 +1092,9 @@ export default function AddMealPage() {
             onClick={() => setSnackOpen(!snackOpen)}
             className={`w-full flex justify-between items-center font-semibold text-zinc-800 ${btnClass}`}
           >
-            <span>🍪 {t("addMeal.calculateCalories", "計算卡路里")}</span>
+            <IconLabel icon={Cookie} iconClassName="text-zinc-700">
+              {t("addMeal.calculateCalories", "計算卡路里")}
+            </IconLabel>
             <span className="text-zinc-400">{snackOpen ? "▲" : "▼"}</span>
           </button>
           {snackOpen && (
@@ -616,6 +1152,16 @@ export default function AddMealPage() {
               </span>
             )}
           </div>
+          {entryStep === "cooked" ? (
+            <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
+          ) : null}
+          {ocrPortionBase && (
+            <ServingPortionPicker
+              baseWeightG={ocrPortionBase.baseWeightG}
+              productName={ocrPortionBase.productName}
+              onPortionChange={applyOcrPortionedNutrition}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             {(
               [
@@ -630,12 +1176,40 @@ export default function AddMealPage() {
                 <input
                   type="number"
                   value={val}
-                  onChange={(e) => setter(Number(e.target.value))}
+                  onChange={(e) => {
+                    setter(Number(e.target.value));
+                    setNutritionSource("manual");
+                    setMacrosFromSearch(false);
+                    setMacrosLockedFromPicker(false);
+                  }}
                   className="w-full mt-1 rounded-xl border border-zinc-200 px-3 py-2.5"
                 />
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={shareToCommunity}
+              onChange={(e) => setShareToCommunity(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-semibold text-zinc-800 text-sm">
+                <Globe size={16} className="text-emerald-600 shrink-0" aria-hidden />
+                {t("addMeal.shareToCommunity", "分享到 Community")}
+              </span>
+              <span className="block text-xs text-zinc-500 mt-1 leading-relaxed">
+                {t(
+                  "addMeal.shareToCommunityHint",
+                  "發布記錄後會將食物名稱、相片（如有）同 P/C/F 營養素顯示喺社群動態"
+                )}
+              </span>
+            </span>
+          </label>
         </section>
 
         <button
@@ -645,14 +1219,41 @@ export default function AddMealPage() {
           className={`w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg text-lg disabled:opacity-60 ${btnClass}`}
         >
           {saveLoading
-            ? macrosFromSearch
-              ? t("addMeal.saving", "正在儲存...")
-              : t("addMeal.aiAnalyzing", "AI 正在火速分析...")
+            ? t("addMeal.aiVerifying", "AI 正在覆核營養...")
             : imageCompressing
               ? t("addMeal.compressingPhoto", "壓縮相片中...")
               : t("addMeal.publish", "發布記錄")}
         </button>
+          </div>
+        )}
       </main>
+
+      <NutritionLabelScanOverlay
+        open={ocrOverlayOpen}
+        onClose={() => {
+          setOcrOverlayOpen(false);
+          if (!ocrPortionBase) {
+            setEntryStep("select");
+          }
+        }}
+        onSuccess={handleOcrSuccess}
+        autoLaunch
+      />
+
+      {(session?.role === "coach" || session?.role === "admin") && fromCoach && (
+        <BottomNav
+          role={session.role === "admin" ? "admin" : "coach"}
+          onFabClick={() => router.push("/add-meal?from=coach")}
+        />
+      )}
     </div>
+  );
+}
+
+export default function AddMealPage() {
+  return (
+    <Suspense fallback={<LoadingView message="載入中..." />}>
+      <AddMealPageContent />
+    </Suspense>
   );
 }

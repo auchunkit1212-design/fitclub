@@ -1,13 +1,92 @@
 {
+  "streak": {
+    "days": "{count} Days",
+    "longestHint": "Longest streak: {days} days",
+    "guestName": "Student",
+    "cardAlt": "Streak share card",
+    "celebration": {
+      "title": "{days}-day streak!",
+      "body": "Logged today! Save your card or share it with friends."
+    },
+    "milestone": {
+      "title": "Amazing! {days}-day healthy logging streak",
+      "body": "Gorilla coach salutes your discipline! You're ahead of 90% of members on a cut — keep it up!",
+      "cta": "Keep going"
+    },
+    "share": {
+      "saveImage": "Save image",
+      "saving": "Saving…",
+      "savedImage": "Streak image saved",
+      "social": "Share",
+      "community": "Community",
+      "sharing": "Sharing…",
+      "shared": "Share sheet opened",
+      "copied": "Caption copied",
+      "failed": "Share failed, try again",
+      "needLogin": "Please sign in to share",
+      "communityPosted": "Posted to Community",
+      "cta": "Share streak"
+    }
+  },
   "nav": {
     "home": "Home",
     "coach": "Coach",
     "settings": "Settings",
-    "addMeal": "Meal"
+    "addMeal": "Meal",
+    "explore": "Explore",
+    "profile": "Profile",
+    "records": "Student records",
+    "students": "Students",
+    "coachLogMeal": "Log meal"
+  },
+  "coach": {
+    "myMeals": "My meal logs",
+    "logMeal": "Log meal",
+    "fromDate": "From",
+    "toDate": "To",
+    "noMealsInRange": "No logs in this date range.",
+    "proteinG": "Protein"
+  },
+  "coachFeatures": {
+    "title": "Coach Tools",
+    "explore": "Explore more →",
+    "newBadge": "NEW",
+    "students": {
+      "title": "Manage Students",
+      "subtitle": "Roster, reviews and daily goals"
+    },
+    "report": {
+      "title": "AI Coach Report",
+      "subtitle": "Analyze check-ins and nutrition"
+    },
+    "challenge": {
+      "title": "Challenge Board",
+      "subtitle": "View this month's ranks and scores"
+    },
+    "invite": {
+      "title": "Invite Students",
+      "subtitle": "Copy your invite code and sign-up link"
+    },
+    "branding": {
+      "title": "Brand & Broadcast",
+      "subtitle": "Logo, theme color and announcements"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Get real-time student check-in alerts"
+    },
+    "meals": {
+      "title": "My Meals",
+      "subtitle": "Review your own meal history"
+    },
+    "plan": {
+      "title": "Coach Pro",
+      "subtitle": "Manage plans and advanced features"
+    }
   },
   "header": {
     "back": "← Back",
-    "logout": "🚪 Logout"
+    "logout": "Logout"
   },
   "language": {
     "label": "Language",
@@ -25,25 +104,54 @@
     },
     "todayMealCount": "Today {count} meals",
     "healthMgmt": "Health management",
-    "welcome": "👋 Welcome, {name}",
-    "advancedNutrition": "📊 Advanced Nutrition",
+    "welcome": "Welcome, {name}",
+    "advancedNutrition": "Advanced Nutrition",
+    "features": {
+      "title": "Health tools",
+      "exploreAll": "Explore all →",
+      "newBadge": "NEW",
+      "logMeal": {
+        "title": "Log a meal",
+        "subtitle": "Snap or search for a quick check-in"
+      },
+      "nutrition": {
+        "title": "Today's nutrition",
+        "subtitle": "Calories, macros, and target progress"
+      },
+      "suggest": {
+        "title": "What should I eat?",
+        "subtitle": "Next-meal ideas from remaining macros"
+      },
+      "challenge": {
+        "title": "Fat-loss challenge",
+        "subtitle": "Monthly leaderboard and check-ins"
+      },
+      "inbody": {
+        "title": "InBody analysis",
+        "subtitle": "Scan a report to track fat and muscle"
+      },
+      "history": {
+        "title": "History",
+        "subtitle": "Review meals and coach feedback"
+      }
+    },
     "notifications": {
       "logMeal": "⏰ Time to log your last meal — don't miss a check-in!",
-      "hydration": "💧 Hydration reminder: drink a big glass of water now!",
+      "hydration": "Hydration reminder: drink a big glass of water now!",
       "later": "Later",
       "actNow": "Do it now"
     },
     "errors": {
-      "cloudLoadFailed": "❌ Cloud load failed. Check your network or Supabase."
+      "cloudLoadFailed": "Couldn't load data. Check your network and try again."
     },
     "targets": {
       "lockedSolo": "AI Gorilla Mandate",
       "lockedCoach": "Coach Mandate",
-      "lockedBanner": "📜 {source} locked targets: {calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g"
+      "lockedBanner": "{source} locked targets: {calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g"
     },
-    "soloModeBanner": "🦍 You're in AI private-coach mode — Gorilla auto-reviews every meal you log!",
+    "soloModeBanner": "You're in AI private-coach mode — Gorilla auto-reviews every meal you log!",
     "coachReplied": "Coach replied {sticker}",
-    "broadcastPrefix": "📣 Coach alert:",
+    "broadcastPrefix": "Coach alert:",
     "aiCoach": {
       "soloTitle": "Gorilla AI Coach",
       "coachTitle": "Your coach AI review",
@@ -53,7 +161,7 @@
       "progressGood": "solid progress",
       "defaultCoach": "Pro coaching team"
     },
-    "roastTitle": "🤖 AI coach roast",
+    "roastTitle": "AI coach roast",
     "settingsSummary": "Your settings: {trainingType} · {weeklyFrequency} per week",
     "progress": {
       "title": "Today's progress"
@@ -63,22 +171,30 @@
       "last7Days": "Last 7 days",
       "placeholder": "Today's weight (kg)",
       "saving": "Saving…",
-      "updateButton": "Update today's weight",
+      "updateButton": "Save",
       "invalidAlert": "Please enter a valid weight (30–300 kg)",
-      "savedToast": "✅ Today's weight saved",
+      "savedToast": "Today's weight saved",
       "saveFailed": "Failed to save weight: {message}\n\nRun phase5-weight-logs.sql in Supabase."
     },
     "meals": {
       "today": "Today's meals",
       "macroLine": "{calories} kcal · Protein {protein}g · Carbs {carbs}g · Fat {fats}g",
-      "quickSaved": "✅ Logged: {name}",
-      "quickSaveFailed": "❌ {message}"
-    }
+      "quickSaved": "Logged: {name}",
+      "quickSavedAi": "Logged after AI review: {name}",
+      "quickSaveFailed": "{message}"
+    },
+    "profileHint": "Weight, meal history, and personal info are in the Profile tab.",
+    "coachStudentsCta": "Student management & meal logs",
+    "coachStudentsHint": "Register students, view roster and meal analysis — or use the Students tab below"
   },
   "common": {
     "loading": "Loading...",
     "loadingCloud": "Loading from cloud…",
-    "save": "Save settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "sending": "Sending…",
+    "remove": "Remove",
     "protein": "Protein",
     "carbs": "Carbs",
     "fat": "Fat",
@@ -96,18 +212,23 @@
     "uploadedPhotoAlt": "Uploaded food photo",
     "calculateCalories": "Snack Calculator",
     "publish": "Publish Log",
+    "shareToCommunity": "Share to Community",
+    "shareToCommunityHint": "After saving, your meal name, photo (if any), and macros will appear on the community feed.",
     "saving": "Saving...",
     "aiAnalyzing": "AI is analyzing...",
+    "aiVerifying": "AI is verifying nutrition...",
+    "aiAdjusted": "AI verified and adjusted: {note}",
+    "aiAdjustedShort": "Saved after AI nutrition verification.",
     "advancedNutrition": "Advanced Nutrition",
     "mealType": "Meal type",
     "description": "Food description",
     "descriptionPlaceholder": "e.g. char siu ramen, fried noodles...",
-    "quickPortion": "Quick portion estimate",
-    "quickPortionHint": "AI adjusts hidden calories for dining out (broth, chili oil, cooking oil)",
+    "quickPortion": "Portion adjust",
+    "quickPortionHint": "Trust AI by default. Only use palm/fist sizes when the AI portion looks wrong.",
     "carbsPortion": "Carbs (fist size)",
     "proteinPortion": "Protein (palm size)",
     "veggies": "Vegetables",
-    "autoEstimateHint": "Calories and macros are estimated automatically when you save",
+    "autoEstimateHint": "AI rechecks nutrition before save (and uses the photo when available).",
     "perPieceCalories": "Calories per piece",
     "applyTotalCalories": "Apply total calories",
     "manualMacros": "Adjust macros manually",
@@ -136,13 +257,21 @@
     "errors": {
       "descriptionRequired": "Please enter a food description.",
       "loginRequired": "Please log in before logging a meal.",
-      "compressFailed": "Photo compression failed. Try a smaller image."
-    }
+      "compressFailed": "Photo compression failed. Try a smaller image.",
+      "saveFailed": "Save failed. Please try again."
+    },
+    "portionOverrideOpen": "AI portion wrong? Adjust with palm/fist",
+    "portionOverrideTitle": "Manual portion (palm / fist)",
+    "portionOverrideCancel": "Use AI again",
+    "portionOverrideHint": "No protein? Choose None — don’t pick medium palm. No rice/noodles? Choose carbs None.",
+    "logDate": "Log date",
+    "logDateTodayHint": "Defaults to today. Change the date to backfill a missed meal.",
+    "logDateBackfillHint": "Backfilling {date} (won't count toward today's streak)"
   },
   "foodSearch": {
     "title": "Food Search",
-    "hint": "Type partial keywords (typos, EN/ZH mix OK) — AI suggests HK & Taiwan foods with estimated macros",
     "sourceAi": "AI suggest",
+    "source711": "7-Eleven DB",
     "sourceLocalDb": "HK/TW local DB",
     "placeholder": "Search food name...",
     "searching": "Searching...",
@@ -154,7 +283,7 @@
     "minCharsHint": "Keep typing to see suggestions…",
     "networkError": "Network error. Please try again.",
     "sourceHk": "HK café database",
-    "sourceLocal": "Smart estimate",
+    "sourceLocal": "Local DB",
     "addedHint": "Added to form — tap Publish Log to save",
     "addFavorite": "Add to favorites",
     "favorites": "Favorites / History",
@@ -163,8 +292,13 @@
     "loginRequired": "Please log in to search foods",
     "fatSecretIpBlocked": "FatSecret blocked this server IP. Add it in FatSecret Platform → your app → IP allowlist. On Vercel, enable Static IPs under Project Settings → Connectivity.",
     "sheetTitle": "Quick log meal",
-    "fullLogCta": "📷 Full log (with photo)",
-    "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page."
+    "fullLogCta": "Full log (with photo)",
+    "sheetHint": "Pick a food to log instantly. For photos or full options, use the full log page.",
+    "advanced": {
+      "title": "Advanced Nutrition",
+      "cholesterol": "Cholesterol",
+      "disclaimer": "Advanced nutrients are AI-estimated or derived from macros. Pro reference only—not medical advice."
+    }
   },
   "snackScanner": {
     "scanning": "Reading nutrition label...",
@@ -173,6 +307,24 @@
     "perPiece": "→ About {cal} kcal per piece (applied)",
     "engineOpenAi": "Engine: GPT-4o Vision",
     "engineMock": "Engine: demo mode"
+  },
+  "nutritionOcr": {
+    "scanButton": "Scan nutrition label (AI OCR)",
+    "scanning": "Gorilla is reading the label...",
+    "blurError": "The label is a bit blurry—Gorilla can't read it! Please retake the photo or enter manually.",
+    "scannedLabel": "Scanned nutrition label",
+    "perServing": "Per serving"
+  },
+  "portion": {
+    "title": "How much did you eat?",
+    "full": "Full serving",
+    "half": "Half",
+    "third": "⅓ serving",
+    "quarter": "¼ serving",
+    "customGrams": "Or enter grams eaten",
+    "perServing": "{g}g per serving",
+    "gramsEaten": "{grams}g of {base}g",
+    "noWeightHint": "If the label has no weight, use half or ⅓ serving to estimate."
   },
   "roles": {
     "admin": "Admin Console",
@@ -209,12 +361,12 @@
     "verifying": "Verifying…",
     "signup": {
       "registering": "Signing up…",
-      "soloCta": "🦍 Sign up for AI Coach",
-      "coachCta": "🚀 Create brand space",
+      "soloCta": "Sign up for AI Coach",
+      "coachCta": "Create brand space",
       "soloTitle": "Sign up for AI private coach (no human coach required)",
       "soloHint": "Password required · Auto-connects to official AI tenant · Gorilla manages targets and reviews",
-      "trackSolo": "🦍 AI solo student",
-      "trackCoach": "🏢 Coach / Brand",
+      "trackSolo": "AI solo student",
+      "trackCoach": "Coach / Brand",
       "passwordPlaceholder": "Password (min. 6 characters, required for solo)",
       "nameCoach": "Coach name",
       "nameStudent": "Your name"
@@ -222,29 +374,33 @@
     "invite": {
       "hide": "Hide coach invite code",
       "show": "I have a coach invite code (optional)",
-      "placeholder": "Enter coach invite code (leave blank if none)"
+      "placeholder": "Enter coach invite code (leave blank if none)",
+      "prefilled": "Coach invite applied · code: {code}",
+      "loginTabHint": "You opened a coach invite link. New students: switch to Sign Up. Already registered: log in with your password.",
+      "alreadyRegisteredHint": "This email already has an account — enter your password to log in. Contact your coach if you forgot it."
     },
     "footer": {
       "ownerPrompt": "Gym owner?",
       "sasLink": "Open a free brand space"
     },
     "errors": {
-      "passwordMin": "⚠️ Please set a password with at least 6 characters.",
+      "passwordMin": "Please set a password with at least 6 characters.",
       "emailRequired": "Please enter your email first.",
       "registerFailed": "Registration failed",
-      "network": "❌ Connection failed. Please try again later.",
-      "networkRetry": "❌ Connection failed. Check your network and try again.",
+      "network": "Connection failed. Please try again later.",
+      "networkRetry": "Connection failed. Check your network and try again.",
+      "serverResponse": "Server returned an unexpected response. Please try again or contact support.",
       "loginFailed": "Login failed"
     },
     "toast": {
-      "welcome": "🎉 Welcome {name}",
-      "adminWelcome": "🎉 Welcome, Chief Executive",
-      "brandOpened": "🎉 Brand \"{gymName}\" is live!",
-      "soloReady": "🦍 Welcome! Gorilla AI coach is ready for onboarding."
+      "welcome": "Welcome {name}",
+      "adminWelcome": "Welcome, Chief Executive",
+      "brandOpened": "Brand \"{gymName}\" is live!",
+      "soloReady": "Welcome! Gorilla AI coach is ready for onboarding."
     }
   },
   "settings": {
-    "title": "⚙️ Personal settings",
+    "title": "Personal settings",
     "nickname": "Nickname",
     "nicknamePlaceholder": "What should your coach call you?",
     "job": "Job type",
@@ -283,7 +439,189 @@
       "cardio": "Cardio",
       "mixed": "Mixed training"
     },
-    "saveButton": "Save settings"
+    "saveButton": "Save settings",
+    "appTitle": "App settings",
+    "appSubtitle": "Language, push notifications, and reminders. Personal data and meal history are under Profile.",
+    "language": "Interface language",
+    "morningTimeAt": "{time}"
+  },
+  "profile": {
+    "subtitle": "Personal info, weight, InBody progress, and meal history",
+    "targetCalories": "Daily calorie goal",
+    "targetProtein": "Protein goal",
+    "personalTitle": "Personal info",
+    "saveButton": "Save profile",
+    "saved": "Profile saved",
+    "weightTitle": "Weight trend",
+    "mealHistory": "Meal history",
+    "noMeals": "No logs yet — tap + in the center to start",
+    "photo": {
+      "upload": "Upload photo",
+      "uploading": "Uploading…",
+      "remove": "Remove",
+      "change": "Change profile photo",
+      "fail": "Could not process photo. Please try again.",
+      "cloudNotReady": "Cloud avatars are not set up yet. Run profile-avatar-cloud.sql in Supabase."
+    },
+    "proBadge": "Pro",
+    "proMember": "Pro member",
+    "proOnly": "This feature is for Pro members only.",
+    "proOnlyTitle": "Pro feature",
+    "proOnlyBody": "{feature} is for Pro members. Students can upgrade to Solo Pro, or get access through a Pro coach.",
+    "proCoachHint": "Coach Pro: unlimited students + micro-nutrient analysis and AI meal plans for your roster.",
+    "proFeatureDefault": "This advanced feature",
+    "proPreviewBadge": "Preview"
+  },
+  "inbody": {
+    "title": "InBody body composition",
+    "subtitle": "Photograph an InBody / body-fat report. AI reads fat, muscle, and visceral fat so you can track real progress.",
+    "last90Days": "Last 90 days",
+    "loading": "Loading body composition…",
+    "emptyTitle": "No InBody progress yet",
+    "emptyHint": "Upload a report photo to see body-fat and muscle trends here",
+    "scanButton": "Scan InBody photo",
+    "scanning": "Reading your report…",
+    "scanOk": "Report read — review the numbers, then save",
+    "scanFailed": "Could not read the report. Retake a clearer photo.",
+    "reviewTitle": "Review scan results",
+    "reviewHint": "Edit any wrong numbers before saving.",
+    "deviceHint": "Device: {device}",
+    "cancel": "Cancel",
+    "confirmSave": "Save progress",
+    "saving": "Saving…",
+    "saved": "InBody progress saved",
+    "saveFailed": "Could not save. Please try again.",
+    "needMetrics": "Enter at least weight, body fat, or muscle mass",
+    "vsPrev": "vs last",
+    "metric": {
+      "bodyFat": "Body fat",
+      "muscle": "Muscle",
+      "visceral": "Visceral fat",
+      "weight": "Weight"
+    },
+    "field": {
+      "date": "Date",
+      "weight": "Weight (kg)",
+      "bodyFat": "Body fat (%)",
+      "muscle": "Muscle mass (kg)",
+      "smm": "Skeletal muscle (kg)",
+      "visceral": "Visceral fat",
+      "bmr": "BMR (kcal)",
+      "water": "Body water (%)"
+    }
+  },
+  "leaderboard": {
+    "title": "Fat-loss challenge",
+    "subtitle": "Monthly leaderboard",
+    "back": "← Explore",
+    "introTitle": "Check in together. Grow healthier, climb higher.",
+    "introBody": "Scores reset every month. Logging earns points; hitting targets earns more. You only compete with classmates from the same coach or gym.",
+    "ruleCheckin": "+1 for a check-in day (any meal logged)",
+    "rulePartial": "+2 for a near-target day",
+    "ruleMet": "+3 for a full on-target day",
+    "ruleWhy": "The middle +2 tier rewards effort so you don’t only score on perfect days.",
+    "prevMonth": "Previous",
+    "nextMonth": "Next",
+    "yourRank": "Your rank",
+    "yourScore": "This month",
+    "yourMet": "On-target days",
+    "loading": "Scoring this month…",
+    "loadFailed": "Could not load the leaderboard",
+    "emptyTitle": "No classmates on the board yet",
+    "emptyHint": "Bind a coach or gym and teammates will show up here.",
+    "you": "(you)",
+    "rowStats": "{logged} logged · {met} on target",
+    "points": "pts",
+    "players": "players",
+    "metDaysShort": "on-target days",
+    "fullRanking": "Full ranking",
+    "howToScore": "How scoring works",
+    "resetsMonthly": "Resets automatically on the 1st",
+    "checkinShort": "Check-in",
+    "partialShort": "Near target",
+    "metShort": "On target"
+  },
+  "suggest": {
+    "intro": "Based on what you already ate today and what’s left, the gorilla suggests your next meal. Coaches and students can both use this."
+  },
+  "community": {
+    "badge": "Community",
+    "title": "Explore",
+    "subtitle": "Share thoughts, photos, and videos, or sync meal logs to the community.",
+    "hub": {
+      "title": "Discover features",
+      "comingSoon": "This feature is coming soon!",
+      "comingSoonBadge": "Coming soon",
+      "comingSoonPage": "This feature is coming soon. Coaches and students can already open it from Explore. The full version will suggest groceries from your nutrition targets.",
+      "comingSoonQuiz": "This feature is coming soon. Coaches and students can already open it from Explore. The full version will teach macros with a short quiz.",
+      "inbody-scan": {
+        "title": "InBody photo scan",
+        "subtitle": "Auto-read body fat and muscle progress"
+      },
+      "coach-suggest": {
+        "title": "What should I eat?",
+        "subtitle": "Meal ideas from remaining macros"
+      },
+      "fat-loss-challenge": {
+        "title": "Fat-loss challenge",
+        "subtitle": "Monthly leaderboard — check in together"
+      },
+      "smart-grocery": {
+        "title": "Smart grocery list",
+        "subtitle": "Suggestions based on your goals"
+      },
+      "nutrition-quiz": {
+        "title": "Nutrition quiz",
+        "subtitle": "Learn macros while you play"
+      }
+    },
+    "feed": {
+      "title": "Community feed",
+      "like": "Like",
+      "comment": "Comment",
+      "photoAlt": "Post photo",
+      "hint": "Your posts appear here; demo posts are marked Demo.",
+      "mockHint": "Sample posts above; a live feed will connect later."
+    },
+    "composer": {
+      "placeholder": "Share your thoughts or meal notes…",
+      "post": "Post",
+      "camera": "Take photo",
+      "photo": "Photo",
+      "video": "Video",
+      "imageFail": "Could not process image",
+      "videoFail": "Could not read video",
+      "storageFull": "Storage full — remove media or use a shorter video",
+      "postFail": "Post failed. Try again."
+    },
+    "post": {
+      "moreActions": "More actions",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this post?",
+      "emptyError": "Text and media cannot both be empty",
+      "saveFailed": "Save failed"
+    },
+    "comment": {
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "loading": "Loading comments…",
+      "empty": "No comments yet — be the first!",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?",
+      "deleteFailed": "Failed to delete comment",
+      "postFailed": "Failed to post comment. Try again."
+    }
+  },
+  "microGuide": {
+    "title": "Advanced nutrients guide",
+    "subtitle": "Beyond calories and macros — see suggested intake for fiber, sugar, sodium, and more.",
+    "recommendedDaily": "Suggested daily intake",
+    "nutrient": "Nutrient",
+    "recommend": "Guideline",
+    "todayVsRecommend": "Today vs guideline",
+    "cholesterol": "Cholesterol",
+    "noMealsYet": "No meals logged today — estimates appear after your first check-in."
   },
   "ai": {
     "roast": {
@@ -301,7 +639,7 @@
       "badge": "Starter quest · Welcome setup",
       "title": "Build your body profile",
       "subtitleSolo": "Gorilla AI will generate calorie and macro targets from your data.",
-      "subtitleCoach": "Complete this to enter the app so AI can estimate dining-out calories and daily targets."
+      "subtitleCoach": "Choose your weekly weight goal — daily calories adjust across 5 pace tiers."
     },
     "fields": {
       "height": "Height (cm)",
@@ -317,9 +655,9 @@
       "other": "Other"
     },
     "goal": {
-      "cut": "🔥 Cut fat",
-      "bulk": "💪 Build muscle",
-      "maintain": "⚖️ Maintain"
+      "cut": "Cut fat",
+      "bulk": "Build muscle",
+      "maintain": "Maintain"
     },
     "submit": {
       "saving": "Saving…",
@@ -329,6 +667,7 @@
     },
     "errors": {
       "invalidFields": "Please enter valid height, weight, age, and target weight.",
+      "paceRequired": "Please select a weekly weight goal (gain / maintain / lose).",
       "permission": "Permission check failed — log out and sign in again as a student.",
       "saveFailed": "Save failed. Please try again later."
     },
@@ -339,7 +678,7 @@
     }
   },
   "bodyProfile": {
-    "sectionTitle": "📏 Body data",
+    "sectionTitle": "Body data",
     "height": "Height (cm)",
     "weight": "Weight (kg)",
     "age": "Age",
@@ -348,16 +687,26 @@
     "genderFemale": "Female",
     "genderOther": "Other",
     "targetWeight": "Target weight (kg)",
-    "exerciseCalories": "Today's exercise burn (kcal)"
+    "exerciseCalories": "Today's exercise burn (kcal)",
+    "pace": {
+      "label": "Weekly weight goal",
+      "hint": "Pick how fast you want to gain, lose, or maintain — daily calories update from this.",
+      "required": "Select a weekly weight goal to update calorie targets.",
+      "gain1": "Gain +1 kg / week",
+      "gain05": "Gain +0.5 kg / week",
+      "maintain": "Maintain weight",
+      "lose05": "Lose -0.5 kg / week",
+      "lose1": "Lose -1 kg / week"
+    }
   },
   "push": {
-    "title": "📲 Meal & hydration reminders",
+    "title": "Meal & hydration reminders",
     "description": "Get system notifications even when the app is closed (requires VAPID + Supabase subscription storage).",
     "unsupported": {
-      "title": "📲 System notifications",
+      "title": "System notifications",
       "hint": "Web Push isn't supported here. On iPhone, use Safari Add to Home Screen, then open from the icon (iOS 16.4+)."
     },
-    "enable": "🔔 Enable meal & hydration reminders",
+    "enable": "Enable meal & hydration reminders",
     "processing": "Processing…",
     "test": "Test notification",
     "disable": "Disable",
@@ -367,28 +716,28 @@
     "messages": {
       "permissionStatus": "Permission: {permission}{subscribed}",
       "subscribed": " · Subscribed",
-      "enabled": "✅ Notifications on; subscription saved to Supabase.",
-      "enabledConsole": "✅ Notifications on. Supabase table missing — subscription logged to Console (F12).",
+      "enabled": "Notifications on; subscription saved to Supabase.",
+      "enabledConsole": "Notifications on. Supabase table missing — subscription logged to Console (F12).",
       "disabled": "Push subscription disabled.",
-      "testSent": "📲 Local test notification sent (check system settings if nothing appears).",
-      "enableFailed": "❌ {message}",
+      "testSent": "Local test notification sent (check system settings if nothing appears).",
+      "enableFailed": "{message}",
       "disableFailed": "Failed to disable",
       "testFailed": "Test failed"
     }
   },
   "coachPush": {
-    "title": "📲 Instant meal-log alerts",
+    "title": "Instant meal-log alerts",
     "description": "Get system notifications when a student logs a meal, even if the app is in the background.",
-    "unsupportedTitle": "📲 Meal-log alerts",
+    "unsupportedTitle": "Meal-log alerts",
     "unsupportedHint": "Web Push isn't supported here. Use Chrome/Safari; on iPhone, Add to Home Screen first (iOS 16.4+).",
-    "enable": "🔔 Enable push notifications",
+    "enable": "Enable push notifications",
     "processing": "Processing…",
     "test": "Test notification",
     "disable": "Disable",
     "permission": "Permission: {permission}",
     "subscribed": " · Subscribed",
-    "enabled": "✅ Push enabled! You'll be notified when students log meals.",
-    "testOk": "📲 Local test sent (use /api/push/test for server push).",
+    "enabled": "Push enabled! You'll be notified when students log meals.",
+    "testOk": "Local test sent (use /api/push/test for server push).",
     "deniedHelp": "Notifications were blocked. Allow this site in browser/system settings."
   },
   "nutritionDash": {
@@ -417,7 +766,7 @@
       "noMacroData": "No macro data"
     },
     "recommendations": {
-      "title": "💡 Meal ideas for remaining quota",
+      "title": "Meal ideas for remaining quota",
       "loading": "Generating AI meal suggestions…",
       "itemLine": "~{calories} kcal · P{protein} C{carbs} F{fats}"
     },
@@ -445,5 +794,180 @@
     "good": "Good",
     "caution": "Caution",
     "danger": "High"
+  },
+  "coachSuggest": {
+    "title": "Ask Coach",
+    "subtitle": "Coach! What to eat? — Next meal plus your rest-of-day eating plan",
+    "restOfDayPlan": "After that, you can still eat today",
+    "fullDayPlan": "Full-day meal plan",
+    "cravingLabel": "What are you craving for your next meal?",
+    "cravingPlaceholder": "e.g. Japanese, fast food, cha chaan teng — or leave blank",
+    "cta": "Coach! What to eat?",
+    "loading": "Coach is thinking…",
+    "regenerate": "Try other options",
+    "regenerating": "Coach is cooking up alternatives…",
+    "error": "Coach is busy — try again shortly",
+    "empty": "No reply from coach — please try again",
+    "demo": {
+      "text": "You still have about 1,500 kcal left today. Keep lunch lighter with lean protein and veggies, save carbs for dinner, and add a protein snack this afternoon.",
+      "lunchSlot": "Lunch",
+      "lunchTitle": "Chicken breast rice bowl",
+      "lunchDesc": "Steamed chicken, brown rice, broccoli, and a little avocado — high protein without heavy fats.",
+      "snackSlot": "Snack",
+      "snackTitle": "Greek yogurt with blueberries",
+      "snackDesc": "Top up protein and a little carbs so you are not starving before dinner.",
+      "dinnerSlot": "Dinner",
+      "dinnerTitle": "Steamed fish with greens",
+      "dinnerDesc": "Quality protein and fiber, with a small portion of sweet potato or rice to finish the day.",
+      "tag1": "High protein",
+      "tag2": "Balanced",
+      "tag3": "Save carbs"
+    }
+  },
+  "history": {
+    "title": "History Calendar",
+    "subtitle": "Review meal logs and AI feedback — green on target, red over",
+    "open": "History calendar",
+    "fullView": "Full screen",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loading": "Loading calendar…",
+    "targetHint": "Target {calories} kcal/day",
+    "legend": {
+      "under": "On target",
+      "over": "Over"
+    },
+    "day": {
+      "loading": "Loading day…",
+      "pickDate": "Tap a date on the calendar to see details",
+      "noLogs": "No meals logged this day",
+      "title": "{date} details",
+      "mealCount": "{count} meals",
+      "macros": "P / C / F progress",
+      "meals": "Meals",
+      "aiReviews": "Gorilla AI reviews",
+      "addMeal": "Add meal for this day"
+    }
+  },
+  "appGuide": {
+    "badge": "Getting started · Feature tour",
+    "title": "App usage guide",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Get started",
+    "progress": "Step {current} of {total}",
+    "replayButton": "App usage guide",
+    "replayHint": "Replay the feature tour, including nutrition label scanning and meal logging.",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Gorilla Diet Coach",
+        "body": "This quick tour shows you how to log meals, scan nutrition labels, and use the main features.\n\nYou can replay it anytime from Settings."
+      },
+      "nav": {
+        "title": "Bottom navigation",
+        "body": "Five tabs at the bottom:\n· Explore — community meal shares\n· Home — daily calories and progress\n· + Log meal — tap the center button to add food\n· Profile — meal history, coach replies, body stats\n· Settings — language, reminders, and push notifications"
+      },
+      "recordMeal": {
+        "title": "Log a meal",
+        "body": "Tap the + button or open the log-meal page to:\n· Pick a meal type (breakfast, lunch, dinner, etc.)\n· Take or upload a food photo\n· Search the food database\n· Adjust portions with the serving picker"
+      },
+      "scanLabel": {
+        "title": "Scan nutrition labels",
+        "body": "While logging, tap \"Scan nutrition label\" and point your camera at the facts panel on packaging.\n\nOCR reads calories, protein, carbs, and fat automatically — no manual typing."
+      },
+      "aiVerify": {
+        "title": "AI nutrition check",
+        "body": "When you save a meal, Gorilla AI reviews your numbers against typical foods and portions.\n\nIt adjusts unrealistic entries so your daily progress stays accurate."
+      },
+      "home": {
+        "title": "Home dashboard",
+        "body": "Your home screen shows:\n· Calorie and macro ring progress\n· Detailed nutrition analysis and AI roast\n· Coach broadcast messages\n· Logging streak\n\nTap \"Advanced nutrition\" for deeper stats."
+      },
+      "community": {
+        "title": "Explore community",
+        "body": "On Explore you can share your meals and browse what other students are eating.\n\nStay motivated and pick up ideas from the community."
+      },
+      "profile": {
+        "title": "Your profile",
+        "body": "Profile includes:\n· Full meal history and calendar\n· Coach sticker reactions on your meals\n· Body stats (height, weight, goals)\n· Avatar and nickname"
+      },
+      "settings": {
+        "title": "Settings & reminders",
+        "body": "In Settings you can:\n· Switch language (Cantonese / Traditional Chinese / English)\n· Set water and morning reminder times\n· Enable push notifications so you never miss a log"
+      },
+      "coachInvite": {
+        "title": "Link your coach (invite code)",
+        "body": "If you have a coach invite code, enter it at registration to link your coach and gym.\n\nYour coach can then set nutrition targets, review your logs, and send broadcasts."
+      }
+    }
+  },
+  "legal": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "deleteAccount": "Delete account",
+    "footerNav": "Legal & account",
+    "sectionTitle": "Legal & account",
+    "lastUpdated": "Last updated: {date}",
+    "contactTitle": "Contact us",
+    "contactBody": "For privacy or account requests, email:",
+    "registerConsent": "By signing up or logging in you agree to our",
+    "and": " and ",
+    "deleteTitle": "Permanently delete account",
+    "deleteWarning": "This removes your account, meal logs, body profile, push subscriptions, and related data. This cannot be undone.",
+    "deleteCoachWarning": "After a coach account is deleted, new students cannot bind via your invite code; existing student data is not deleted.",
+    "deleteTypeEmail": "Type your email to confirm: {email}",
+    "deleteButton": "Permanently delete my account",
+    "deleteConfirmDialog": "This cannot be undone. Delete your account and all meal logs?",
+    "deleteSuccess": "Your account has been permanently deleted.",
+    "deleteFailed": "Deletion failed",
+    "deleting": "Deleting...",
+    "deleteLoginRequired": "Please log in before deleting your account.",
+    "goLogin": "Go to login"
+  },
+  "billing": {
+    "sectionTitle": "Subscription plans",
+    "sectionSubtitle": "Pro unlocks advanced nutrition, AI meal suggestions, and unlimited coach students. HK$38/month.",
+    "sectionSubtitleDual": "Choose the plan that fits you. Secure checkout via Stripe.",
+    "currentPro": "You are a Pro member",
+    "currentProCoach": "You are a Pro member (via your coach)",
+    "coachProHint": "Pro features come from your Pro coach — no separate subscription to manage.",
+    "syncPending": "Pro is active but Stripe billing is not synced yet. Refresh if you just paid, or check your Webhook setup.",
+    "syncPendingSelf": "You paid, but Stripe isn't linked to this account yet. Tap below to sync (login email must match checkout).",
+    "syncButton": "Sync my subscription",
+    "syncing": "Syncing from Stripe...",
+    "syncFailed": "Sync failed. Please try again.",
+    "upgradePro": "Upgrade to Pro",
+    "upgradeSolo": "Upgrade Solo (HK$38/mo)",
+    "upgradeCoachPro": "Upgrade Pro Coach (HK$399/mo)",
+    "manageBilling": "Manage subscription / payment",
+    "openingCheckout": "Opening Stripe...",
+    "openingPortal": "Opening...",
+    "checkoutFailed": "Could not start checkout",
+    "portalFailed": "Could not open billing portal",
+    "successTitle": "Subscription successful",
+    "successHeadline": "Welcome to Pro!",
+    "successBody": "Payment complete. Pro features are unlocked. Returning home...",
+    "freeTrialBadge": "3-day free trial",
+    "cancelTitle": "Payment not completed",
+    "cancelBody": "You cancelled Stripe Checkout. You can upgrade anytime."
+  },
+  "pullRefresh": {
+    "pull": "Pull to refresh",
+    "release": "Release to refresh",
+    "refreshing": "Refreshing..."
+  },
+  "share": {
+    "copyFailed": "Copy failed — long-press to copy manually",
+    "student": {
+      "title": "Share app with friends",
+      "hintSolo": "Share the link so friends can log meals and get AI nutrition insights.",
+      "hintCoach": "Share the link — friends who sign up join your coach and gym.",
+      "copyLink": "Copy link",
+      "copyMessage": "Copy message",
+      "shareButton": "Share with friends",
+      "copiedLink": "Link copied",
+      "copiedMessage": "Message copied"
+    }
   }
 }

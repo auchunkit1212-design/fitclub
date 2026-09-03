@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   diagnoseOpenRouter,
+  getOpenRouterKeyHint,
   getOpenRouterModel,
   isOpenRouterConfigured,
 } from "@/lib/food-search/openrouter";
@@ -26,9 +27,12 @@ export async function GET() {
   const diagnostics = await diagnoseOpenRouter();
   return NextResponse.json({
     source: "openrouter",
+    keyHint: getOpenRouterKeyHint(),
     ...diagnostics,
     message: diagnostics.ok
-      ? `OpenRouter ready (${diagnostics.model}).`
-      : diagnostics.error ?? "OpenRouter check failed.",
+      ? `OpenRouter ready (${diagnostics.model}, ${diagnostics.sampleCount ?? 0} sample items).`
+      : diagnostics.hint
+        ? `${diagnostics.error ?? "OpenRouter check failed."} — ${diagnostics.hint}`
+        : diagnostics.error ?? "OpenRouter check failed.",
   });
 }

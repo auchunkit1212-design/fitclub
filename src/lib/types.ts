@@ -2,6 +2,9 @@ export type ThemeColor = "emerald" | "blue" | "black";
 
 export type StudentGender = "male" | "female" | "other";
 
+/** 每週體重變化目標 (kg)：增肌 +1/+0.5、維持 0、減脂 -0.5/-1 */
+export type WeightChangeKgPerWeek = -1 | -0.5 | 0 | 0.5 | 1;
+
 export interface StudentBodyProfile {
   email: string;
   heightCm: number;
@@ -9,6 +12,8 @@ export interface StudentBodyProfile {
   age: number;
   gender: StudentGender;
   targetWeightKg: number;
+  /** 每週目標體重變化；必填後先視為完成 onboarding */
+  weightChangeKgPerWeek?: WeightChangeKgPerWeek | null;
   exerciseCaloriesDaily: number;
   onboardingComplete: boolean;
   updatedAt?: string;
@@ -28,6 +33,24 @@ export interface WeightLog {
   createdAt: string;
 }
 
+/** InBody／體脂報告身體組成記錄（每日最多一筆） */
+export interface BodyCompositionLog {
+  id: string;
+  email: string;
+  /** YYYY-MM-DD */
+  logDate: string;
+  weightKg: number | null;
+  bodyFatPct: number | null;
+  muscleMassKg: number | null;
+  skeletalMuscleKg: number | null;
+  visceralFatLevel: number | null;
+  bmrKcal: number | null;
+  bodyWaterPct: number | null;
+  imageUrl: string | null;
+  source: string;
+  createdAt: string;
+}
+
 export interface CoachBranding {
   appTitle: string;
   themeColor: ThemeColor;
@@ -43,10 +66,20 @@ export interface Tenant {
   plan: string;
 }
 
+export interface StudentStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastStreakUpdate: string | null;
+}
+
+export type UserPlan = "free" | "pro";
+
 export interface RegistryUser {
   email: string;
   name: string;
   role: "student" | "coach";
+  plan?: UserPlan;
+  avatarUrl?: string | null;
   gym: string;
   coach?: string;
   addedBy?: string;
@@ -57,8 +90,13 @@ export interface RegistryUser {
   themeColor?: ThemeColor;
   broadcast?: string;
   hasPassword?: boolean;
+  currentStreak?: number;
+  longestStreak?: number;
+  lastStreakUpdate?: string | null;
   /** 僅伺服器登入驗證用，切勿傳去前端 */
   passwordHash?: string;
+  /** 僅總裁後台 API 回傳，新註冊／重設後才有明文 */
+  adminPasswordPlain?: string | null;
 }
 
 export interface UserSession {
@@ -74,6 +112,10 @@ export interface UserSession {
   brandLogo?: string;
   /** 無真人教練的 B2C 散客 */
   isSoloStudent?: boolean;
+  /** 訂閱方案；Pro 功能門控用 */
+  plan?: UserPlan;
+  /** 已解析的 Pro 權限（登入／sync 時寫入 session） */
+  isPro?: boolean;
   isLoggedIn: boolean;
 }
 
@@ -113,6 +155,16 @@ export interface MealLogReaction {
   createdAt: string;
 }
 
+export interface MealLogFeedback {
+  id: string;
+  mealLogId: string;
+  coachEmail: string;
+  presetKey: string;
+  messageText: string;
+  sticker?: string;
+  createdAt: string;
+}
+
 export interface FavoriteFood {
   id: string;
   studentEmail: string;
@@ -127,7 +179,16 @@ export interface FavoriteFood {
   lastUsedAt: string;
 }
 
-export interface FoodSearchItem {
+/** Pro-tier micronutrients from AI food search (per serving) */
+export interface FoodAdvancedNutrients {
+  fiberG?: number;
+  sugarG?: number;
+  saturatedFatG?: number;
+  sodiumMg?: number;
+  cholesterolMg?: number;
+}
+
+export interface FoodSearchItem extends FoodAdvancedNutrients {
   id: string;
   name: string;
   brand: string;
@@ -140,6 +201,7 @@ export interface FoodSearchItem {
   source:
     | "openrouter"
     | "hk_tw"
+    | "hk_711"
     | "hk"
     | "local"
     | "gemini"

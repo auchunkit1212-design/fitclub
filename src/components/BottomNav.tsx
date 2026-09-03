@@ -1,120 +1,195 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { getSession } from "@/lib/session";
+import {
+  CircleUser,
+  Globe,
+  GraduationCap,
+  Home,
+  Plus,
+  Settings,
+  Users,
+} from "@/components/icons";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-type ActiveTab = "dashboard" | "settings";
-
 interface BottomNavProps {
-  activeTab: ActiveTab;
-  onTabChange: (tab: ActiveTab) => void;
   role: "student" | "coach" | "admin";
   onFabClick?: () => void;
+  studentsBadgeCount?: number;
+}
+
+function NavTabButton({
+  active,
+  label,
+  icon: Icon,
+  onClick,
+  badgeCount,
+}: {
+  active: boolean;
+  label: string;
+  icon: typeof Home;
+  onClick: () => void;
+  badgeCount?: number;
+}) {
+  const showBadge = badgeCount !== undefined && badgeCount > 0;
+  const badgeLabel =
+    badgeCount !== undefined && badgeCount > 99 ? "99+" : String(badgeCount);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-1 flex-col items-center justify-center gap-1 min-w-0 max-w-[5rem] py-1.5 ${btnClass}`}
+      aria-current={active ? "page" : undefined}
+      aria-label={label}
+    >
+      <span className="relative shrink-0">
+        <Icon
+          size={24}
+          strokeWidth={active ? 2.25 : 2}
+          className={`shrink-0 ${active ? "text-emerald-600" : "text-zinc-400"}`}
+        />
+        {showBadge && (
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none inline-flex items-center justify-center">
+            {badgeLabel}
+          </span>
+        )}
+      </span>
+      <span
+        className={`text-[10px] leading-tight font-semibold text-center ${
+          active ? "text-emerald-600" : "text-zinc-400"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
 }
 
 export function BottomNav({
-  activeTab,
-  onTabChange,
   role,
   onFabClick,
+  studentsBadgeCount,
 }: BottomNavProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useI18n();
-  const isStudent = role === "student";
+  const effectiveRole = useMemo(() => {
+    const sessionRole = getSession()?.role;
+    if (sessionRole === "coach" || sessionRole === "admin") return sessionRole;
+    if (role === "coach" || role === "admin") return role;
+    return role;
+  }, [role]);
+  const isStudent = effectiveRole === "student";
+  const isCoachOrAdmin =
+    effectiveRole === "coach" || effectiveRole === "admin";
+
+  const communityActive =
+    pathname === "/community" ||
+    pathname.startsWith("/leaderboard") ||
+    pathname.startsWith("/suggest") ||
+    pathname.startsWith("/grocery") ||
+    pathname.startsWith("/quiz");
+  const homeActive = pathname === "/";
+  const profileActive = pathname === "/profile";
+  const settingsActive = pathname === "/settings";
+  const studentsActive =
+    pathname.startsWith("/coach/students") ||
+    pathname.startsWith("/coach/records");
+  const coachActive = pathname === "/coach";
 
   const handleFab = () => {
     if (onFabClick) {
       onFabClick();
       return;
     }
-    if (isStudent) router.push("/add-meal");
-    else router.push("/coach/records");
+    if (isStudent) {
+      router.push("/add-meal");
+      return;
+    }
+    if (isCoachOrAdmin) {
+      router.push("/add-meal?from=coach");
+    }
   };
 
+  const rightTabs = isStudent ? (
+    <>
+      <NavTabButton
+        active={profileActive}
+        label={t("nav.profile", "我的")}
+        icon={CircleUser}
+        onClick={() => router.push("/profile")}
+      />
+      <NavTabButton
+        active={settingsActive}
+        label={t("nav.settings", "設定")}
+        icon={Settings}
+        onClick={() => router.push("/settings")}
+      />
+    </>
+  ) : isCoachOrAdmin ? (
+    <>
+      <NavTabButton
+        active={studentsActive}
+        label={t("nav.students", "學員")}
+        icon={Users}
+        badgeCount={studentsBadgeCount}
+        onClick={() => router.push("/coach/students")}
+      />
+      <NavTabButton
+        active={coachActive}
+        label={t("nav.coach", "教練")}
+        icon={GraduationCap}
+        onClick={() => router.push("/coach")}
+      />
+    </>
+  ) : null;
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
-      <div className="relative pointer-events-auto h-[4.5rem]">
-        <nav className="absolute inset-x-0 bottom-0 h-14 flex items-center justify-between bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-6 sm:px-10">
-          <button
-            type="button"
-            onClick={() => onTabChange("dashboard")}
-            className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-            aria-current={activeTab === "dashboard" ? "page" : undefined}
-          >
-            <span
-              className={`text-xl leading-none ${
-                activeTab === "dashboard" ? "opacity-100" : "opacity-50"
-              }`}
-            >
-              🏠
-            </span>
-            <span
-              className={`text-[10px] font-semibold ${
-                activeTab === "dashboard"
-                  ? "text-emerald-600"
-                  : "text-gray-500"
-              }`}
-            >
-              {t("nav.home", "主頁")}
-            </span>
-          </button>
+    <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(100%,24rem)] px-2 pointer-events-none">
+      <div className="relative pointer-events-auto">
+        <nav
+          className="flex items-center h-16 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-1.5"
+          aria-label={t("nav.main", "主導覽")}
+        >
+          <div className="flex flex-1 items-center justify-around min-w-0 pr-1">
+            <NavTabButton
+              active={communityActive}
+              label={t("nav.explore", "探索")}
+              icon={Globe}
+              onClick={() => router.push("/community")}
+            />
+            <NavTabButton
+              active={homeActive}
+              label={t("nav.home", "主頁")}
+              icon={Home}
+              onClick={() => router.push("/")}
+            />
+          </div>
 
-          <div className="w-14 shrink-0" aria-hidden />
+          <div className="w-16 shrink-0" aria-hidden />
 
-          {isStudent ? (
-            <button
-              type="button"
-              onClick={() => onTabChange("settings")}
-              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-              aria-current={activeTab === "settings" ? "page" : undefined}
-            >
-              <span
-                className={`text-xl leading-none ${
-                  activeTab === "settings" ? "opacity-100" : "opacity-50"
-                }`}
-              >
-                ⚙️
-              </span>
-              <span
-                className={`text-[10px] font-semibold ${
-                  activeTab === "settings"
-                    ? "text-emerald-600"
-                    : "text-gray-500"
-                }`}
-              >
-                {t("nav.settings", "設定")}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => router.push("/coach")}
-              className={`flex flex-col items-center gap-0.5 min-w-[3rem] ${btnClass}`}
-            >
-              <span className="text-xl leading-none">👨‍🏫</span>
-              <span className="text-[10px] font-semibold text-gray-500">
-                {t("nav.coach", "教練")}
-              </span>
-            </button>
-          )}
+          <div className="flex flex-1 items-center justify-around min-w-0 pl-1">
+            {rightTabs}
+          </div>
         </nav>
 
         <button
           type="button"
           onClick={handleFab}
           aria-label={
-            isStudent
+            isStudent || isCoachOrAdmin
               ? t("nav.addMeal", "記錄飲食")
-              : t("nav.records", "學員記錄")
+              : t("nav.students", "學員")
           }
-          className={`absolute left-1/2 -translate-x-1/2 -top-1 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform ${btnClass}`}
+          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1.5 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg ${btnClass}`}
         >
-          <span className="text-2xl font-light leading-none block w-6 h-6 text-center">
-            +
-          </span>
+          <Plus size={26} strokeWidth={2.5} aria-hidden />
         </button>
       </div>
     </div>

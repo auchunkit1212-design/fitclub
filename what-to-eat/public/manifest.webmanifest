@@ -1,0 +1,24 @@
+{
+  "name": "食咩好",
+  "short_name": "食咩好",
+  "description": "What to Eat — Nutrition Coach 一星期餐單（外食 + 煮食）",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3eb",
+  "theme_color": "#1b4332",
+  "lang": "zh-HK",
+  "icons": [
+    {
+      "src": "/icon-192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

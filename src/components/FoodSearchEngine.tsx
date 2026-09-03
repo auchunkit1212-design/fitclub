@@ -2,15 +2,52 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { AdvancedNutritionCard } from "@/components/AdvancedNutritionCard";
+import { CheckCircle2, IconLabel, Search } from "@/components/icons";
+import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
+import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { useDebounce } from "@/hooks/useDebounce";
+import { hasAiAdvancedNutrients } from "@/lib/food-advanced-nutrients";
+import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
+import type { MealBaselineSource } from "@/lib/meal-ai-verify";
+import {
+  parseGramsFromLabel,
+  scaleAdvancedNutrients,
+  scaleMacros,
+  type MacroValues,
+} from "@/lib/portion-scale";
 import { getSessionRequestHeaders } from "@/lib/session";
-import type { FavoriteFood, FoodSearchItem } from "@/lib/types";
+import type { FavoriteFood, FoodAdvancedNutrients, FoodSearchItem } from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-const MIN_QUERY_LENGTH = 2;
-const DEBOUNCE_MS = 500;
+/** 打 1 個字即可搜尋 */
+const MIN_QUERY_LENGTH = 1;
+const DEBOUNCE_MS = 600;
+const SEARCH_TIMEOUT_MS = 15_000;
+
+export type PortionBasePayload = {
+  productName: string;
+  macros: MacroValues;
+  advanced?: FoodAdvancedNutrients;
+  baseWeightG?: number;
+  proNutrition?: boolean;
+  nutritionSource?: MealBaselineSource;
+};
+
+function nutritionSourceFromItem(item: FoodSearchItem): MealBaselineSource {
+  if (item.id === "ocr-nutrition-label") return "ocr";
+  if (item.source === "openrouter") return "openrouter";
+  if (
+    item.source === "hk_711" ||
+    item.source === "hk_tw" ||
+    item.source === "local"
+  ) {
+    return "local_db";
+  }
+  return "manual";
+}
 
 interface FoodSearchEngineProps {
   onAddToMeal: (item: {
@@ -20,6 +57,10 @@ interface FoodSearchEngineProps {
     carbs: number;
     fats: number;
     fromSearch: boolean;
+    advanced?: FoodAdvancedNutrients;
+    proNutrition?: boolean;
+    portionBase?: PortionBasePayload;
+    nutritionSource?: MealBaselineSource;
   }) => void;
   /** Strip outer card chrome when used inside a bottom sheet */
   embedded?: boolean;
@@ -39,7 +80,11 @@ export function FoodSearchEngine({
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [lastSource, setLastSource] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [aiFallback, setAiFallback] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [portionBase, setPortionBase] = useState<
+    (PortionBasePayload & { itemMeta?: FoodSearchItem }) | null
+  >(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +118,13 @@ export function FoodSearchEngine({
       const seq = ++searchSeq.current;
       setLoading(true);
       setSearchError(null);
+      setAiFallback(false);
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SEARCH_TIMEOUT_MS
+      );
 
       try {
         const res = await fetch("/api/food-search", {
@@ -83,12 +135,14 @@ export function FoodSearchEngine({
           },
           credentials: "include",
           body: JSON.stringify({ query: trimmed, lang }),
+          signal: controller.signal,
         });
         const data = (await res.json()) as {
           items?: FoodSearchItem[];
           source?: string;
           error?: string;
           databaseSize?: number;
+          aiFallback?: boolean;
         };
 
         if (seq !== searchSeq.current) return;
@@ -112,13 +166,21 @@ export function FoodSearchEngine({
         const items = data.items ?? [];
         setResults(items);
         setSearchError(null);
+        setAiFallback(Boolean(data.aiFallback));
         setLastSource(items[0]?.source ?? data.source ?? "openrouter");
-      } catch {
+      } catch (err) {
         if (seq !== searchSeq.current) return;
         setResults([]);
         setLastSource(null);
-        setSearchError(t("foodSearch.searchFailed", "搜尋失敗，請稍後再試"));
+        setAiFallback(false);
+        const timedOut = err instanceof Error && err.name === "AbortError";
+        setSearchError(
+          timedOut
+            ? t("foodSearch.searchTimeout", "搜尋逾時，請再試一次")
+            : t("foodSearch.searchFailed", "搜尋失敗，請稍後再試")
+        );
       } finally {
+        window.clearTimeout(timeoutId);
         if (seq === searchSeq.current) setLoading(false);
       }
     },
@@ -156,24 +218,104 @@ export function FoodSearchEngine({
     loadFavorites();
   };
 
-  const selectResult = (item: FoodSearchItem) => {
-    const desc = item.brand ? `${item.brand} ${item.name}` : item.name;
-    setQuery(desc);
+  const pushPortionedMeal = useCallback(
+    (
+      base: PortionBasePayload & { itemMeta?: FoodSearchItem },
+      ratio: number,
+      description: string
+    ) => {
+      const scaled = scaleMacros(base.macros, ratio);
+      const scaledAdvanced = scaleAdvancedNutrients(base.advanced, ratio);
+      onAddToMeal({
+        description,
+        calories: scaled.calories,
+        protein: scaled.protein,
+        carbs: scaled.carbs,
+        fats: scaled.fats,
+        fromSearch: true,
+        advanced: scaledAdvanced,
+        proNutrition: base.proNutrition,
+        portionBase: {
+          productName: base.productName,
+          macros: base.macros,
+          advanced: base.advanced,
+          baseWeightG: base.baseWeightG,
+          proNutrition: base.proNutrition,
+          nutritionSource: base.nutritionSource,
+        },
+        nutritionSource: base.nutritionSource,
+      });
+      // OCR 結果唔寫入搜尋框，避免 AI 聯想蓋過標籤數值
+      if (base.nutritionSource !== "ocr") {
+        setQuery(description);
+      }
+      if (base.itemMeta) {
+        setSelectedItem({
+          ...base.itemMeta,
+          name: base.productName,
+          calories: scaled.calories,
+          protein: scaled.protein,
+          carbs: scaled.carbs,
+          fats: scaled.fats,
+          fiberG: scaledAdvanced?.fiberG,
+          sugarG: scaledAdvanced?.sugarG,
+          saturatedFatG: scaledAdvanced?.saturatedFatG,
+          sodiumMg: scaledAdvanced?.sodiumMg,
+          cholesterolMg: scaledAdvanced?.cholesterolMg,
+        });
+      }
+    },
+    [onAddToMeal]
+  );
+
+  const handlePortionChange = useCallback(
+    (ratio: number, _portionLabel: string, description: string) => {
+      if (!portionBase) return;
+      pushPortionedMeal(portionBase, ratio, description);
+    },
+    [portionBase, pushPortionedMeal]
+  );
+
+  const beginPortionSelection = (
+    item: FoodSearchItem,
+    productName: string,
+    proNutrition?: boolean
+  ) => {
+    setPortionBase({
+      productName,
+      macros: {
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+      },
+      advanced: {
+        fiberG: item.fiberG,
+        sugarG: item.sugarG,
+        saturatedFatG: item.saturatedFatG,
+        sodiumMg: item.sodiumMg,
+        cholesterolMg: item.cholesterolMg,
+      },
+      baseWeightG: parseGramsFromLabel(item.servingLabel),
+      proNutrition,
+      itemMeta: item,
+      nutritionSource: nutritionSourceFromItem(item),
+    });
     setSelectedItem(item);
     setDropdownOpen(false);
-    onAddToMeal({
-      description: desc,
-      calories: item.calories,
-      protein: item.protein,
-      carbs: item.carbs,
-      fats: item.fats,
-      fromSearch: true,
-    });
+  };
+
+  const selectResult = (item: FoodSearchItem) => {
+    const productName = item.brand ? `${item.brand} ${item.name}` : item.name;
+    beginPortionSelection(
+      item,
+      productName,
+      item.source === "openrouter" && hasAiAdvancedNutrients(item)
+    );
   };
 
   const quickAddFavorite = (item: FavoriteFood) => {
-    setQuery(item.name);
-    setSelectedItem({
+    const foodItem: FoodSearchItem = {
       id: item.id,
       name: item.name,
       brand: item.brand,
@@ -183,22 +325,42 @@ export function FoodSearchEngine({
       fats: item.fats,
       servingLabel: item.servingLabel,
       source: "local",
-    });
+    };
+    beginPortionSelection(foodItem, item.name);
+  };
+
+  const handleOcrSuccess = (v: OcrNutritionResult) => {
+    const productName =
+      v.brand && v.productName
+        ? `${v.brand} ${v.productName}`.trim()
+        : v.productName;
+    const item: FoodSearchItem = {
+      id: "ocr-nutrition-label",
+      name: productName,
+      brand: v.brand,
+      calories: v.calories,
+      protein: v.protein,
+      carbs: v.carbs,
+      fats: v.fat,
+      servingLabel:
+        v.servingWeightG > 0
+          ? `約 ${v.servingWeightG}g`
+          : t("nutritionOcr.perServing", "每份"),
+      // 標籤／條碼結果唔好標成 AI 聯想，避免後續當成 openrouter 覆寫
+      source: "local",
+      sodiumMg: v.sodium > 0 ? v.sodium : undefined,
+      sugarG: v.sugar > 0 ? v.sugar : undefined,
+    };
+    beginPortionSelection(item, productName, v.sodium > 0 || v.sugar > 0);
+    // 唔好把產品名寫入搜尋框，避免觸發 AI 食物搜尋蓋過 OCR
+    setQuery("");
     setDropdownOpen(false);
-    onAddToMeal({
-      description: item.name,
-      calories: item.calories,
-      protein: item.protein,
-      carbs: item.carbs,
-      fats: item.fats,
-      fromSearch: true,
-    });
+    setResults([]);
   };
 
   const trimmedQuery = query.trim();
-  const showDropdown = dropdownOpen && trimmedQuery.length > 0;
-  const showMinChars =
-    showDropdown && trimmedQuery.length < MIN_QUERY_LENGTH && !loading;
+  const showDropdown =
+    dropdownOpen && trimmedQuery.length >= MIN_QUERY_LENGTH;
   const showEmpty =
     showDropdown &&
     !loading &&
@@ -212,23 +374,42 @@ export function FoodSearchEngine({
 
   return (
     <Wrapper className={wrapperClass}>
+      <NutritionLabelOcrButton onSuccess={handleOcrSuccess} />
+
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-gray-900">
-          🔍 {t("foodSearch.title", "巨型食物搜尋引擎")}
+          <IconLabel icon={Search} iconClassName="text-gray-600">
+            {t("foodSearch.title", "巨型食物搜尋引擎")}
+          </IconLabel>
         </h2>
-        {(lastSource === "openrouter" ||
-          results.some((r) => r.source === "openrouter")) && (
+        {loading && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
-            {t("foodSearch.sourceAi", "AI 聯想")}
+            {t("foodSearch.aiThinking", "AI 聯想中…")}
+          </span>
+        )}
+        {!loading &&
+          (lastSource === "openrouter" ||
+            results.some((r) => r.source === "openrouter")) && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
+              {t("foodSearch.sourceAi", "AI 聯想")}
+            </span>
+          )}
+        {aiFallback && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            {t("foodSearch.aiFallbackLocal", "AI 暫不可用 · 本地")}
+          </span>
+        )}
+        {results.some((r) => r.source === "hk_711") && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+            {t("foodSearch.source711", "7-11 資料庫")}
+          </span>
+        )}
+        {results.some((r) => r.source === "hk_tw") && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            {t("foodSearch.sourceLocal", "本地資料庫")}
           </span>
         )}
       </div>
-      <p className="text-xs text-gray-500">
-        {t(
-          "foodSearch.hint",
-          "輸入未完成關鍵字即可聯想（中英、錯字皆可）— AI 估算港台地道美食營養"
-        )}
-      </p>
 
       <div ref={containerRef} className="relative">
         <div className="relative">
@@ -236,11 +417,27 @@ export function FoodSearchEngine({
             ref={inputRef}
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
+              const next = e.target.value;
+              setQuery(next);
               setSelectedItem(null);
-              setDropdownOpen(true);
+              setPortionBase(null);
+              if (next.trim().length < MIN_QUERY_LENGTH) {
+                searchSeq.current += 1;
+                setDropdownOpen(false);
+                setLoading(false);
+                setResults([]);
+                setSearchError(null);
+                setLastSource(null);
+                setAiFallback(false);
+              } else {
+                setDropdownOpen(true);
+              }
             }}
-            onFocus={() => setDropdownOpen(true)}
+            onFocus={() => {
+              if (trimmedQuery.length >= MIN_QUERY_LENGTH) {
+                setDropdownOpen(true);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Escape") setDropdownOpen(false);
               if (e.key === "Enter" && trimmedQuery.length >= MIN_QUERY_LENGTH) {
@@ -248,11 +445,11 @@ export function FoodSearchEngine({
                 setDropdownOpen(true);
               }
             }}
-            placeholder={t("foodSearch.placeholder", "搜尋食物名稱...")}
+            placeholder={t("foodSearch.placeholder", "搜尋食物名稱…")}
             autoComplete="off"
             className="w-full rounded-2xl border border-gray-100 px-3 py-3 pr-10 text-sm text-gray-900 bg-white shadow-[0_4px_16px_rgb(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600"
           />
-          {loading && (
+          {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -264,16 +461,10 @@ export function FoodSearchEngine({
             className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.08)]"
             role="listbox"
           >
-            {showMinChars && (
-              <p className="px-3 py-3 text-sm text-gray-500">
-                {t("foodSearch.minCharsHint", "繼續輸入以顯示建議…")}
-              </p>
-            )}
-
-            {loading && trimmedQuery.length >= MIN_QUERY_LENGTH && (
-              <div className="flex items-center gap-2 px-3 py-3 text-sm text-emerald-700">
-                <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                {t("foodSearch.searching", "搜尋中...")}
+            {loading && (
+              <div className="flex items-center gap-2 px-3 py-3 text-sm text-violet-700 border-b border-gray-50">
+                <div className="w-4 h-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                {t("foodSearch.aiSearching", "AI 聯想中…")}
               </div>
             )}
 
@@ -290,7 +481,7 @@ export function FoodSearchEngine({
               </p>
             )}
 
-            {!loading &&
+            {results.length > 0 &&
               results.map((item) => {
                 const active = hoveredId === item.id;
                 return (
@@ -322,45 +513,49 @@ export function FoodSearchEngine({
       </div>
 
       {selectedItem && (
-        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-3 shadow-sm space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">{selectedItem.name}</p>
-              {selectedItem.brand && (
-                <p className="text-xs text-gray-500 truncate">{selectedItem.brand}</p>
-              )}
-            </div>
-            <span className="shrink-0 text-lg font-black text-emerald-700">
-              {selectedItem.calories}
-              <span className="text-xs font-semibold ml-0.5">kcal</span>
-            </span>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {(
-              [
-                [t("common.protein", "蛋白"), selectedItem.protein, "bg-sky-100 text-sky-800"],
-                [t("common.carbs", "碳水"), selectedItem.carbs, "bg-amber-100 text-amber-800"],
-                [t("common.fat", "脂肪"), selectedItem.fats, "bg-rose-100 text-rose-800"],
-              ] as const
-            ).map(([label, val, cls]) => (
-              <span
-                key={String(label)}
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}
-              >
-                {label} {val}g
-              </span>
-            ))}
-          </div>
+        <div className="space-y-3">
+          {portionBase && (
+            <ServingPortionPicker
+              baseWeightG={portionBase.baseWeightG}
+              productName={portionBase.productName}
+              onPortionChange={handlePortionChange}
+            />
+          )}
+          <AdvancedNutritionCard
+            name={selectedItem.brand ? `${selectedItem.brand} ${selectedItem.name}` : selectedItem.name}
+            macros={{
+              calories: selectedItem.calories,
+              protein: selectedItem.protein,
+              carbs: selectedItem.carbs,
+              fats: selectedItem.fats,
+            }}
+            advanced={{
+              fiberG: selectedItem.fiberG,
+              sugarG: selectedItem.sugarG,
+              saturatedFatG: selectedItem.saturatedFatG,
+              sodiumMg: selectedItem.sodiumMg,
+              cholesterolMg: selectedItem.cholesterolMg,
+            }}
+            proSource={
+              selectedItem.source === "openrouter" &&
+              hasAiAdvancedNutrients(selectedItem)
+            }
+          />
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-sm">
           <p className="text-xs text-emerald-700 font-medium">
-            {t("foodSearch.addedHint", "✓ 已帶入表單，撳「發布記錄」即可儲存")}
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-emerald-700" aria-hidden />
+              {t("foodSearch.addedHint", "已帶入表單，撳「發布記錄」即可儲存")}
+            </span>
           </p>
           <button
             type="button"
             onClick={() => saveFavorite(selectedItem)}
             className="text-[11px] text-gray-500 hover:text-amber-600"
           >
-            {t("foodSearch.addFavorite", "⭐ 加入常用")}
+            {t("foodSearch.addFavorite", "加入常用")}
           </button>
+          </div>
         </div>
       )}
 

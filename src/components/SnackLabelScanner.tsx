@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { Camera, IconLabel } from "@/components/icons";
 import type { NutritionLabelResult } from "@/lib/vision-label";
 
 const btnClass =
@@ -72,9 +73,13 @@ export function SnackLabelScanner({ onApplyPerPiece }: SnackLabelScannerProps) {
         onClick={() => inputRef.current?.click()}
         className={`w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl disabled:opacity-60 ${btnClass}`}
       >
-        {scanning
-          ? t("snackScanner.scanning", "AI 辨識標籤中...")
-          : t("snackScanner.scanButton", "📸 拍攝營養標籤")}
+        {scanning ? (
+          t("snackScanner.scanning", "AI 辨識標籤中...")
+        ) : (
+          <IconLabel icon={Camera} size="md" className="justify-center" iconClassName="text-white">
+            {t("snackScanner.scanButton", "拍攝營養標籤")}
+          </IconLabel>
+        )}
       </button>
       {error && (
         <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">{error}</p>

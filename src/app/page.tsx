@@ -1,76 +1,107 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  BodyProfileFields,
-  bodyProfileToFormValues,
-} from "@/components/BodyProfileFields";
+import { bodyProfileToFormValues } from "@/components/BodyProfileFields";
 import { CoachLogoAvatar } from "@/components/CoachLogoAvatar";
 import { GorillaMascot } from "@/components/GorillaMascot";
+import {
+  BarChart2,
+  Bot,
+  Calendar,
+  Cpu,
+  Flame,
+  Hand,
+  IconLabel,
+  MapPin,
+  Megaphone,
+  ScrollText,
+  Sparkles,
+} from "@/components/icons";
 import { BottomNav } from "@/components/BottomNav";
-import { MealSearchSheet } from "@/components/MealSearchSheet";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { CoachSuggestCard } from "@/components/CoachSuggestCard";
+import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
 import { BRAND_NAME, BRAND_TAGLINE, isCustomBrandLogo } from "@/lib/brand";
-import { WeightTrendChart } from "@/components/WeightTrendChart";
 import { FranchiseConsole } from "@/components/FranchiseConsole";
 import { OnboardingModal } from "@/components/OnboardingModal";
-import { NutritionDashboard } from "@/components/NutritionDashboard";
-import { PushReminderToggle } from "@/components/PushReminderToggle";
+import { StudentAppGuide } from "@/components/StudentAppGuide";
+import { ProFeatureGate } from "@/components/ProFeatureGate";
+import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
+import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import { StudentPushPrompt } from "@/components/StudentPushPrompt";
+import { StudentFeatureGrid } from "@/components/StudentFeatureGrid";
+import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LoadingView } from "@/components/LoadingView";
 import { useI18n } from "@/components/I18nProvider";
 import { generateRoast } from "@/lib/ai-mock";
+import { fetchAiRoast } from "@/lib/ai-feedback-client";
+import { saveMealViaApi } from "@/lib/meal-save-client";
+import {
+  consumePendingStreakCelebration,
+  type PendingStreakCelebration,
+} from "@/lib/streak";
+import {
+  hasCompletedAppGuide,
+  resetAppGuide,
+} from "@/lib/app-guide";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
 } from "@/lib/body-profile";
-import { fetchStudentBodyProfile } from "@/lib/db";
+import { fetchOwnMealLogsForSession, fetchStudentBodyProfile } from "@/lib/db";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
+import { syncSessionPlan } from "@/lib/plan-client";
 import { clearSession, getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
-import { withTimeout } from "@/lib/with-timeout";
-import {
-  fetchWeightLogsLastDays,
-  upsertWeightLog,
-} from "@/lib/weight-logs";
+import { fetchWithTimeout, withTimeout } from "@/lib/with-timeout";
 import {
   getMealLogs,
   getThemeClasses,
   getUserProfile,
   isToday,
 } from "@/lib/storage";
-import type {
-  CoachBranding,
-  MealLog,
-  MealLogReaction,
-  RegistryUser,
-  StudentBodyProfile,
-  StudentNutritionTargets,
-  UserProfile,
-  UserSession,
-  WeightLog,
-} from "@/lib/types";
-import { getMealImageSrc } from "@/lib/meal-display";
-import { DEFAULT_BRANDING } from "@/lib/types";
-
 import {
   loadReminderSettingsFromServer,
   syncReminderSettingsToServer,
 } from "@/lib/reminder-settings-client";
 import {
   DEFAULT_PERSONAL_SETTINGS,
-  JOB_KEYS,
-  MEAL_SCHEDULE_KEYS,
-  TRAINING_TYPE_KEYS,
-  WATER_REMINDER_KEYS,
   WEEKLY_FREQUENCY_KEYS,
-  MORNING_REMINDER_TIME_OPTIONS,
   normalizePersonalSettings,
-  formatMorningReminderTimeLabel,
   type PersonalSettings,
 } from "@/lib/personal-settings";
+import type {
+  CoachBranding,
+  MealLog,
+  MealLogFeedback,
+  MealLogReaction,
+  RegistryUser,
+  StudentBodyProfile,
+  StudentNutritionTargets,
+  UserProfile,
+  UserSession,
+} from "@/lib/types";
+import { DEFAULT_BRANDING } from "@/lib/types";
 
-type ActiveTab = "dashboard" | "settings";
+const NutritionDashboard = dynamic(
+  () =>
+    import("@/components/NutritionDashboard").then((m) => ({
+      default: m.NutritionDashboard,
+    })),
+  { ssr: false }
+);
+
+const MealSearchSheet = dynamic(
+  () =>
+    import("@/components/MealSearchSheet").then((m) => ({
+      default: m.MealSearchSheet,
+    })),
+  { ssr: false }
+);
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -148,13 +179,6 @@ const FREQUENCY_LABEL_KEY = {
   daily: "settings.frequency.daily",
 } as const;
 
-const WATER_LABEL_KEY = {
-  "1h": "settings.water.every1h",
-  "2h": "settings.water.every2h",
-  "4h": "settings.water.every4h",
-  off: "settings.water.off",
-} as const;
-
 const TRAINING_LABEL_KEY = {
   weight: "settings.training.weightTraining",
   cardio: "settings.training.cardio",
@@ -202,11 +226,12 @@ export default function StudentDashboard() {
   const [branding, setBranding] = useState<CoachBranding | null>(null);
   const [broadcast, setBroadcast] = useState("");
   const [logs, setLogs] = useState<MealLog[]>([]);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [session, setSession] = useState<UserSession | null>(null);
   const [userRegistry, setUserRegistry] = useState<RegistryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const silentRefreshRef = useRef(false);
   const [toast, setToast] = useState("");
   const [settings, setSettings] = useState<PersonalSettings>(DEFAULT_PERSONAL_SETTINGS);
   const [bodyProfile, setBodyProfile] = useState<StudentBodyProfile | null>(
@@ -219,12 +244,45 @@ export default function StudentDashboard() {
     null
   );
   const [coachReactions, setCoachReactions] = useState<MealLogReaction[]>([]);
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
-  const [weightLogsLoading, setWeightLogsLoading] = useState(false);
-  const [weightInput, setWeightInput] = useState("");
-  const [weightSaving, setWeightSaving] = useState(false);
+  const [coachFeedback, setCoachFeedback] = useState<MealLogFeedback[]>([]);
   const [mealSearchOpen, setMealSearchOpen] = useState(false);
   const [quickMealSaving, setQuickMealSaving] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [streakCelebration, setStreakCelebration] =
+    useState<PendingStreakCelebration | null>(null);
+  const [roast, setRoast] = useState("");
+  const [roastLoading, setRoastLoading] = useState(false);
+  const [showAppGuide, setShowAppGuide] = useState(false);
+
+  const applyStreakApiPayload = (payload?: {
+    currentStreak?: number;
+    longestStreak?: number;
+    celebrationTriggered?: boolean;
+    celebrationDays?: number;
+    isSpecialMilestone?: boolean;
+    milestoneTriggered?: boolean;
+    milestoneDays?: number;
+  }) => {
+    if (!payload) return;
+    if (typeof payload.currentStreak === "number") {
+      setCurrentStreak(payload.currentStreak);
+    }
+    if (typeof payload.longestStreak === "number") {
+      setLongestStreak(payload.longestStreak);
+    }
+    const triggered =
+      payload.celebrationTriggered ?? payload.milestoneTriggered ?? false;
+    const days = payload.celebrationDays ?? payload.milestoneDays;
+    if (triggered && days && days >= 1) {
+      setStreakCelebration({
+        days,
+        isSpecialMilestone:
+          payload.isSpecialMilestone ??
+          [3, 7, 14, 30].includes(days),
+      });
+    }
+  };
 
   const showToast = (message: string) => {
     setToast(message);
@@ -237,10 +295,17 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
+    const pending = consumePendingStreakCelebration();
+    if (pending) setStreakCelebration(pending);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      if (!silentRefreshRef.current) {
+        setLoading(true);
+      }
       setLoadError(null);
 
       const parsed = getSession();
@@ -254,12 +319,15 @@ export default function StudentDashboard() {
         parsed.role === "coach" || parsed.role === "admin"
           ? parsed.role
           : "student";
+      const synced =
+        (await withTimeout(syncSessionPlan(), 8_000).catch(() => parsed)) ??
+        parsed;
       const activeSession: UserSession = {
-        ...parsed,
+        ...synced,
         role,
-        name: parsed.name || t("home.defaults.trialStudent", "體驗學員"),
-        email: parsed.email || "",
-        gym: parsed.gym || t("home.defaults.unboundGym", "未綁定分店"),
+        name: synced.name || t("home.defaults.trialStudent", "體驗學員"),
+        email: synced.email || "",
+        gym: synced.gym || t("home.defaults.unboundGym", "未綁定分店"),
         isLoggedIn: true,
       };
 
@@ -274,15 +342,15 @@ export default function StudentDashboard() {
           12_000,
           t("errors.fetchUsersTimeout", "讀取用戶逾時")
         );
-        const mealLogs = await withTimeout(
-          getMealLogs(activeSession, registry),
+        const [mealLogs, brand] = await withTimeout(
+          Promise.all([
+            role === "student"
+              ? fetchOwnMealLogsForSession(activeSession)
+              : getMealLogs(activeSession, registry),
+            resolveBrandForUser(activeSession, registry),
+          ]),
           12_000,
-          t("errors.fetchMealsTimeout", "讀取餐食逾時")
-        );
-        const brand = await withTimeout(
-          resolveBrandForUser(activeSession, registry),
-          12_000,
-          t("errors.fetchBrandTimeout", "讀取品牌逾時")
+          t("errors.cloudLoadFailed", "雲端讀取失敗")
         );
 
         if (cancelled) return;
@@ -294,55 +362,7 @@ export default function StudentDashboard() {
         setSession(applyBrandToSession(activeSession, brand));
         saveSession(applyBrandToSession(activeSession, brand));
 
-        if (role === "student" && activeSession.email) {
-          const body = await fetchStudentBodyProfile(activeSession.email);
-          if (!cancelled) {
-            setBodyProfile(body);
-            setBodyForm(bodyProfileToFormValues(body));
-            if (body && isBodyProfileComplete(body)) {
-              setProfile(
-                computeTargetProfile(body, {
-                  job: settings.job,
-                  weeklyFrequency: settings.weeklyFrequency,
-                })
-              );
-            }
-            const tRes = await fetch("/api/coach/student-targets", {
-              credentials: "include",
-            });
-            const tData = (await tRes.json()) as {
-              targets?: StudentNutritionTargets | null;
-            };
-            if (tData.targets?.locked) {
-              setCoachTargets(tData.targets);
-              setProfile({
-                targetCalories: tData.targets.targetCalories,
-                targetProtein: tData.targets.targetProtein,
-              });
-            }
-            setWeightLogsLoading(true);
-            try {
-              const weights = await fetchWeightLogsLastDays(activeSession.email, 7);
-              if (!cancelled) {
-                setWeightLogs(weights);
-                const today = new Date().toISOString().slice(0, 10);
-                const todayLog = weights.find((w) => w.logDate === today);
-                setWeightInput(
-                  todayLog
-                    ? String(todayLog.weightKg)
-                    : body?.weightKg
-                      ? String(body.weightKg)
-                      : ""
-                );
-              }
-            } catch {
-              if (!cancelled) setWeightLogs([]);
-            } finally {
-              if (!cancelled) setWeightLogsLoading(false);
-            }
-          }
-        }
-        if (!cancelled) setProfileChecked(true);
+        if (!cancelled) setProfileChecked(role !== "student");
 
         const rawSettings = localStorage.getItem("student_settings");
         if (rawSettings) {
@@ -351,14 +371,6 @@ export default function StudentDashboard() {
             setSettings(normalizePersonalSettings(settingsParsed));
           } catch {
             // Keep default settings when parse fails
-          }
-        }
-        if (role === "student") {
-          const cloudReminder = await loadReminderSettingsFromServer();
-          if (cloudReminder && !cancelled) {
-            setSettings((prev) =>
-              normalizePersonalSettings({ ...prev, ...cloudReminder })
-            );
           }
         }
       } catch (error) {
@@ -370,11 +382,11 @@ export default function StudentDashboard() {
         setBroadcast("");
         setLogs([]);
         setUserRegistry([]);
-        showToast(t("home.errors.cloudLoadFailed", "❌ 雲端讀取失敗，請檢查網絡或 Supabase。"));
+        showToast(t("home.errors.cloudLoadFailed", "暫時讀唔到資料，請檢查網絡後再試。"));
       } finally {
         if (!cancelled) {
+          silentRefreshRef.current = false;
           setLoading(false);
-          if (role !== "student") setProfileChecked(true);
         }
       }
     };
@@ -384,7 +396,89 @@ export default function StudentDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router, t, lang]);
+  }, [router, t, lang, refreshKey]);
+
+  useEffect(() => {
+    if (!session?.email || session.role !== "student") return;
+
+    let cancelled = false;
+
+    const loadStudentExtras = async () => {
+      try {
+        const headers = getSessionRequestHeaders();
+        const [streakRes, body, tRes, cloudReminder] = await withTimeout(
+          Promise.all([
+            fetchWithTimeout("/api/student/streak", {
+              credentials: "include",
+              headers,
+            }),
+            fetchStudentBodyProfile(session.email),
+            fetchWithTimeout("/api/coach/student-targets", {
+              credentials: "include",
+            }),
+            loadReminderSettingsFromServer(),
+          ]),
+          10_000
+        );
+
+        if (streakRes.ok) {
+          const streakData = (await streakRes.json()) as {
+            streak?: { currentStreak?: number; longestStreak?: number };
+          };
+          if (!cancelled && streakData.streak) {
+            setCurrentStreak(streakData.streak.currentStreak ?? 0);
+            setLongestStreak(streakData.streak.longestStreak ?? 0);
+          }
+        }
+
+        if (!cancelled) {
+          setBodyProfile(body);
+          setBodyForm(bodyProfileToFormValues(body));
+          if (body && isBodyProfileComplete(body)) {
+            setProfile(
+              computeTargetProfile(body, {
+                job: settings.job,
+                weeklyFrequency: settings.weeklyFrequency,
+              })
+            );
+          }
+        }
+
+        const tData = (await tRes.json()) as {
+          targets?: StudentNutritionTargets | null;
+        };
+        if (!cancelled && tData.targets?.locked) {
+          setCoachTargets(tData.targets);
+          setProfile({
+            targetCalories: tData.targets.targetCalories,
+            targetProtein: tData.targets.targetProtein,
+          });
+        }
+
+        if (cloudReminder && !cancelled) {
+          setSettings((prev) =>
+            normalizePersonalSettings({ ...prev, ...cloudReminder })
+          );
+        }
+      } catch {
+        // streak columns or profile APIs may not exist yet
+      } finally {
+        if (!cancelled) setProfileChecked(true);
+      }
+    };
+
+    void loadStudentExtras();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.email,
+    session?.role,
+    refreshKey,
+    settings.job,
+    settings.weeklyFrequency,
+  ]);
 
   const isStudent = session?.role === "student";
 
@@ -396,13 +490,29 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (!isStudent || todayLogs.length === 0) return;
     const poll = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
       const ids = todayLogs.map((l) => l.id).join(",");
-      const res = await fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
-        credentials: "include",
-        headers: getSessionRequestHeaders(),
-      });
-      const data = (await res.json()) as { reactions?: MealLogReaction[] };
-      setCoachReactions(data.reactions ?? []);
+      const headers = getSessionRequestHeaders();
+      const [reactionRes, feedbackRes] = await Promise.all([
+        fetch(`/api/coach/reactions?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+        fetch(`/api/coach/meal-feedback?mealLogIds=${ids}`, {
+          credentials: "include",
+          headers,
+        }),
+      ]);
+      const reactionData = (await reactionRes.json()) as {
+        reactions?: MealLogReaction[];
+      };
+      const feedbackData = (await feedbackRes.json()) as {
+        feedback?: MealLogFeedback[];
+      };
+      setCoachReactions(reactionData.reactions ?? []);
+      setCoachFeedback(feedbackData.feedback ?? []);
     };
     poll();
     const timer = setInterval(poll, 30_000);
@@ -414,11 +524,78 @@ export default function StudentDashboard() {
 
   const targetCalories = profile?.targetCalories ?? 2000;
   const targetProtein = profile?.targetProtein ?? 120;
+
+  const todayLogKey = useMemo(
+    () =>
+      todayLogs
+        .map((l) => `${l.id}:${l.calories}:${l.protein}`)
+        .join("|"),
+    [todayLogs]
+  );
+
+  useEffect(() => {
+    if (!isStudent || !session) return;
+
+    let cancelled = false;
+    const fallback = generateRoast(
+      todayCalories,
+      targetCalories,
+      todayProtein,
+      targetProtein,
+      lang,
+      todayLogs
+    );
+    setRoast(fallback);
+
+    const loadRoast = async () => {
+      setRoastLoading(true);
+      try {
+        const text = await fetchAiRoast({
+          meals: todayLogs,
+          targetCalories,
+          targetProtein,
+          lang,
+          studentName: session.name,
+        });
+        if (!cancelled) setRoast(text);
+      } finally {
+        if (!cancelled) setRoastLoading(false);
+      }
+    };
+
+    void loadRoast();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isStudent,
+    session,
+    todayLogKey,
+    targetCalories,
+    targetProtein,
+    lang,
+  ]);
+
   const targetCarbs = coachTargets?.targetCarbs ?? 200;
   const targetFats = coachTargets?.targetFats ?? 65;
   const needsOnboarding =
     isStudent && profileChecked && !isBodyProfileComplete(bodyProfile);
   const exerciseDaily = bodyProfile?.exerciseCaloriesDaily ?? 0;
+
+  useEffect(() => {
+    if (!isStudent || !profileChecked || needsOnboarding) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("guide") === "1") {
+      resetAppGuide();
+      setShowAppGuide(true);
+      router.replace("/", { scroll: false });
+      return;
+    }
+    if (!hasCompletedAppGuide()) {
+      setShowAppGuide(true);
+    }
+  }, [isStudent, profileChecked, needsOnboarding, router]);
 
   const handleQuickAddMeal = async (item: {
     description: string;
@@ -426,72 +603,49 @@ export default function StudentDashboard() {
     protein: number;
     carbs: number;
     fats: number;
+    nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
+    advanced?: import("@/lib/types").FoodAdvancedNutrients;
   }) => {
     if (!session?.email || quickMealSaving) return;
     setQuickMealSaving(true);
     try {
-      const res = await fetch("/api/meals/log", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email: session.email,
-          mealType: mealTypeByTimeOfDay(),
-          description: item.description.trim(),
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fats: item.fats,
-        }),
+      const result = await saveMealViaApi({
+        email: session.email,
+        mealType: mealTypeByTimeOfDay(),
+        description: item.description.trim(),
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+        nutritionSource: item.nutritionSource,
+        advanced: item.advanced,
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Save failed");
-      }
+      applyStreakApiPayload(result.streak);
       const registry = await fetchUsersForSession(session);
       const mealLogs = await getMealLogs(session, registry);
       setLogs(mealLogs);
       setMealSearchOpen(false);
-      showToast(t("home.meals.quickSaved", "✅ 已記錄：{name}", { name: item.description }));
+      const savedName = result.log.description.trim() || item.description.trim();
+      if (result.nutritionVerified?.adjusted) {
+        showToast(
+          t(
+            "home.meals.quickSavedAi",
+            "AI 覆核後已記錄：{name}",
+            { name: savedName }
+          )
+        );
+      } else {
+        showToast(
+          t("home.meals.quickSaved", "已記錄：{name}", { name: savedName })
+        );
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
-      showToast(t("home.meals.quickSaveFailed", "❌ {message}", { message }));
+      showToast(t("home.meals.quickSaveFailed", "{message}", { message }));
     } finally {
       setQuickMealSaving(false);
     }
   };
-
-  const handleSaveWeight = async () => {
-    if (!session?.email || weightSaving) return;
-    const w = Number(weightInput);
-    if (!w || w < 30 || w > 300) {
-      alert(t("home.weight.invalidAlert", "請輸入有效體重（30–300 kg）"));
-      return;
-    }
-    setWeightSaving(true);
-    try {
-      await upsertWeightLog(session.email, w);
-      const refreshed = await fetchWeightLogsLastDays(session.email, 7);
-      setWeightLogs(refreshed);
-      showToast(t("home.weight.savedToast", "✅ 今日體重已記錄"));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t("errors.cloudLoadFailed", "儲存失敗");
-      alert(t("home.weight.saveFailed", "體重儲存失敗：{message}\n\n請確認已在 Supabase 執行 phase5-weight-logs.sql", { message }));
-    } finally {
-      setWeightSaving(false);
-    }
-  };
-
-  const roast = generateRoast(
-    todayCalories,
-    targetCalories,
-    todayProtein,
-    targetProtein,
-    lang
-  );
 
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? BRAND_NAME;
@@ -511,11 +665,13 @@ export default function StudentDashboard() {
     );
   }
 
-  if (loading || !branding) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-zinc-500 px-6 text-center">
-        <p>{t("common.loadingCloud", "從雲端載入緊...")}</p>
-        {loadError && (
+      <LoadingView
+        message={t("common.loadingCloud", "從雲端載入緊...")}
+        logoUrl={branding?.logo}
+      >
+        {loadError ? (
           <>
             <p className="text-sm text-red-600">{loadError}</p>
             <button
@@ -526,8 +682,8 @@ export default function StudentDashboard() {
               {t("auth.backToLogin", "返回登入")}
             </button>
           </>
-        )}
-      </div>
+        ) : null}
+      </LoadingView>
     );
   }
 
@@ -547,6 +703,9 @@ export default function StudentDashboard() {
               weeklyFrequency: settings.weeklyFrequency,
             })
           );
+          if (!hasCompletedAppGuide()) {
+            setShowAppGuide(true);
+          }
           if (session.isSoloStudent) {
             fetch("/api/coach/student-targets", { credentials: "include" })
               .then((r) => r.json())
@@ -565,7 +724,20 @@ export default function StudentDashboard() {
   const todayFats = todayLogs.reduce((s, l) => s + l.fats, 0);
 
   return (
+    <PullToRefresh
+      onRefresh={() => {
+        silentRefreshRef.current = true;
+        setRefreshKey((key) => key + 1);
+      }}
+    >
     <div className="min-h-screen bg-white pb-32">
+      {isStudent && (
+        <StudentPushPrompt
+          reminderSettings={settings}
+          onSettingsSync={syncReminderSettingsToServer}
+        />
+      )}
+
       {showNutritionDash && isStudent && (
         <NutritionDashboard
           logs={todayLogs}
@@ -588,6 +760,7 @@ export default function StudentDashboard() {
                 age: bodyProfile.age,
                 gender: bodyProfile.gender,
                 targetWeightKg: bodyProfile.targetWeightKg,
+                weightChangeKgPerWeek: bodyProfile.weightChangeKgPerWeek,
                 exerciseCaloriesDaily: kcal,
               }),
             });
@@ -621,7 +794,7 @@ export default function StudentDashboard() {
         <header className="w-full space-y-4">
           <div className="flex items-start justify-between gap-3 w-full">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <GorillaMascot logoUrl={branding?.logo} size="sm" />
+              <GorillaMascot logoUrl={branding?.logo} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-gray-500 text-xs leading-tight">
                   {BRAND_TAGLINE}
@@ -637,13 +810,26 @@ export default function StudentDashboard() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`shrink-0 text-[10px] bg-gray-100 text-gray-500 px-2.5 py-1.5 rounded-xl whitespace-nowrap ${btnClass}`}
-            >
-              {t("header.logout", "登出")}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {isStudent && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/history")}
+                  className={`p-2 rounded-xl bg-emerald-50 text-emerald-600 ${btnClass}`}
+                  aria-label={t("history.open", "歷史紀錄日曆")}
+                  title={t("history.open", "歷史紀錄日曆")}
+                >
+                  <Calendar size={18} strokeWidth={2.25} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={`text-[10px] bg-gray-100 text-gray-500 px-2.5 py-1.5 rounded-xl whitespace-nowrap ${btnClass}`}
+              >
+                {t("header.logout", "登出")}
+              </button>
+            </div>
           </div>
 
           {isStudent && (
@@ -704,14 +890,32 @@ export default function StudentDashboard() {
         </header>
 
       <main className="flex flex-col gap-5 w-full">
-        {activeTab === "dashboard" && (
-          <section className={`${SOFT_CARD} p-5 text-sm`}>
-            <div className="flex justify-between items-center gap-2">
-              <p className="font-semibold text-gray-900 text-base">
-                {t("home.welcome", "👋 歡迎，{name}", {
-                  name: displayName,
-                })}
+        <section className={`${SOFT_CARD} p-5 text-sm`}>
+            <div className="flex justify-between items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-900 text-base min-w-0">
+                <IconLabel icon={Hand} iconClassName="text-gray-600">
+                  {t("home.welcome", "歡迎，{name}", {
+                    name: displayName,
+                  })}
+                </IconLabel>
               </p>
+              <div className="flex items-center gap-2 shrink-0">
+                {isStudent && currentStreak > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-sm font-bold text-orange-500"
+                    title={t("streak.longestHint", "最長紀錄 {days} 天", {
+                      days: longestStreak,
+                    })}
+                  >
+                    <Flame
+                      size={18}
+                      strokeWidth={2.5}
+                      className="text-orange-500 fill-orange-400 shrink-0"
+                      aria-hidden
+                    />
+                    {t("streak.days", "{count} 天", { count: currentStreak })}
+                  </span>
+                )}
               <span className={`text-[10px] font-bold uppercase ${BRAND_BTN} px-2.5 py-1 rounded-full`}>
                 {session.role === "admin"
                   ? t("roles.admin", "總控制台")
@@ -719,14 +923,43 @@ export default function StudentDashboard() {
                     ? t("roles.coach", "教練")
                     : t("roles.student", "學員")}
               </span>
+              </div>
             </div>
             <p className="text-gray-500 mt-2 text-xs">{session.email}</p>
-            <p className="text-gray-500 text-xs mt-0.5">📍 {session.gym}</p>
-          </section>
+            <p className="text-gray-500 text-xs mt-0.5 flex items-center gap-1.5">
+              <MapPin size={14} strokeWidth={2} className="shrink-0 text-gray-500" aria-hidden />
+              {session.gym}
+            </p>
+        </section>
+
+        {isStudent && (
+          <StudentFeatureGrid
+            onLogMeal={() => setMealSearchOpen(true)}
+            onOpenNutrition={() => setShowNutritionDash(true)}
+          />
         )}
 
-        {activeTab === "dashboard" &&
-          (session.role === "admin" || session.role === "coach") && (
+        {session.role === "coach" && <CoachFeatureGrid />}
+
+        {(session.role === "admin" || session.role === "coach") && (
+          <>
+            {session.role === "admin" && (
+              <button
+                type="button"
+                onClick={() => router.push("/coach/students")}
+                className={`w-full ${SOFT_CARD} px-4 py-4 text-left ring-1 ring-emerald-600/30 ${btnClass}`}
+              >
+                <p className="font-semibold text-emerald-800">
+                  {t("home.coachStudentsCta", "學員管理同飲食紀錄")}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t(
+                    "home.coachStudentsHint",
+                    "登記學員、查看名單同打卡分析 — 亦可撳底部「學員」分欄"
+                  )}
+                </p>
+              </button>
+            )}
             <FranchiseConsole
               session={session}
               registry={userRegistry}
@@ -734,11 +967,13 @@ export default function StudentDashboard() {
               onToast={showToast}
               onGoCoach={() => router.push("/coach")}
             />
-          )}
+          </>
+        )}
 
-        {activeTab === "dashboard" && isStudent && coachTargets?.locked && (
+        {isStudent && coachTargets?.locked && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 ring-1 ring-emerald-600/30`}>
-            {t("home.targets.lockedBanner", "📜 {source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
+            <IconLabel icon={ScrollText} size="sm" iconClassName="text-emerald-600" className="text-sm font-medium text-gray-800">
+              {t("home.targets.lockedBanner", "{source}已鎖定目標：{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
               source: session.isSoloStudent
                 ? t("home.targets.lockedSolo", "AI 大猩猩聖旨")
                 : t("home.targets.lockedCoach", "教練聖旨"),
@@ -747,38 +982,53 @@ export default function StudentDashboard() {
               carbs: coachTargets.targetCarbs,
               fats: coachTargets.targetFats,
             })}
+            </IconLabel>
           </div>
         )}
 
-        {activeTab === "dashboard" && isStudent && session.isSoloStudent && (
+        {isStudent && session.isSoloStudent && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-[#ecfdf5]`}>
-            {t("home.soloModeBanner", "🦍 你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
+            <IconLabel icon={Cpu} iconClassName="text-emerald-600">
+              {t("home.soloModeBanner", "你正在使用 AI 專屬私教模式 — 每餐記錄後大猩猩會自動批閱！")}
+            </IconLabel>
           </div>
         )}
 
-        {activeTab === "dashboard" && isStudent && coachReactions.length > 0 && (
-          <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800`}>
-            {coachReactions.slice(0, 3).map((r) => (
-              <p key={r.id} className="font-medium">
-                {t("home.coachReplied", "教練回覆咗你 {sticker}", { sticker: r.sticker })}
-              </p>
-            ))}
+        {isStudent &&
+          (coachReactions.length > 0 || coachFeedback.length > 0) && (
+          <div className={`${SOFT_CARD} px-4 py-3 text-sm text-gray-800 space-y-2`}>
+            {todayLogs.slice(0, 3).map((log) => {
+              const reaction = coachReactions.find((r) => r.mealLogId === log.id);
+              const feedback = coachFeedback.find((f) => f.mealLogId === log.id);
+              if (!reaction && !feedback) return null;
+              return (
+                <CoachFeedbackDisplay
+                  key={log.id}
+                  reaction={reaction}
+                  feedback={feedback}
+                />
+              );
+            })}
           </div>
         )}
 
-        {activeTab === "dashboard" && isStudent && !session.isSoloStudent && broadcast.trim() && (
+        {isStudent && !session.isSoloStudent && broadcast.trim() && (
           <div className={`${SOFT_CARD} px-4 py-3 text-sm font-medium text-gray-800 bg-amber-50`}>
-            {t("home.broadcastPrefix", "📣 教練突發警告:")} {broadcast}
+            <IconLabel icon={Megaphone} size="sm" iconClassName="text-amber-700" gapClass="gap-1.5">
+              {t("home.broadcastPrefix", "教練突發警告:")}
+            </IconLabel>{" "}
+            {broadcast}
           </div>
         )}
 
-        {activeTab === "dashboard" && isStudent && (
+        {isStudent && (
           <section className={`${SOFT_CARD} p-5 bg-gradient-to-br from-[#ecfdf5] to-white`}>
             <p className="text-sm font-semibold text-emerald-700 mb-1">
-              🤖{" "}
-              {session.isSoloStudent
-                ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
-                : t("home.aiCoach.coachTitle", "專屬教練 AI 點評")}
+              <IconLabel icon={Bot} iconClassName="text-emerald-600">
+                {session.isSoloStudent
+                  ? t("home.aiCoach.soloTitle", "大猩猩 AI 私教")
+                  : t("home.aiCoach.coachTitle", "專屬教練 AI 點評")}
+              </IconLabel>
             </p>
             <p className="text-sm leading-relaxed text-gray-700">
               {session.isSoloStudent
@@ -810,13 +1060,23 @@ export default function StudentDashboard() {
           </section>
         )}
 
-        {activeTab === "dashboard" && isStudent ? (
+        {isStudent ? (
           <>
             <section className={`${SOFT_CARD} p-5`}>
               <h2 className="text-sm font-semibold text-emerald-600 mb-2">
-                {t("home.roastTitle", "🤖 AI 教練吐槽")}
+                <IconLabel icon={Sparkles} iconClassName="text-emerald-600">
+                  {t("home.roastTitle", "AI 教練吐槽")}
+                </IconLabel>
               </h2>
-              <p className="text-gray-900 leading-relaxed">{roast}</p>
+              <p className="text-gray-900 leading-relaxed">
+                {roast ||
+                  t("home.roastLoading", "AI 教練分析緊你今日食咗咩...")}
+              </p>
+              {roastLoading && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {t("home.roastRefreshing", "根據實際飲食記錄更新中...")}
+                </p>
+              )}
               <p className="text-xs text-gray-500 mt-3">
                 {t("home.settingsSummary", "你而家設定：{trainingType} · 每星期 {weeklyFrequency}", {
                   trainingType: t(TRAINING_LABEL_KEY[settings.trainingType], settings.trainingType),
@@ -830,7 +1090,9 @@ export default function StudentDashboard() {
               onClick={() => setShowNutritionDash(true)}
               className={`w-full ${BRAND_BTN} font-bold py-4 rounded-3xl shadow-[0_8px_30px_rgb(5,150,105,0.25)] ${btnClass}`}
             >
-              📊 {t("home.advancedNutrition", "高級營養分析")}
+              <IconLabel icon={BarChart2} size="md" className="justify-center" iconClassName="text-white">
+                {t("home.advancedNutrition", "高級營養分析")}
+              </IconLabel>
             </button>
 
             <section className={`${SOFT_CARD} p-5 space-y-4`}>
@@ -849,294 +1111,81 @@ export default function StudentDashboard() {
                 unit="g"
                 barClass={BRAND_BAR}
               />
-            </section>
-
-            <section className={`${SOFT_CARD} p-5 space-y-3`}>
-              <div className="flex justify-between items-center">
-                <h2 className="font-semibold text-gray-900">{t("home.weight.title", "體重趨勢")}</h2>
-                <span className="text-xs text-gray-500">{t("home.weight.last7Days", "過去 7 日")}</span>
-              </div>
-              <WeightTrendChart logs={weightLogs} loading={weightLogsLoading} />
-              <div className="flex gap-2 pt-1">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={weightInput}
-                  onChange={(e) => setWeightInput(e.target.value)}
-                  placeholder={t("home.weight.placeholder", "今日體重 (kg)")}
-                  className="flex-1 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-gray-900"
-                />
-                <button
-                  type="button"
-                  disabled={weightSaving}
-                  onClick={handleSaveWeight}
-                  className={`shrink-0 px-4 py-2.5 rounded-2xl ${BRAND_BTN} text-sm font-semibold disabled:opacity-60 ${btnClass}`}
-                >
-                  {weightSaving ? t("home.weight.saving", "儲存中...") : t("home.weight.updateButton", "更新今日體重")}
-                </button>
-              </div>
-            </section>
-
-            {todayLogs.length > 0 && (
-              <section className={`${SOFT_CARD} p-5`}>
-                <h2 className="font-semibold text-gray-900 mb-3">{t("home.meals.today", "今日餐單")}</h2>
-                <ul className="space-y-2">
-                  {todayLogs.map((log) => {
-                    const reaction = coachReactions.find(
-                      (r) => r.mealLogId === log.id
-                    );
-                    return (
-                    <li
-                      key={log.id}
-                      className="p-3 rounded-2xl bg-gray-50"
-                    >
-                      <div className="flex gap-3">
-                      {getMealImageSrc(log) && (
-                        <img
-                          src={getMealImageSrc(log)}
-                          alt=""
-                          className="w-14 h-14 rounded-lg object-cover shrink-0"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">
-                          {log.mealType} · {log.description}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {t("home.meals.macroLine", "{calories} kcal · 蛋白 {protein}g · 碳水 {carbs}g · 脂肪 {fats}g", {
-                            calories: log.calories,
-                            protein: log.protein,
-                            carbs: log.carbs,
-                            fats: log.fats,
-                          })}
-                        </p>
-                      </div>
-                      </div>
-                      {reaction && (
-                        <p className="text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-2 mt-2 leading-relaxed">
-                          {reaction.sticker}
-                        </p>
-                      )}
-                    </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            )}
-          </>
-        ) : isStudent ? (
-          <section className={`${SOFT_CARD} p-5 space-y-4`}>
-            <h2 className="font-semibold text-gray-900">{t("settings.title", "⚙️ 個人化設定")}</h2>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-500">{t("settings.nickname", "暱稱")}</label>
-              <input
-                value={settings.nickname}
-                onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, nickname: e.target.value }))
-                }
-                placeholder={t("settings.nicknamePlaceholder", "你想教練點叫你")}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
+              <ProgressBar
+                label={t("common.carbs", "碳水")}
+                current={todayCarbs}
+                target={targetCarbs}
+                unit="g"
+                barClass="bg-amber-500"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-500">{t("settings.job", "工作型態")}</label>
-                <select
-                  value={settings.job}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      job: e.target.value as PersonalSettings["job"],
-                    }))
-                  }
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-                >
-                  {JOB_KEYS.map((key) => (
-                    <option key={key} value={key}>
-                      {t(`settings.jobs.${key}`, key)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-500">{t("settings.weeklyFrequency", "每星期訓練次數")}</label>
-                <select
-                  value={settings.weeklyFrequency}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      weeklyFrequency: e.target.value as PersonalSettings["weeklyFrequency"],
-                    }))
-                  }
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-                >
-                  {WEEKLY_FREQUENCY_KEYS.map((key) => (
-                    <option key={key} value={key}>
-                      {t(FREQUENCY_LABEL_KEY[key], key)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-500">{t("settings.mealSchedule", "飲食安排")}</label>
-              <select
-                value={settings.mealSchedule}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    mealSchedule: e.target.value as PersonalSettings["mealSchedule"],
-                  }))
-                }
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {MEAL_SCHEDULE_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(`settings.mealSchedules.${key}`, key)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-500">{t("settings.waterReminder", "飲水提醒")}</label>
-              <select
-                value={settings.waterReminder}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    waterReminder: e.target.value as PersonalSettings["waterReminder"],
-                  }))
-                }
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {WATER_REMINDER_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(WATER_LABEL_KEY[key], key)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-500">{t("settings.trainingType", "訓練類型")}</label>
-              <select
-                value={settings.trainingType}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    trainingType: e.target.value as PersonalSettings["trainingType"],
-                  }))
-                }
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {TRAINING_TYPE_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(TRAINING_LABEL_KEY[key], key)}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <ProgressBar
+                label={t("common.fat", "脂肪")}
+                current={todayFats}
+                target={targetFats}
+                unit="g"
+                barClass="bg-rose-400"
+              />
+            </section>
 
-            <BodyProfileFields
-              values={bodyForm}
-              onChange={(patch) =>
-                setBodyForm((prev) => ({ ...prev, ...patch }))
-              }
-            />
+            <ProFeatureGate feature="AI 推薦菜單">
+              <CoachSuggestCard
+                targetCalories={targetCalories}
+                targetProtein={targetProtein}
+                targetCarbs={targetCarbs}
+                targetFats={targetFats}
+                consumedCalories={todayCalories}
+                consumedProtein={todayProtein}
+                consumedCarbs={todayCarbs}
+                consumedFats={todayFats}
+                mealsLoggedToday={todayLogs.length}
+              />
+            </ProFeatureGate>
 
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-500">
-                {t("settings.morningReminderTime", "朝早提醒時間")}
-              </label>
-              <select
-                value={settings.morningReminderTime}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    morningReminderTime: e.target
-                      .value as PersonalSettings["morningReminderTime"],
-                  }))
-                }
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5"
-              >
-                {MORNING_REMINDER_TIME_OPTIONS.map((time) => (
-                  <option key={time} value={time}>
-                    {formatMorningReminderTimeLabel(time)}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[10px] text-zinc-400 leading-relaxed">
-                {t(
-                  "settings.morningReminderHint",
-                  "每日喺你揀嘅時間，鎖屏收到飲水同記錄飲食提醒（需開啟下方推播）。"
-                )}
-              </p>
-            </div>
+            <ProFeatureGate feature="微營養數據分析">
+              <StudentMicronutrientPanel
+                todayCalories={todayCalories}
+                todayCarbs={todayCarbs}
+                todayFats={todayFats}
+                todayProtein={todayProtein}
+                targetCalories={targetCalories}
+                targetCarbs={targetCarbs}
+                targetFats={targetFats}
+                weightKg={bodyProfile?.weightKg}
+              />
+            </ProFeatureGate>
 
-            <PushReminderToggle
-              reminderSettings={settings}
-              onSettingsSync={syncReminderSettingsToServer}
-            />
-
-            <button
-              type="button"
-              onClick={async () => {
-                localStorage.setItem("student_settings", JSON.stringify(settings));
-                void syncReminderSettingsToServer(settings);
-                const h = Number(bodyForm.heightCm);
-                const w = Number(bodyForm.weightKg);
-                const a = Number(bodyForm.age);
-                const tw = Number(bodyForm.targetWeightKg);
-                if (session.email && h && w && a && tw) {
-                  try {
-                    const res = await fetch("/api/student/profile", {
-                      method: "PUT",
-                      credentials: "include",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        email: session.email,
-                        heightCm: h,
-                        weightKg: w,
-                        age: a,
-                        gender: bodyForm.gender,
-                        targetWeightKg: tw,
-                        exerciseCaloriesDaily:
-                          Number(bodyForm.exerciseCaloriesDaily) || 0,
-                      }),
-                    });
-                    const data = (await res.json()) as {
-                      profile?: StudentBodyProfile;
-                    };
-                    if (data.profile) {
-                      setBodyProfile(data.profile);
-                      setProfile(
-                        computeTargetProfile(data.profile, {
-                          job: settings.job,
-                          weeklyFrequency: settings.weeklyFrequency,
-                        })
-                      );
-                    }
-                  } catch {
-                    showToast(t("settings.bodySyncFailed", "身體數據同步失敗，已儲存本地設定。"));
-                  }
-                }
-                showToast(t("settings.saved", "設定已儲存"));
-                setActiveTab("dashboard");
-              }}
-              className={`w-full ${BRAND_BTN} font-semibold py-3.5 rounded-2xl ${btnClass}`}
-            >
-              {t("settings.saveButton", "儲存設定")}
-            </button>
-          </section>
+            <p className="text-center text-xs text-gray-400">
+              {t("home.profileHint", "體重、飲食記錄同個人資料請到「我的」分頁查看")}
+            </p>
+          </>
         ) : null}
       </main>
       </div>
 
+      {streakCelebration && (
+        <StreakMilestoneModal
+          days={streakCelebration.days}
+          isSpecialMilestone={streakCelebration.isSpecialMilestone}
+          session={session}
+          longestStreak={longestStreak}
+          onClose={() => setStreakCelebration(null)}
+          onNotify={showToast}
+        />
+      )}
+
+      {isStudent && (
+        <StudentAppGuide
+          open={showAppGuide}
+          onClose={() => setShowAppGuide(false)}
+          themeBtn={theme.btn}
+        />
+      )}
+
       <BottomNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
         role={session?.role ?? "student"}
         onFabClick={isStudent ? () => setMealSearchOpen(true) : undefined}
       />
     </div>
+    </PullToRefresh>
   );
 }

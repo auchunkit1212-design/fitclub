@@ -26,5 +26,15 @@ yarn-error.log*
 # env files
 .env*.local
 
+# what-to-eat nested app
+/what-to-eat/node_modules
+/what-to-eat/.next
+/what-to-eat/out
+
 # typescript
 *.tsbuildinfo
+.vercel
+
+# capacitor generated (re-run cap sync after clone)
+/ios/App/App/public
+/android/app/src/main/assets/public

@@ -1,9 +1,15 @@
+import { parseWeightChangePace } from "@/lib/body-profile";
 import { resolveBrandForUser } from "@/lib/branding";
-import { syncTenantBranding } from "@/lib/tenant";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  backfillCoachStudentTenants,
+  ensureCoachTenant,
+  syncTenantBranding,
+} from "@/lib/tenant";
+import { getSupabaseAdmin, getSupabaseServiceRole } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { toReadableError } from "@/lib/errors";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+import { applyUserPlanToSession, normalizeUserPlan } from "@/lib/user-plan";
 import type {
   CoachBranding,
   MealLog,
@@ -14,6 +20,11 @@ import type {
   UserSession,
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
+import {
+  computeStreakAfterMealLog,
+  type StreakUpdateResult,
+  type StudentStreakSnapshot,
+} from "@/lib/streak";
 
 type UserRow = {
   id: string;
@@ -30,6 +41,11 @@ type UserRow = {
   tenant_id: string | null;
   password_hash: string | null;
   created_at: string;
+  current_streak?: number | null;
+  longest_streak?: number | null;
+  last_streak_update?: string | null;
+  plan?: string | null;
+  avatar_url?: string | null;
 };
 
 type MealRow = {
@@ -46,11 +62,26 @@ type MealRow = {
   created_at: string;
 };
 
+const REGISTRY_LIST_COLUMNS =
+  "email, name, role, gym, coach, logo, added_by, app_title, theme_color, broadcast, tenant_id, plan, avatar_url, created_at, current_streak, longest_streak, last_streak_update";
+
+const MEAL_LIST_COLUMNS =
+  "id, email, meal_type, description, calories, protein, carbs, fats, image_url, created_at";
+
+/** Default lookback for client meal lists (avoids loading entire history + base64). */
+export function defaultMealLogsFromDate(daysBack = 45): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysBack);
+  return d.toISOString().slice(0, 10);
+}
+
 function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
   const user: RegistryUser = {
     email: row.email,
     name: row.name,
     role: row.role,
+    plan: normalizeUserPlan(row.plan),
+    avatarUrl: row.avatar_url ?? null,
     gym: row.gym ?? "",
     coach: row.coach ?? undefined,
     addedBy: row.added_by ?? undefined,
@@ -60,6 +91,9 @@ function mapUser(row: UserRow, includePasswordHash = false): RegistryUser {
     themeColor: (row.theme_color as ThemeColor) ?? undefined,
     broadcast: row.broadcast ?? undefined,
     hasPassword: Boolean(row.password_hash),
+    currentStreak: Number(row.current_streak) || 0,
+    longestStreak: Number(row.longest_streak) || 0,
+    lastStreakUpdate: row.last_streak_update ?? null,
   };
   if (includePasswordHash && row.password_hash) {
     user.passwordHash = row.password_hash;
@@ -161,12 +195,29 @@ export async function fetchUserByEmail(
   return getDemoUser(normalized);
 }
 
+/** 僅讀取 password_hash（登入驗證用，必須 Service Role） */
+export async function fetchPasswordHashForEmail(
+  email: string
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseServiceRole();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("password_hash")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  const hash = data?.password_hash;
+  return typeof hash === "string" && hash.trim() ? hash.trim() : null;
+}
+
 /** 伺服器登入專用：以 service role 讀取用戶與 password_hash，避免 RLS 阻擋舊帳號登入 */
 export async function fetchUserByEmailForAuth(
   email: string
 ): Promise<RegistryUser | null> {
   const normalized = email.trim().toLowerCase();
-  const admin = getSupabaseAdmin();
+  const admin = getSupabaseServiceRole();
   const { data, error } = await admin
     .from("users_registry")
     .select("*")
@@ -176,14 +227,13 @@ export async function fetchUserByEmailForAuth(
   if (error) throw error;
   if (data) return mapUser(data as UserRow, true);
 
-  const { getDemoUser } = await import("@/lib/demo-users");
-  return getDemoUser(normalized);
+  return null;
 }
 
 export async function fetchAllUsers(): Promise<RegistryUser[]> {
   const { data, error } = await supabase
     .from("users_registry")
-    .select("*")
+    .select(REGISTRY_LIST_COLUMNS)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
@@ -194,31 +244,89 @@ export async function fetchAllUsers(): Promise<RegistryUser[]> {
   return getDemoRegistry();
 }
 
+async function fetchRegistryForStudentSession(
+  session: UserSession
+): Promise<RegistryUser[]> {
+  const email = session.email.trim().toLowerCase();
+  const users: RegistryUser[] = [];
+
+  const { data: selfRow, error: selfError } = await supabase
+    .from("users_registry")
+    .select(REGISTRY_LIST_COLUMNS)
+    .eq("email", email)
+    .maybeSingle();
+  if (selfError) throw selfError;
+  if (selfRow) users.push(mapUser(selfRow as UserRow));
+
+  if (session.tenantId) {
+    const { data: coachRows, error: coachError } = await supabase
+      .from("users_registry")
+      .select(REGISTRY_LIST_COLUMNS)
+      .eq("role", "coach")
+      .eq("tenant_id", session.tenantId)
+      .limit(1);
+    if (coachError) throw coachError;
+    if (coachRows?.[0]) users.push(mapUser(coachRows[0] as UserRow));
+  } else if (session.coach?.trim()) {
+    const { data: coachRows, error: coachError } = await supabase
+      .from("users_registry")
+      .select(REGISTRY_LIST_COLUMNS)
+      .eq("role", "coach")
+      .eq("name", session.coach.trim())
+      .limit(1);
+    if (coachError) throw coachError;
+    if (coachRows?.[0]) users.push(mapUser(coachRows[0] as UserRow));
+  }
+
+  if (users.length === 0) {
+    const { getDemoRegistry } = await import("@/lib/demo-users");
+    return getDemoRegistry().filter(
+      (u) =>
+        u.email === email ||
+        u.tenantId === session.tenantId ||
+        (session.coach && u.role === "coach" && u.name === session.coach)
+    );
+  }
+
+  return attachTenantNames(users);
+}
+
 export async function fetchUsersForSession(
   session: UserSession
 ): Promise<RegistryUser[]> {
+  if (session.role === "student" && session.email) {
+    return fetchRegistryForStudentSession(session);
+  }
+
   const all = await fetchAllUsers();
 
   if (session.role === "admin") return all;
 
-  if (session.tenantId) {
-    return all.filter((u) => u.tenantId === session.tenantId);
-  }
-
   if (session.role === "coach") {
+    const coachEmail = session.email.trim().toLowerCase();
+    const coachName = session.name?.trim();
     return all.filter(
       (u) =>
-        u.addedBy === session.email ||
-        u.email === session.email ||
-        (u.role === "student" && u.coach === session.name)
+        u.email === coachEmail ||
+        u.addedBy === coachEmail ||
+        (coachName && u.coach === coachName) ||
+        (session.tenantId != null && u.tenantId === session.tenantId)
     );
   }
 
   if (session.role === "student") {
+    if (session.tenantId) {
+      return all.filter(
+        (u) =>
+          u.email === session.email ||
+          u.tenantId === session.tenantId ||
+          (session.coach && u.role === "coach" && u.name === session.coach)
+      );
+    }
     return all.filter(
       (u) =>
         u.email === session.email ||
-        (u.role === "coach" && u.name === session.coach)
+        (session.coach && u.role === "coach" && u.name === session.coach)
     );
   }
 
@@ -249,8 +357,13 @@ export function filterStudentsForSession(
 }
 
 export async function emailExists(email: string): Promise<boolean> {
-  const user = await fetchUserByEmail(email);
-  return Boolean(user);
+  try {
+    const user = await fetchUserByEmailForAuth(email);
+    return Boolean(user);
+  } catch {
+    const user = await fetchUserByEmail(email);
+    return Boolean(user);
+  }
 }
 
 export async function insertUser(
@@ -274,39 +387,74 @@ export async function insertUser(
 }
 
 export function registryUserToSession(user: RegistryUser): UserSession {
-  return {
-    role: user.role,
-    name: user.name,
-    email: user.email,
-    gym: user.gym,
-    coach: user.coach,
-    addedBy: user.addedBy,
-    tenantId: user.tenantId,
-    brandName: user.appTitle ?? user.gym,
-    brandLogo: user.logo,
-    isLoggedIn: true,
-  };
+  return applyUserPlanToSession(
+    {
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      gym: user.gym,
+      coach: user.coach,
+      addedBy: user.addedBy,
+      tenantId: user.tenantId,
+      brandName: user.appTitle ?? user.gym,
+      brandLogo: user.logo,
+      isLoggedIn: true,
+    },
+    user
+  );
 }
 
 export function createAdminSession(email: string): UserSession {
-  return {
+  return applyUserPlanToSession({
     role: "admin",
     name: "最高總裁 (Kit Au)",
     email: email.trim().toLowerCase(),
     gym: "全港連鎖總部",
     brandName: "連鎖總部",
     isLoggedIn: true,
-  };
+  });
+}
+
+export async function fetchUserAvatarUrl(
+  email: string
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("avatar_url")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  const url = data?.avatar_url;
+  return typeof url === "string" && url.trim() ? url.trim() : null;
+}
+
+export async function updateUserAvatarUrl(
+  email: string,
+  avatarUrl: string | null
+): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
+    .from("users_registry")
+    .update({ avatar_url: avatarUrl })
+    .eq("email", normalized);
+
+  if (error) throw error;
 }
 
 export async function fetchMealLogs(options?: {
   emails?: string[];
   from?: string;
   to?: string;
+  includeImageBase64?: boolean;
 }): Promise<MealLog[]> {
+  const selectCols = options?.includeImageBase64 ? "*" : MEAL_LIST_COLUMNS;
   let query = supabase
     .from("meal_logs")
-    .select("*")
+    .select(selectCols)
     .order("created_at", { ascending: false });
 
   if (options?.emails && options.emails.length > 0) {
@@ -321,11 +469,15 @@ export async function fetchMealLogs(options?: {
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data as MealRow[]).map(mapMeal);
+  return ((data ?? []) as unknown as MealRow[]).map(mapMeal);
 }
 
 export async function insertMealLog(
-  log: Omit<MealLog, "id" | "createdAt" | "date"> & { email: string },
+  log: Omit<MealLog, "id" | "createdAt" | "date"> & {
+    email: string;
+    /** Optional ISO created_at override (backdated meal). */
+    createdAt?: string;
+  },
   options?: { useServiceRole?: boolean }
 ): Promise<MealLog> {
   const client = options?.useServiceRole
@@ -333,7 +485,24 @@ export async function insertMealLog(
     : supabase;
 
   const email = log.email.trim().toLowerCase();
+  const createdAtOverride = log.createdAt?.trim() || undefined;
+  const baseRow: Record<string, unknown> = {
+    email,
+    meal_type: log.mealType,
+    description: log.description,
+    calories: log.calories,
+    protein: log.protein,
+    carbs: log.carbs,
+    fats: log.fats,
+    image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
+    image_url: log.imageUrl ?? null,
+  };
+  if (createdAtOverride) {
+    baseRow.created_at = createdAtOverride;
+  }
+
   const attempts: Record<string, unknown>[] = [
+    { ...baseRow },
     {
       email,
       meal_type: log.mealType,
@@ -343,23 +512,14 @@ export async function insertMealLog(
       carbs: log.carbs,
       fats: log.fats,
       image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-      image_url: log.imageUrl ?? null,
+      ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
     },
     {
       email,
       meal_type: log.mealType,
       description: log.description,
       calories: log.calories,
-      protein: log.protein,
-      carbs: log.carbs,
-      fats: log.fats,
-      image_base64: log.imageUrl ? null : log.imageBase64 ?? null,
-    },
-    {
-      email,
-      meal_type: log.mealType,
-      description: log.description,
-      calories: log.calories,
+      ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
     },
   ];
 
@@ -390,6 +550,71 @@ export async function insertMealLog(
   throw new Error("meal_logs 寫入失敗");
 }
 
+export async function fetchMealLogById(
+  id: string,
+  options?: { useServiceRole?: boolean }
+): Promise<MealLog | null> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { data, error } = await client
+    .from("meal_logs")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapMeal(data as MealRow) : null;
+}
+
+export async function updateMealLog(
+  id: string,
+  patch: {
+    description?: string;
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fats?: number;
+    mealType?: string;
+  },
+  options?: { useServiceRole?: boolean }
+): Promise<MealLog> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const row: Record<string, unknown> = {};
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.mealType !== undefined) row.meal_type = patch.mealType;
+  if (patch.calories !== undefined) row.calories = patch.calories;
+  if (patch.protein !== undefined) row.protein = patch.protein;
+  if (patch.carbs !== undefined) row.carbs = patch.carbs;
+  if (patch.fats !== undefined) row.fats = patch.fats;
+
+  const { data, error } = await client
+    .from("meal_logs")
+    .update(row)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw toReadableError(error, "meal_logs 更新失敗");
+  return mapMeal(data as MealRow);
+}
+
+export async function deleteMealLog(
+  id: string,
+  options?: { useServiceRole?: boolean }
+): Promise<void> {
+  const client = options?.useServiceRole
+    ? (await import("@/lib/supabase-admin")).getSupabaseAdmin()
+    : supabase;
+
+  const { error } = await client.from("meal_logs").delete().eq("id", id);
+  if (error) throw toReadableError(error, "meal_logs 刪除失敗");
+}
+
 export async function fetchMealLogsForSession(
   session: UserSession,
   registry: RegistryUser[],
@@ -412,7 +637,21 @@ export async function fetchMealLogsForSession(
     return fetchMealLogs({ ...filters, emails });
   }
 
-  return fetchMealLogs({ ...filters, emails: [session.email] });
+  const from =
+    filters?.from ??
+    (session.role === "student" ? defaultMealLogsFromDate(45) : undefined);
+  return fetchMealLogs({ ...filters, from, emails: [session.email] });
+}
+
+/** Meal logs for the logged-in user only (coach/admin self, or student self). */
+export async function fetchOwnMealLogsForSession(
+  session: UserSession,
+  filters?: { from?: string; to?: string }
+): Promise<MealLog[]> {
+  const from =
+    filters?.from ??
+    (session.role === "student" ? defaultMealLogsFromDate(45) : undefined);
+  return fetchMealLogs({ ...filters, from, emails: [session.email] });
 }
 
 export async function resolveBranding(
@@ -434,10 +673,17 @@ export async function updateCoachBrandingAdmin(
     logo?: string;
     broadcast: string;
     tenantId?: string;
+    coachName?: string;
   }
-): Promise<void> {
+): Promise<{ tenantId: string; tenantSlug: string }> {
   const admin = getSupabaseAdmin();
   const email = coachEmail.trim().toLowerCase();
+
+  const tenant = await ensureCoachTenant({
+    coachEmail: email,
+    gymName: payload.appTitle,
+    coachName: payload.coachName,
+  });
 
   const { error } = await admin
     .from("users_registry")
@@ -447,6 +693,7 @@ export async function updateCoachBrandingAdmin(
       logo: payload.logo ?? null,
       broadcast: payload.broadcast,
       gym: payload.appTitle,
+      tenant_id: tenant.id,
     })
     .eq("email", email)
     .eq("role", "coach");
@@ -466,13 +713,22 @@ export async function updateCoachBrandingAdmin(
     throw error;
   }
 
-  if (payload.tenantId) {
-    await syncTenantBranding(payload.tenantId, {
-      gymName: payload.appTitle,
-      logoUrl: payload.logo,
-      themeColor: payload.themeColor,
+  await syncTenantBranding(tenant.id, {
+    gymName: payload.appTitle,
+    logoUrl: payload.logo,
+    themeColor: payload.themeColor,
+  });
+
+  const coach = await fetchUserByEmailForAuth(email);
+  if (coach?.name) {
+    await backfillCoachStudentTenants({
+      coachEmail: email,
+      coachName: coach.name,
+      tenantId: tenant.id,
     });
   }
+
+  return { tenantId: tenant.id, tenantSlug: tenant.slug };
 }
 
 /** @deprecated 請改用 API /api/coach/branding（service role） */
@@ -537,12 +793,23 @@ type BodyProfileRow = {
   age: number;
   gender: string;
   target_weight_kg: number;
+  weight_change_kg_per_week?: number | null;
   exercise_calories_daily: number;
   onboarding_complete: boolean;
   updated_at: string;
 };
 
 function mapBodyProfile(row: BodyProfileRow): StudentBodyProfile {
+  const paceRaw = row.weight_change_kg_per_week;
+  const pace =
+    paceRaw === 1 ||
+    paceRaw === 0.5 ||
+    paceRaw === 0 ||
+    paceRaw === -0.5 ||
+    paceRaw === -1
+      ? (paceRaw as StudentBodyProfile["weightChangeKgPerWeek"])
+      : null;
+
   return {
     email: row.email,
     heightCm: Number(row.height_cm),
@@ -550,6 +817,7 @@ function mapBodyProfile(row: BodyProfileRow): StudentBodyProfile {
     age: row.age,
     gender: row.gender as StudentGender,
     targetWeightKg: Number(row.target_weight_kg),
+    weightChangeKgPerWeek: pace,
     exerciseCaloriesDaily: row.exercise_calories_daily ?? 0,
     onboardingComplete: row.onboarding_complete ?? true,
     updatedAt: row.updated_at,
@@ -596,6 +864,32 @@ export async function fetchStudentBodyProfile(
   return readLocalBodyProfile(normalized);
 }
 
+export async function fetchStudentBodyProfilesForEmails(
+  emails: string[]
+): Promise<Map<string, StudentBodyProfile>> {
+  const normalized = Array.from(
+    new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+  const map = new Map<string, StudentBodyProfile>();
+  if (normalized.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("student_body_profiles")
+    .select("*")
+    .in("email", normalized);
+
+  if (error) {
+    console.warn("[body-profile] batch fetch failed:", error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const profile = mapBodyProfile(row as BodyProfileRow);
+    map.set(profile.email.trim().toLowerCase(), profile);
+  }
+  return map;
+}
+
 export async function upsertStudentBodyProfile(
   profile: Omit<StudentBodyProfile, "updatedAt">,
   options?: { useServiceRole?: boolean }
@@ -608,8 +902,13 @@ export async function upsertStudentBodyProfile(
     age: profile.age,
     gender: profile.gender,
     target_weight_kg: profile.targetWeightKg,
+    weight_change_kg_per_week: parseWeightChangePace(
+      profile.weightChangeKgPerWeek
+    ),
     exercise_calories_daily: profile.exerciseCaloriesDaily ?? 0,
-    onboarding_complete: true,
+    onboarding_complete:
+      profile.onboardingComplete !== false &&
+      parseWeightChangePace(profile.weightChangeKgPerWeek) !== null,
     updated_at: new Date().toISOString(),
   };
 
@@ -638,4 +937,116 @@ export async function upsertStudentBodyProfile(
 
   writeLocalBodyProfile(saved);
   return saved;
+}
+
+function streakSnapshotFromRow(row: {
+  current_streak?: number | null;
+  longest_streak?: number | null;
+  last_streak_update?: string | null;
+}): StudentStreakSnapshot {
+  return {
+    currentStreak: Math.max(0, Number(row.current_streak) || 0),
+    longestStreak: Math.max(0, Number(row.longest_streak) || 0),
+    lastStreakUpdate: row.last_streak_update ?? null,
+  };
+}
+
+function isMissingStreakColumnError(error: unknown): boolean {
+  const msg =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: string }).message)
+      : "";
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code: string }).code)
+      : "";
+  return (
+    code === "PGRST204" ||
+    msg.includes("current_streak") ||
+    msg.includes("schema cache")
+  );
+}
+
+const EMPTY_STREAK_RESULT: StreakUpdateResult = {
+  currentStreak: 0,
+  longestStreak: 0,
+  lastStreakUpdate: null,
+  streakUpdated: false,
+  celebrationTriggered: false,
+  isSpecialMilestone: false,
+  milestoneTriggered: false,
+};
+
+export async function fetchStudentStreak(
+  email: string
+): Promise<StudentStreakSnapshot> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("role, current_streak, longest_streak, last_streak_update")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingStreakColumnError(error)) return EMPTY_STREAK_RESULT;
+    throw error;
+  }
+
+  if (!data || data.role !== "student") return EMPTY_STREAK_RESULT;
+  return streakSnapshotFromRow(data);
+}
+
+/** 學員成功記錄飲食後更新連續打卡天數 */
+export async function applyMealLogStreak(
+  email: string
+): Promise<StreakUpdateResult> {
+  const normalized = email.trim().toLowerCase();
+  const admin = getSupabaseAdmin();
+
+  const { data, error } = await admin
+    .from("users_registry")
+    .select("role, current_streak, longest_streak, last_streak_update")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingStreakColumnError(error)) {
+      console.warn("[streak] columns missing — run supabase/student-streak.sql");
+      return EMPTY_STREAK_RESULT;
+    }
+    throw error;
+  }
+
+  if (!data || data.role !== "student") return EMPTY_STREAK_RESULT;
+
+  const snapshot = streakSnapshotFromRow(data);
+  const result = computeStreakAfterMealLog(snapshot);
+
+  if (!result.streakUpdated) {
+    return {
+      ...result,
+      lastStreakUpdate: snapshot.lastStreakUpdate,
+    };
+  }
+
+  const { error: updateError } = await admin
+    .from("users_registry")
+    .update({
+      current_streak: result.currentStreak,
+      longest_streak: result.longestStreak,
+      last_streak_update: result.lastStreakUpdate,
+    })
+    .eq("email", normalized);
+
+  if (updateError) {
+    if (isMissingStreakColumnError(updateError)) {
+      console.warn("[streak] update skipped — run supabase/student-streak.sql");
+      return EMPTY_STREAK_RESULT;
+    }
+    throw updateError;
+  }
+
+  return result;
 }

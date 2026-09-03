@@ -1,5 +1,5 @@
-const CACHE_VERSION = "nutrition-coach-pwa-v7";
-const STATIC_CACHE = "nutrition-coach-static-v7";
+const CACHE_VERSION = "nutrition-coach-pwa-v12";
+const STATIC_CACHE = "nutrition-coach-static-v12";
 
 /** 只預快取唔會變嘅靜態檔，唔快取 HTML 頁面 */
 const PRECACHE_URLS = ["/gorilla-logo.png", "/manifest.json"];
@@ -13,6 +13,17 @@ self.addEventListener("install", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+    );
+  }
+});
+
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -20,7 +31,9 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== STATIC_CACHE && key !== CACHE_VERSION)
+            // Drop every cache that is not the current static cache.
+            // Especially drop any old HTML/page caches (nutrition-coach-pwa-v*).
+            .filter((key) => key !== STATIC_CACHE)
             .map((key) => caches.delete(key))
         )
       )
@@ -45,46 +58,83 @@ function isStaticAsset(pathname) {
   );
 }
 
+function offlineResponse(message) {
+  return new Response(message, {
+    status: 503,
+    statusText: "Service Unavailable",
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
+
+async function networkFirst(request, cacheName, offlineMessage) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const copy = response.clone();
+      const cache = await caches.open(cacheName);
+      await cache.put(request, copy);
+    }
+    // Always return a real Response — never null/undefined.
+    return response || offlineResponse(offlineMessage);
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return offlineResponse(offlineMessage);
+  }
+}
+
+/** HTML 只行網絡，唔快取 — 避免主畫面開到舊版（冇「選單」） */
+async function networkOnlyNavigation(request, offlineMessage) {
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    return response || offlineResponse(offlineMessage);
+  } catch {
+    return offlineResponse(offlineMessage);
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // HTML / 頁面導航：網絡優先，避免主畫面開到舊版空白頁
+  // 唔攔截 SW 本身，等瀏覽器正常檢查更新
+  if (url.pathname === "/sw.js") return;
+
+  // API / RSC / data：唔攔截，交返瀏覽器，避免 SW 令載入失敗
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.includes("_rsc") ||
+    url.searchParams.has("_rsc")
+  ) {
+    return;
+  }
+
+  // HTML / 頁面導航：只行網絡，唔用舊快取
   if (isNavigationRequest(event.request)) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+      networkOnlyNavigation(
+        event.request,
+        "暫時無法連線，請檢查網絡後用主畫面圖示重新開啟。"
+      )
     );
     return;
   }
 
-  // Next 靜態資源：網絡優先，避免 PWA 長期使用舊版 JS
+  // Next 靜態資源：網絡優先（hash 檔名，舊 chunk 唔會被新 HTML 引用）
   if (isStaticAsset(url.pathname)) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+      networkFirst(
+        event.request,
+        STATIC_CACHE,
+        "靜態資源暫時無法載入，請檢查網絡。"
+      )
     );
     return;
   }
 
-  // 其他 GET（例如 RSC、API）：直接走網絡
-  event.respondWith(fetch(event.request));
+  // 其他 GET：唔攔截
 });
 
 /** 收到伺服器推送（Web Push）時顯示系統通知 */

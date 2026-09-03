@@ -4,7 +4,7 @@ import { notifyStudentOfReaction } from "@/lib/meal-notifications";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
 
-const STICKERS = ["👍", "🔥", "💪", "⭐", "🎯", "❤️", "👏", "🥗"];
+import { isValidSticker, normalizeStickerId } from "@/lib/meal-stickers";
 
 function isCoachOrAdmin(session: ReturnType<typeof parseSessionFromRequest>) {
   return (
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "參數不完整" }, { status: 400 });
   }
 
-  if (!STICKERS.includes(body.sticker)) {
+  const stickerId = normalizeStickerId(body.sticker);
+  if (!stickerId || !isValidSticker(stickerId)) {
     return NextResponse.json({ error: "無效貼紙" }, { status: 400 });
   }
 
@@ -41,14 +42,14 @@ export async function POST(request: Request) {
     const reaction = await insertMealReaction(
       body.mealLogId,
       session!.email,
-      body.sticker,
+      stickerId,
       { useServiceRole: true }
     );
 
     if (body.studentEmail) {
       notifyStudentOfReaction(
         body.studentEmail,
-        body.sticker,
+        stickerId,
         session!.name || "教練"
       ).catch((pushErr) => {
         console.warn("[coach/reactions] push notification failed (ignored):", pushErr);

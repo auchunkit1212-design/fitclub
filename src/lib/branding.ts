@@ -1,3 +1,5 @@
+import { fetchCoachByName, fetchCoachByTenantId } from "@/lib/db-coach-lookup";
+import { safeBrandLogo } from "@/lib/session-sanitize";
 import { fetchTenantById } from "@/lib/tenant";
 import type {
   CoachBranding,
@@ -14,6 +16,16 @@ export interface ResolvedBrand {
   tenantSlug?: string;
 }
 
+function resolveBrandingLogo(
+  ...candidates: (string | null | undefined)[]
+): string | undefined {
+  for (const raw of candidates) {
+    const safe = safeBrandLogo(raw);
+    if (safe) return safe;
+  }
+  return undefined;
+}
+
 export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
   return {
     gymName: tenant.gymName,
@@ -22,7 +34,7 @@ export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
     branding: {
       appTitle: tenant.gymName,
       themeColor: "emerald",
-      logo: tenant.logoUrl,
+      logo: resolveBrandingLogo(tenant.logoUrl),
     },
   };
 }
@@ -34,7 +46,7 @@ export function brandingFromCoach(coach: RegistryUser): ResolvedBrand {
     branding: {
       appTitle: coach.appTitle ?? coach.gym ?? DEFAULT_BRANDING.appTitle,
       themeColor: coach.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: coach.logo,
+      logo: resolveBrandingLogo(coach.logo),
     },
   };
 }
@@ -83,6 +95,43 @@ export async function resolveBrandForUser(
   }
 
   return brandingFromCoach(coachRow);
+}
+
+/** 登入專用：輕量查詢，避免 fetchAllUsers 拖慢或逾時 */
+export async function resolveBrandForLogin(
+  session: UserSession,
+  user: RegistryUser
+): Promise<ResolvedBrand> {
+  if (user.tenantId) {
+    const tenant = await fetchTenantById(user.tenantId);
+    if (tenant) {
+      const base = brandingFromTenant(tenant);
+      const coach = await fetchCoachByTenantId(user.tenantId);
+      if (coach?.logo) base.branding.logo = coach.logo;
+      if (coach?.themeColor) base.branding.themeColor = coach.themeColor;
+      if (coach?.broadcast) base.broadcast = coach.broadcast;
+      return base;
+    }
+  }
+
+  if (user.role === "coach") {
+    return brandingFromCoach(user);
+  }
+
+  if (user.coach) {
+    const coach = await fetchCoachByName(user.coach);
+    if (coach) return brandingFromCoach(coach);
+  }
+
+  return {
+    gymName: user.appTitle ?? user.gym ?? session.gym ?? DEFAULT_BRANDING.appTitle,
+    broadcast: user.broadcast ?? "",
+    branding: {
+      appTitle: user.appTitle ?? user.gym ?? DEFAULT_BRANDING.appTitle,
+      themeColor: user.themeColor ?? DEFAULT_BRANDING.themeColor,
+      logo: resolveBrandingLogo(user.logo),
+    },
+  };
 }
 
 export function applyBrandToSession(

@@ -1,13 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  Bell,
+  ClipboardList,
+  Copy,
+  IconLabel,
+  Megaphone,
+  MessageCircle,
+  ScrollText,
+  Smartphone,
+} from "@/components/icons";
+import { CoachMealReviewActions } from "@/components/CoachMealReviewActions";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { errorMessage } from "@/lib/errors";
 import { getMealStatus, mealStatusStyles } from "@/lib/meal-status";
 import { getSession, getSessionRequestHeaders } from "@/lib/session";
-import type { MealLog, RegistryUser, StudentNutritionTargets } from "@/lib/types";
-
-const STICKERS = ["👍", "🔥", "💪", "⭐", "🎯", "❤️", "👏", "🥗"];
+import {
+  isMealReviewedByCoach,
+} from "@/lib/meal-review-status";
+import type {
+  MealLog,
+  MealLogFeedback,
+  MealLogReaction,
+  RegistryUser,
+  StudentNutritionTargets,
+} from "@/lib/types";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -66,35 +84,49 @@ function buildNudgeMessage(
 ): string {
   const mealLine =
     todayMealCount === 0
-      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！🍽️`
-      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！🍽️`;
+      ? `${coachName} 教練想提醒你今日仲未記錄任何飲食！`
+      : `${coachName} 教練見你今日已記錄 ${todayMealCount} 餐，請繼續補記同保持完整打卡！`;
 
-  return `🦍 喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
+  return `喂 ${studentName}！我係 Nutrition Coach 大猩猩教練助手～
 
 ${mealLine}
 
-快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。💧 記得飲水！💪
+快啲打開 App 影相打卡，等我哋幫你分析熱量同 Macros。記得飲水！
 
 — Nutrition Coach · Coach! what to eat?`;
 }
 
 function buildPushNudgeBody(coachName: string, todayMealCount: number): string {
   if (todayMealCount === 0) {
-    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！💧 記得飲水。`;
+    return `${coachName} 教練提醒你：今日仲未記錄飲食，快打開 App 打卡！記得飲水。`;
   }
   return `${coachName} 教練提醒你：今日已記 ${todayMealCount} 餐，請繼續補記同飲水，保持完整打卡！`;
 }
 
+type WallFilter = "all" | "unreviewed";
+
 interface CoachActivityWallProps {
   logs: MealLog[];
   students: RegistryUser[];
+  coachEmail: string;
+  reactions?: MealLogReaction[];
+  feedback?: MealLogFeedback[];
+  onReviewChange?: (mealLogId?: string) => void;
   onToast: (msg: string) => void;
+  onLogUpdated?: (log: MealLog) => void;
+  onLogDeleted?: (id: string) => void;
 }
 
 export function CoachActivityWall({
   logs,
   students,
+  coachEmail,
+  reactions = [],
+  feedback = [],
+  onReviewChange,
   onToast,
+  onLogUpdated,
+  onLogDeleted,
 }: CoachActivityWallProps) {
   const [targetStudent, setTargetStudent] = useState(students[0]?.email ?? "");
   const [targets, setTargets] = useState<TargetFormState>(DEFAULT_TARGETS);
@@ -102,8 +134,25 @@ export function CoachActivityWall({
   const [selectedLog, setSelectedLog] = useState<MealLog | null>(null);
   const [nudgeStudent, setNudgeStudent] = useState<RegistryUser | null>(null);
   const [nudgeSending, setNudgeSending] = useState(false);
+  const [bulkNudgeSending, setBulkNudgeSending] = useState(false);
+  const [wallFilter, setWallFilter] = useState<WallFilter>("all");
 
-  const recentLogs = useMemo(() => logs.slice(0, 30), [logs]);
+  const recentLogs = useMemo(() => {
+    const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+    const filtered =
+      wallFilter === "unreviewed"
+        ? sorted.filter(
+            (log) =>
+              !isMealReviewedByCoach(
+                log.id,
+                coachEmail,
+                reactions,
+                feedback
+              )
+          )
+        : sorted;
+    return filtered.slice(0, 30);
+  }, [logs, wallFilter, coachEmail, reactions, feedback]);
 
   const todayMealCountByEmail = useMemo(() => {
     const today = todayIso();
@@ -123,42 +172,6 @@ export function CoachActivityWall({
     );
     const data = (await res.json()) as { targets?: StudentNutritionTargets | null };
     if (data.targets) setTargets(targetsFromApi(data.targets));
-  };
-
-  const sendReaction = async (log: MealLog, sticker: string) => {
-    try {
-      const res = await fetch("/api/coach/reactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionRequestHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          mealLogId: log.id,
-          sticker,
-          studentEmail: log.email,
-        }),
-      });
-
-      const data = (await res.json()) as { error?: string; hint?: string };
-
-      if (res.ok) {
-        onToast(`已送出 ${sticker} 給學員`);
-        return;
-      }
-
-      console.error("發送 reaction 失敗:", {
-        status: res.status,
-        error: data.error,
-        hint: data.hint,
-        mealLogId: log.id,
-      });
-      onToast(data.error ?? `發送失敗 (HTTP ${res.status})`);
-    } catch (err) {
-      console.error("發送 reaction 失敗:", err);
-      onToast(errorMessage(err, "發送失敗"));
-    }
   };
 
   const saveTargets = async () => {
@@ -238,7 +251,7 @@ export function CoachActivityWall({
       };
 
       if (res.ok && data.ok) {
-        onToast(`📲 已發送 App 通知俾 ${data.studentName ?? student.name}`);
+        onToast(`已發送 App 通知俾 ${data.studentName ?? student.name}`);
         setNudgeStudent(null);
         return;
       }
@@ -253,12 +266,82 @@ export function CoachActivityWall({
     }
   };
 
+  const sendAllAppNudges = async () => {
+    if (students.length === 0) {
+      onToast("未有學員可提醒");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `確定發送 App 提醒俾全部 ${students.length} 位學員？\n\n學員需已開啟推播訂閱先會收到通知。`
+    );
+    if (!confirmed) return;
+
+    setBulkNudgeSending(true);
+    try {
+      const res = await fetch("/api/coach/nudge-all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionRequestHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        hint?: string;
+        message?: string;
+        sentStudents?: number;
+        noSubscription?: number;
+        total?: number;
+      };
+
+      if (res.ok && data.ok) {
+        const skipped =
+          data.noSubscription && data.noSubscription > 0
+            ? `（${data.noSubscription} 位未訂閱推播）`
+            : "";
+        onToast(
+          data.message ??
+            `已發送提醒俾 ${data.sentStudents ?? 0} 位學員${skipped}`
+        );
+        return;
+      }
+
+      onToast(
+        data.hint ? `${data.error} — ${data.hint}` : data.error ?? "批量發送失敗"
+      );
+    } catch (err) {
+      onToast(errorMessage(err, "批量發送失敗"));
+    } finally {
+      setBulkNudgeSending(false);
+    }
+  };
+
   const coachName = getSession()?.name ?? "教練";
 
   return (
     <div className="space-y-4">
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm space-y-3">
-        <h2 className="font-semibold text-zinc-800">📜 教練聖旨 · 遠端控球</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold text-zinc-800">
+            <IconLabel icon={ScrollText} iconClassName="text-gray-600">
+              教練聖旨 · 遠端控球
+            </IconLabel>
+          </h2>
+          <button
+            type="button"
+            onClick={sendAllAppNudges}
+            disabled={bulkNudgeSending || students.length === 0}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-semibold disabled:opacity-50 ${btnClass}`}
+            title="一鍵向全部學員發送 App 飲食提醒"
+          >
+            <Megaphone size={16} strokeWidth={2} aria-hidden />
+            {bulkNudgeSending ? "發送中…" : "一鍵提醒全部"}
+          </button>
+        </div>
 
         <ul className="space-y-2">
           {students.map((s) => {
@@ -277,11 +360,11 @@ export function CoachActivityWall({
                 <button
                   type="button"
                   onClick={() => setNudgeStudent(s)}
-                  className={`shrink-0 text-lg px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 ${btnClass}`}
+                  className={`shrink-0 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 ${btnClass}`}
                   title="發送 App 提醒（有記錄都可發）"
                   aria-label={`提醒 ${s.name} 記錄飲食`}
                 >
-                  🔔
+                  <Bell size={20} strokeWidth={2} aria-hidden />
                 </button>
               </li>
             );
@@ -349,12 +432,55 @@ export function CoachActivityWall({
       </section>
 
       <section className="bg-white rounded-2xl border border-zinc-100 p-4 shadow-sm">
-        <h2 className="font-semibold text-zinc-800 mb-3">📣 動態牆 · 即時批閱</h2>
-        <p className="text-xs text-zinc-400 mb-2">撳卡片查看大圖同完整 Macros</p>
+        <h2 className="font-semibold text-zinc-800 mb-3">
+          <IconLabel icon={Megaphone} iconClassName="text-gray-600">
+            動態牆 · 即時批閱
+          </IconLabel>
+        </h2>
+        <p className="text-xs text-zinc-400 mb-2">
+          撳卡片查看大圖、修正營養或刪除記錄
+        </p>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setWallFilter("all")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${
+              wallFilter === "all"
+                ? "bg-zinc-900 text-white border-zinc-900"
+                : "bg-white text-zinc-600 border-zinc-200"
+            }`}
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            onClick={() => setWallFilter("unreviewed")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${btnClass} ${
+              wallFilter === "unreviewed"
+                ? "bg-amber-600 text-white border-amber-600"
+                : "bg-white text-amber-800 border-amber-200"
+            }`}
+          >
+            未檢閱
+          </button>
+        </div>
         <ul className="space-y-3 max-h-[480px] overflow-y-auto">
+          {recentLogs.length === 0 ? (
+            <li className="text-sm text-zinc-500 text-center py-6">
+              {wallFilter === "unreviewed"
+                ? "暫無未檢閱記錄"
+                : "暫無飲食動態"}
+            </li>
+          ) : null}
           {recentLogs.map((log) => {
             const student = students.find((s) => s.email === log.email);
             const status = getMealStatus(log);
+            const reviewed = isMealReviewedByCoach(
+              log.id,
+              coachEmail,
+              reactions,
+              feedback
+            );
             const calories = Number.isFinite(Number(log.calories)) ? Number(log.calories) : 0;
             const protein = Number.isFinite(Number(log.protein)) ? Number(log.protein) : 0;
             const carbs = Number.isFinite(Number(log.carbs)) ? Number(log.carbs) : 0;
@@ -379,26 +505,36 @@ export function CoachActivityWall({
                       {carbs} F{fats}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealStatusStyles(status)}`}
-                  >
-                    {status}
-                  </span>
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    {!reviewed && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
+                        未檢閱
+                      </span>
+                    )}
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold h-fit ${mealStatusStyles(status)}`}
+                    >
+                      {status}
+                    </span>
+                  </div>
                 </div>
                 <div
-                  className="flex flex-wrap gap-1.5 mt-2"
+                  className="mt-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {STICKERS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => sendReaction(log, s)}
-                      className={`text-lg px-2 py-1 rounded-lg bg-white border border-zinc-200 hover:bg-amber-50 ${btnClass}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  <CoachMealReviewActions
+                    log={log}
+                    compact
+                    onSent={(kind) => {
+                      onReviewChange?.(log.id);
+                      onToast(
+                        kind === "feedback"
+                          ? "已送出評語，學員會收到 App 通知"
+                          : "已送出貼紙"
+                      );
+                    }}
+                    onError={(msg) => onToast(msg)}
+                  />
                 </div>
               </li>
             );
@@ -412,7 +548,23 @@ export function CoachActivityWall({
           studentName={
             students.find((s) => s.email === selectedLog.email)?.name
           }
+          coachReviewMode
           onClose={() => setSelectedLog(null)}
+          onUpdated={(updated) => {
+            setSelectedLog(updated);
+            onLogUpdated?.(updated);
+            onToast("飲食記錄已更新");
+          }}
+          onCoachFeedbackSent={() => {
+            onReviewChange?.(selectedLog.id);
+            onToast("已送出評語，學員會收到 App 通知");
+          }}
+          onDeleted={(id) => {
+            setSelectedLog(null);
+            onLogDeleted?.(id);
+            onReviewChange?.();
+            onToast("已刪除學員飲食記錄");
+          }}
         />
       )}
 
@@ -427,7 +579,9 @@ export function CoachActivityWall({
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="font-bold text-zinc-900">
-              🔔 提醒 {nudgeStudent.name} 記錄
+              <IconLabel icon={Bell} iconClassName="text-emerald-600">
+                提醒 {nudgeStudent.name} 記錄
+              </IconLabel>
             </h3>
             <p className="text-xs text-zinc-500">
               今日已記錄 {mealCount} 餐 · 有記錄都可以再發提醒
@@ -442,22 +596,27 @@ export function CoachActivityWall({
                 onClick={() => sendAppNudge(nudgeStudent)}
                 className={`w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-60 ${btnClass}`}
               >
-                {nudgeSending ? "發送中..." : "📲 發送 App 通知（鎖屏提醒）"}
+                <IconLabel icon={Smartphone} size="md" className="justify-center" iconClassName="text-white">
+                  {nudgeSending ? "發送中..." : "發送 App 通知（鎖屏提醒）"}
+                </IconLabel>
               </button>
               <button
                 type="button"
                 onClick={() => copyNudge(nudgeText)}
                 className={`w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold ${btnClass}`}
               >
-                📋 複製文字訊息
+                <IconLabel icon={ClipboardList} size="md" className="justify-center" iconClassName="text-white">
+                  複製文字訊息
+                </IconLabel>
               </button>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(nudgeText)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center ${btnClass}`}
+                className={`w-full py-3 rounded-xl bg-white border border-zinc-200 text-zinc-800 font-semibold text-center inline-flex items-center justify-center gap-2 ${btnClass}`}
               >
-                💬 WhatsApp 轉發
+                <MessageCircle size={20} strokeWidth={2} className="shrink-0 text-gray-600" aria-hidden />
+                WhatsApp 轉發
               </a>
               <button
                 type="button"

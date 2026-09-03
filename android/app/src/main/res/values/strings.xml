@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nutrition Coach</string>
+    <string name="title_activity_main">Nutrition Coach</string>
+    <string name="package_name">hk.fitclub.nutritioncoach</string>
+    <string name="custom_url_scheme">hk.fitclub.nutritioncoach</string>
+</resources>

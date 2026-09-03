@@ -24,6 +24,10 @@ async function shouldNotifyCoachForStudent(
     return { notify: false, reason: "student_not_found" };
   }
 
+  if (student.role === "coach") {
+    return { notify: false, reason: "coach_self_log" };
+  }
+
   if (student.tenantId) {
     const tenant = await fetchTenantById(student.tenantId);
     if (tenant && isAiSoloTenantSlug(tenant.slug)) {
@@ -74,7 +78,7 @@ export async function notifyCoachOfNewMealLog(
 
   const { sent, failed } = await sendPushToEmails(coachEmails, {
     title: "學員打卡通知",
-    body: `📢 學員 ${studentName} 剛上傳了新飲食紀錄，快去點評！${detail}`,
+    body: `學員 ${studentName} 剛上傳了新飲食紀錄，快去點評！${detail}`,
     url: "/coach",
     tag: `meal-log-${log.id}`,
   });
@@ -104,5 +108,24 @@ export async function notifyStudentOfReaction(
     body: `${coachName} 送咗你 ${sticker}`,
     url: "/",
     tag: `reaction-${Date.now()}`,
+  });
+}
+
+export async function notifyStudentOfMealFeedback(
+  studentEmail: string,
+  coachName: string,
+  messageText: string,
+  mealLogId: string,
+  sticker?: string
+): Promise<void> {
+  const preview =
+    messageText.length > 72 ? `${messageText.slice(0, 72)}…` : messageText;
+  const stickerHint = sticker ? " 👍" : "";
+
+  await sendPushToEmails([studentEmail], {
+    title: "教練評語",
+    body: `${coachName}：${preview}${stickerHint}`,
+    url: "/",
+    tag: `meal-feedback-${mealLogId}`,
   });
 }

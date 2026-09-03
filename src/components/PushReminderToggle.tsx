@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/I18nProvider";
+import { Bell, IconLabel, Smartphone } from "@/components/icons";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import type { PersonalSettings } from "@/lib/personal-settings";
 
@@ -37,11 +38,11 @@ export function PushReminderToggle({
       setMessage(
         t(
           "push.messages.enabled",
-          "✅ 已開啟系統通知！閂咗 App 都會收到飲水同飲食提醒。"
+          "已開啟系統通知！閂咗 App 都會收到飲水同飲食提醒。"
         )
       );
     } else {
-      setMessage(`❌ ${result.error}`);
+      setMessage(result.error);
     }
   };
 
@@ -58,7 +59,7 @@ export function PushReminderToggle({
       setMessage(
         t(
           "push.messages.testSent",
-          "📲 已發送本機測試通知（若無彈出，請檢查系統通知設定）。"
+          "已發送本機測試通知（若無彈出，請檢查系統通知設定）。"
         )
       );
     } else if (message) {
@@ -69,7 +70,11 @@ export function PushReminderToggle({
   if (!supported || status === "unsupported") {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-relaxed">
-        <p className="font-semibold">{t("push.unsupported.title", "📲 系統通知")}</p>
+        <p className="font-semibold">
+          <IconLabel icon={Smartphone} size="sm" iconClassName="text-amber-900">
+            {t("push.unsupported.title", "系統通知")}
+          </IconLabel>
+        </p>
         <p className="mt-1">
           {t(
             "push.unsupported.hint",
@@ -84,7 +89,9 @@ export function PushReminderToggle({
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
       <div>
         <p className="font-semibold text-sm text-emerald-900">
-          {t("push.title", "📲 飲水與飲食提醒")}
+          <IconLabel icon={Smartphone} iconClassName="text-emerald-800">
+            {t("push.title", "飲水與飲食提醒")}
+          </IconLabel>
         </p>
         <p className="text-xs text-emerald-800/80 mt-1 leading-relaxed">
           {t(
@@ -112,7 +119,11 @@ export function PushReminderToggle({
         >
           {status === "loading"
             ? t("push.processing", "處理緊...")
-            : t("push.enable", "🔔 開啟飲水與飲食提醒")}
+            : (
+              <IconLabel icon={Bell} size="sm" className="justify-center" iconClassName="text-white">
+                {t("push.enable", "開啟飲水與飲食提醒")}
+              </IconLabel>
+            )}
         </button>
       ) : (
         <div className="flex gap-2">

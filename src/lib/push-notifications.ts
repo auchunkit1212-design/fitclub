@@ -57,6 +57,7 @@ async function ensureServiceWorkerRegistration(): Promise<ServiceWorkerRegistrat
   if (!registration) {
     registration = await navigator.serviceWorker.register(SW_URL, {
       scope: SW_SCOPE,
+      updateViaCache: "none",
     });
   }
 
@@ -205,7 +206,7 @@ export async function showLocalTestNotification(): Promise<void> {
   }
   const registration = await ensureServiceWorkerRegistration();
   await registration.showNotification("Nutrition Coach 測試", {
-    body: "💧 飲水 / 🍽️ 記錄飲食提醒測試成功！",
+    body: "飲水 / 記錄飲食提醒測試成功！",
     icon: "/gorilla-logo.png",
     badge: "/gorilla-logo.png",
     tag: "nutrition-coach-test",
