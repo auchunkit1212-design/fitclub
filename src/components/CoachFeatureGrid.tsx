@@ -16,13 +16,6 @@ import { useI18n } from "@/components/I18nProvider";
 const btnClass =
   "active:scale-[0.98] active:opacity-85 transition-all cursor-pointer";
 
-function scrollToSection(id: string) {
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
-
 export function CoachFeatureGrid() {
   const router = useRouter();
   const { t } = useI18n();
@@ -45,7 +38,7 @@ export function CoachFeatureGrid() {
       accent: "from-violet-50 to-indigo-50 border-violet-100",
       iconClass: "text-violet-700",
       badge: "AI",
-      onClick: () => scrollToSection("coach-report"),
+      onClick: () => router.push("/coach#coach-report"),
     },
     {
       id: "challenge",
@@ -64,7 +57,7 @@ export function CoachFeatureGrid() {
       icon: Ticket,
       accent: "from-cyan-50 to-sky-50 border-sky-100",
       iconClass: "text-sky-700",
-      onClick: () => scrollToSection("coach-invite"),
+      onClick: () => router.push("/coach#coach-invite"),
     },
     {
       id: "branding",
@@ -73,7 +66,7 @@ export function CoachFeatureGrid() {
       icon: Palette,
       accent: "from-rose-50 to-pink-50 border-rose-100",
       iconClass: "text-rose-600",
-      onClick: () => scrollToSection("coach-branding"),
+      onClick: () => router.push("/coach#coach-branding"),
     },
     {
       id: "notifications",
@@ -82,7 +75,7 @@ export function CoachFeatureGrid() {
       icon: Bell,
       accent: "from-blue-50 to-indigo-50 border-blue-100",
       iconClass: "text-blue-700",
-      onClick: () => scrollToSection("coach-notifications"),
+      onClick: () => router.push("/coach#coach-notifications"),
     },
     {
       id: "meals",
@@ -91,7 +84,7 @@ export function CoachFeatureGrid() {
       icon: UtensilsCrossed,
       accent: "from-lime-50 to-green-50 border-lime-100",
       iconClass: "text-lime-700",
-      onClick: () => scrollToSection("coach-meals"),
+      onClick: () => router.push("/coach#coach-meals"),
     },
     {
       id: "plan",
@@ -100,7 +93,7 @@ export function CoachFeatureGrid() {
       icon: Sparkles,
       accent: "from-yellow-50 to-amber-50 border-yellow-100",
       iconClass: "text-amber-700",
-      onClick: () => scrollToSection("coach-plan"),
+      onClick: () => router.push("/coach#coach-plan"),
     },
   ];
 

@@ -6,7 +6,6 @@ import { CoachAiReportPanel } from "@/components/CoachAiReportPanel";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
-import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchOwnMealLogsForSession,
@@ -133,6 +132,15 @@ export default function CoachPage() {
     load();
   }, [router, refreshKey]);
 
+  useEffect(() => {
+    if (loading || !window.location.hash) return;
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (!target) return;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [loading]);
+
   const handlePublish = async () => {
     if (!session || session.role !== "coach") {
       alert("請用教練帳號登入後再發布品牌設定。");
@@ -237,8 +245,6 @@ export default function CoachPage() {
       />
 
       <main className="px-4 py-4 space-y-4">
-        <CoachFeatureGrid />
-
         {session?.role === "coach" && (
           <div id="coach-invite" className="scroll-mt-24">
             <CoachInviteCodePanel

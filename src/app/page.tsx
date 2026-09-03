@@ -32,6 +32,7 @@ import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPane
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { StudentFeatureGrid } from "@/components/StudentFeatureGrid";
+import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LoadingView } from "@/components/LoadingView";
 import { useI18n } from "@/components/I18nProvider";
@@ -938,23 +939,27 @@ export default function StudentDashboard() {
           />
         )}
 
+        {session.role === "coach" && <CoachFeatureGrid />}
+
         {(session.role === "admin" || session.role === "coach") && (
           <>
-            <button
-              type="button"
-              onClick={() => router.push("/coach/students")}
-              className={`w-full ${SOFT_CARD} px-4 py-4 text-left ring-1 ring-emerald-600/30 ${btnClass}`}
-            >
-              <p className="font-semibold text-emerald-800">
-                {t("home.coachStudentsCta", "學員管理同飲食紀錄")}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t(
-                  "home.coachStudentsHint",
-                  "登記學員、查看名單同打卡分析 — 亦可撳底部「學員」分欄"
-                )}
-              </p>
-            </button>
+            {session.role === "admin" && (
+              <button
+                type="button"
+                onClick={() => router.push("/coach/students")}
+                className={`w-full ${SOFT_CARD} px-4 py-4 text-left ring-1 ring-emerald-600/30 ${btnClass}`}
+              >
+                <p className="font-semibold text-emerald-800">
+                  {t("home.coachStudentsCta", "學員管理同飲食紀錄")}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t(
+                    "home.coachStudentsHint",
+                    "登記學員、查看名單同打卡分析 — 亦可撳底部「學員」分欄"
+                  )}
+                </p>
+              </button>
+            )}
             <FranchiseConsole
               session={session}
               registry={userRegistry}
