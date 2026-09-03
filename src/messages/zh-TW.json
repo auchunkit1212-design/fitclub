@@ -47,6 +47,43 @@
     "noMealsInRange": "此篩選條件下暫無記錄。",
     "proteinG": "蛋白"
   },
+  "coachFeatures": {
+    "title": "教練工具",
+    "explore": "探索更多 →",
+    "newBadge": "NEW",
+    "students": {
+      "title": "學員管理",
+      "subtitle": "名單、審閱與每日達標"
+    },
+    "report": {
+      "title": "AI 教練報告",
+      "subtitle": "分析學員打卡與營養表現"
+    },
+    "challenge": {
+      "title": "減脂挑戰榜",
+      "subtitle": "查看本月學員排名與分數"
+    },
+    "invite": {
+      "title": "邀請學員",
+      "subtitle": "複製邀請碼與註冊連結"
+    },
+    "branding": {
+      "title": "品牌與廣播",
+      "subtitle": "Logo、主題色與學員公告"
+    },
+    "notifications": {
+      "title": "推播通知",
+      "subtitle": "接收學員打卡即時通知"
+    },
+    "meals": {
+      "title": "我的飲食",
+      "subtitle": "查看教練自己的飲食記錄"
+    },
+    "plan": {
+      "title": "Coach Pro",
+      "subtitle": "管理方案與進階功能"
+    }
+  },
   "header": {
     "back": "← 返回",
     "logout": "登出"

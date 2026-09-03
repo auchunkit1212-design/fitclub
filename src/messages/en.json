@@ -47,6 +47,43 @@
     "noMealsInRange": "No logs in this date range.",
     "proteinG": "Protein"
   },
+  "coachFeatures": {
+    "title": "Coach Tools",
+    "explore": "Explore more →",
+    "newBadge": "NEW",
+    "students": {
+      "title": "Manage Students",
+      "subtitle": "Roster, reviews and daily goals"
+    },
+    "report": {
+      "title": "AI Coach Report",
+      "subtitle": "Analyze check-ins and nutrition"
+    },
+    "challenge": {
+      "title": "Challenge Board",
+      "subtitle": "View this month's ranks and scores"
+    },
+    "invite": {
+      "title": "Invite Students",
+      "subtitle": "Copy your invite code and sign-up link"
+    },
+    "branding": {
+      "title": "Brand & Broadcast",
+      "subtitle": "Logo, theme color and announcements"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Get real-time student check-in alerts"
+    },
+    "meals": {
+      "title": "My Meals",
+      "subtitle": "Review your own meal history"
+    },
+    "plan": {
+      "title": "Coach Pro",
+      "subtitle": "Manage plans and advanced features"
+    }
+  },
   "header": {
     "back": "← Back",
     "logout": "Logout"

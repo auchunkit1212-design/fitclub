@@ -6,6 +6,7 @@ import { CoachAiReportPanel } from "@/components/CoachAiReportPanel";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
+import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
 import { useBranding } from "@/components/BrandingProvider";
 import {
   fetchOwnMealLogsForSession,
@@ -236,39 +237,54 @@ export default function CoachPage() {
       />
 
       <main className="px-4 py-4 space-y-4">
+        <CoachFeatureGrid />
+
         {session?.role === "coach" && (
-          <CoachInviteCodePanel
-            inviteCode={inviteCode}
-            brandName={appTitle.trim() || brand.gymName}
-            loading={loading}
-            onCopied={showToast}
-          />
+          <div id="coach-invite" className="scroll-mt-24">
+            <CoachInviteCodePanel
+              inviteCode={inviteCode}
+              brandName={appTitle.trim() || brand.gymName}
+              loading={loading}
+              onCopied={showToast}
+            />
+          </div>
         )}
 
         {(session?.role === "coach" || session?.role === "admin") && (
-          <CoachPushSubscribe />
+          <div id="coach-notifications" className="scroll-mt-24">
+            <CoachPushSubscribe />
+          </div>
         )}
 
         {(session?.role === "coach" || session?.role === "admin") && (
-          <CoachSelfMealPanel logs={ownMealLogs} />
+          <div id="coach-meals" className="scroll-mt-24">
+            <CoachSelfMealPanel logs={ownMealLogs} />
+          </div>
         )}
 
         {(session?.role === "coach" || session?.role === "admin") && (
-          <ProBillingPanel />
+          <div id="coach-plan" className="scroll-mt-24">
+            <ProBillingPanel />
+          </div>
         )}
 
         {session && (
-          <CoachAiReportPanel
-            session={session}
-            registry={registry}
-            gymName={appTitle.trim() || brand.gymName}
-            onToast={showToast}
-            variant="light"
-          />
+          <div id="coach-report" className="scroll-mt-24">
+            <CoachAiReportPanel
+              session={session}
+              registry={registry}
+              gymName={appTitle.trim() || brand.gymName}
+              onToast={showToast}
+              variant="light"
+            />
+          </div>
         )}
 
         {session?.role === "coach" && (
-          <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
+          <section
+            id="coach-branding"
+            className="scroll-mt-24 bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm"
+          >
             <h2 className="font-semibold text-emerald-800">品牌設定</h2>
 
             <div>
