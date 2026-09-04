@@ -30,6 +30,7 @@ import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { StudentMicronutrientPanel } from "@/components/StudentMicronutrientPanel";
 import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import { StudentTodayHome } from "@/components/StudentTodayHome";
 import { StudentPushPrompt } from "@/components/StudentPushPrompt";
 import { StudentFeatureGrid } from "@/components/StudentFeatureGrid";
 import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
@@ -52,6 +53,10 @@ import {
   isBodyProfileComplete,
 } from "@/lib/body-profile";
 import { fetchOwnMealLogsForSession, fetchStudentBodyProfile } from "@/lib/db";
+import {
+  fetchWeightLogsLastDays,
+  upsertWeightLog,
+} from "@/lib/weight-logs";
 import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { goTo } from "@/lib/navigate";
@@ -84,6 +89,7 @@ import type {
   StudentNutritionTargets,
   UserProfile,
   UserSession,
+  WeightLog,
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
@@ -254,6 +260,9 @@ export default function StudentDashboard() {
   const [roast, setRoast] = useState("");
   const [roastLoading, setRoastLoading] = useState(false);
   const [showAppGuide, setShowAppGuide] = useState(false);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [weightLogsLoading, setWeightLogsLoading] = useState(false);
+  const [weightSaving, setWeightSaving] = useState(false);
 
   const applyStreakApiPayload = (payload?: {
     currentStreak?: number;
@@ -406,7 +415,8 @@ export default function StudentDashboard() {
     const loadStudentExtras = async () => {
       try {
         const headers = getSessionRequestHeaders();
-        const [streakRes, body, tRes, cloudReminder] = await withTimeout(
+        setWeightLogsLoading(true);
+        const [streakRes, body, tRes, cloudReminder, weights] = await withTimeout(
           Promise.all([
             fetchWithTimeout("/api/student/streak", {
               credentials: "include",
@@ -417,6 +427,7 @@ export default function StudentDashboard() {
               credentials: "include",
             }),
             loadReminderSettingsFromServer(),
+            fetchWeightLogsLastDays(session.email, 7).catch(() => []),
           ]),
           10_000
         );
@@ -460,10 +471,17 @@ export default function StudentDashboard() {
             normalizePersonalSettings({ ...prev, ...cloudReminder })
           );
         }
+
+        if (!cancelled) {
+          setWeightLogs(weights);
+        }
       } catch {
         // streak columns or profile APIs may not exist yet
       } finally {
-        if (!cancelled) setProfileChecked(true);
+        if (!cancelled) {
+          setWeightLogsLoading(false);
+          setProfileChecked(true);
+        }
       }
     };
 
@@ -647,6 +665,24 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleSaveWeight = async (weightKg: number) => {
+    if (!session?.email || weightSaving) return;
+    setWeightSaving(true);
+    try {
+      await upsertWeightLog(session.email, weightKg);
+      const weights = await fetchWeightLogsLastDays(session.email, 7);
+      setWeightLogs(weights);
+      showToast(t("home.weight.savedToast", "今日體重已記錄"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      showToast(
+        t("home.weight.saveFailed", "體重儲存失敗：{message}", { message })
+      );
+    } finally {
+      setWeightSaving(false);
+    }
+  };
+
   const theme = getThemeClasses(branding?.themeColor ?? "emerald");
   const title = branding?.appTitle ?? BRAND_NAME;
 
@@ -730,7 +766,7 @@ export default function StudentDashboard() {
         setRefreshKey((key) => key + 1);
       }}
     >
-    <div className="min-h-screen bg-white pb-32">
+    <div className={`min-h-screen pb-32 ${isStudent ? "bg-[#f6f3fb]" : "bg-white"}`}>
       {isStudent && (
         <StudentPushPrompt
           reminderSettings={settings}
@@ -790,6 +826,66 @@ export default function StudentDashboard() {
         </div>
       )}
 
+      {isStudent ? (
+        <StudentTodayHome
+          displayName={displayName}
+          logoUrl={branding?.logo}
+          todayCalories={todayCalories}
+          todayProtein={todayProtein}
+          todayCarbs={todayCarbs}
+          todayFats={todayFats}
+          targetCalories={targetCalories}
+          targetProtein={targetProtein}
+          targetCarbs={targetCarbs}
+          targetFats={targetFats}
+          exerciseDaily={exerciseDaily}
+          todayLogs={todayLogs}
+          settings={settings}
+          bodyProfile={bodyProfile}
+          weightLogs={weightLogs}
+          weightLogsLoading={weightLogsLoading}
+          weightSaving={weightSaving}
+          onSaveWeight={handleSaveWeight}
+          currentStreak={currentStreak}
+          roast={roast}
+          roastLoading={roastLoading}
+          broadcast={broadcast}
+          coachTargets={coachTargets}
+          coachReactions={coachReactions}
+          coachFeedback={coachFeedback}
+          isSoloStudent={Boolean(session.isSoloStudent)}
+          onOpenNutrition={() => setShowNutritionDash(true)}
+          onOpenHistory={() => router.push("/history")}
+          onLogout={handleLogout}
+          onOpenProfile={() => router.push("/profile")}
+        >
+          <ProFeatureGate feature="AI 推薦菜單">
+            <CoachSuggestCard
+              targetCalories={targetCalories}
+              targetProtein={targetProtein}
+              targetCarbs={targetCarbs}
+              targetFats={targetFats}
+              consumedCalories={todayCalories}
+              consumedProtein={todayProtein}
+              consumedCarbs={todayCarbs}
+              consumedFats={todayFats}
+              mealsLoggedToday={todayLogs.length}
+            />
+          </ProFeatureGate>
+          <ProFeatureGate feature="微營養數據分析">
+            <StudentMicronutrientPanel
+              todayCalories={todayCalories}
+              todayCarbs={todayCarbs}
+              todayFats={todayFats}
+              todayProtein={todayProtein}
+              targetCalories={targetCalories}
+              targetCarbs={targetCarbs}
+              targetFats={targetFats}
+              weightKg={bodyProfile?.weightKg}
+            />
+          </ProFeatureGate>
+        </StudentTodayHome>
+      ) : (
       <div className="w-full max-w-md mx-auto px-4 py-6 pt-safe flex flex-col gap-5 bg-white min-h-screen">
         <header className="w-full space-y-4">
           <div className="flex items-start justify-between gap-3 w-full">
@@ -1161,6 +1257,7 @@ export default function StudentDashboard() {
         ) : null}
       </main>
       </div>
+      )}
 
       {streakCelebration && (
         <StreakMilestoneModal

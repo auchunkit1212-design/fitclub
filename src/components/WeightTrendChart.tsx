@@ -20,9 +20,14 @@ function formatChartLabel(isoDate: string): string {
 interface WeightTrendChartProps {
   logs: WeightLog[];
   loading?: boolean;
+  compact?: boolean;
 }
 
-export function WeightTrendChart({ logs, loading }: WeightTrendChartProps) {
+export function WeightTrendChart({
+  logs,
+  loading,
+  compact = false,
+}: WeightTrendChartProps) {
   const chartData = useMemo(
     () =>
       logs.map((log) => ({
@@ -46,7 +51,9 @@ export function WeightTrendChart({ logs, loading }: WeightTrendChartProps) {
 
   if (loading) {
     return (
-      <div className="h-36 flex items-center justify-center text-sm text-zinc-400">
+      <div
+        className={`${compact ? "h-16" : "h-36"} flex items-center justify-center text-sm text-zinc-400`}
+      >
         載入體重數據中...
       </div>
     );
@@ -54,36 +61,46 @@ export function WeightTrendChart({ logs, loading }: WeightTrendChartProps) {
 
   if (logs.length === 0) {
     return (
-      <div className="h-36 flex flex-col items-center justify-center text-center px-4">
+      <div
+        className={`${compact ? "h-16" : "h-36"} flex flex-col items-center justify-center text-center px-4`}
+      >
         <p className="text-sm text-zinc-500">尚無足夠數據</p>
-        <p className="text-xs text-zinc-400 mt-1">
-          記錄今日體重後，過去 7 日趨勢會顯示喺呢度
-        </p>
+        {!compact && (
+          <p className="text-xs text-zinc-400 mt-1">
+            記錄今日體重後，過去 7 日趨勢會顯示喺呢度
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <div className="min-w-0 w-full overflow-hidden">
-      <div className="h-36 w-full min-w-0">
+      <div className={`${compact ? "h-16" : "h-36"} w-full min-w-0`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+            margin={
+              compact
+                ? { top: 4, right: 4, left: 4, bottom: 0 }
+                : { top: 8, right: 8, left: -16, bottom: 0 }
+            }
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+            {!compact && <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />}
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: "#71717a" }}
+              tick={compact ? false : { fontSize: 11, fill: "#71717a" }}
               axisLine={false}
               tickLine={false}
+              hide={compact}
             />
             <YAxis
               domain={yDomain}
-              tick={{ fontSize: 11, fill: "#71717a" }}
+              tick={compact ? false : { fontSize: 11, fill: "#71717a" }}
               axisLine={false}
               tickLine={false}
-              width={36}
+              width={compact ? 0 : 36}
+              hide={compact}
               tickFormatter={(v) => `${v}`}
             />
             <Tooltip
@@ -101,16 +118,20 @@ export function WeightTrendChart({ logs, loading }: WeightTrendChartProps) {
             <Line
               type="monotone"
               dataKey="weight"
-              stroke="#10b981"
-              strokeWidth={logs.length === 1 ? 0 : 2.5}
-              dot={{ r: logs.length === 1 ? 5 : 4, fill: "#10b981", strokeWidth: 0 }}
-              activeDot={{ r: 6 }}
+              stroke={compact ? "#8b7cf6" : "#10b981"}
+              strokeWidth={logs.length === 1 ? 0 : compact ? 2 : 2.5}
+              dot={{
+                r: compact ? 2.5 : logs.length === 1 ? 5 : 4,
+                fill: compact ? "#8b7cf6" : "#10b981",
+                strokeWidth: 0,
+              }}
+              activeDot={{ r: compact ? 4 : 6 }}
               connectNulls={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {latest != null && (
+      {latest != null && !compact && (
         <p className="text-xs text-zinc-500 mt-2 text-center">
           最新: {latest} kg
           {logs.length === 1 ? "（僅 1 筆記錄，多記幾日就會顯示趨勢線）" : ""}

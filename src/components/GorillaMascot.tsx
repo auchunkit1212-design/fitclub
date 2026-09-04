@@ -5,7 +5,7 @@ import { APP_LOGO_PATH, resolveTenantLogoUrl } from "@/lib/brand";
 interface GorillaMascotProps {
   logoUrl?: string;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   /** @deprecated */
   themeColor?: string;
   /** @deprecated */
@@ -13,6 +13,7 @@ interface GorillaMascotProps {
 }
 
 const SIZE_CLASS = {
+  xs: "w-10 h-10",
   sm: "w-16 h-16",
   md: "w-20 h-20",
   lg: "w-36 h-36",
@@ -20,6 +21,7 @@ const SIZE_CLASS = {
 } as const;
 
 const PAD_CLASS = {
+  xs: "p-1",
   sm: "p-1.5",
   md: "p-2",
   lg: "p-3",
