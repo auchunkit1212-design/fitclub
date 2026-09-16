@@ -1,29 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ComingSoonFeature } from "@/components/ComingSoonFeature";
-import { LoadingView } from "@/components/LoadingView";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { useI18n } from "@/components/I18nProvider";
-import { getSession } from "@/lib/session";
-import type { UserSession } from "@/lib/types";
+import { useRequiredSession } from "@/components/SessionProvider";
 
 export default function QuizPage() {
-  const router = useRouter();
   const { t } = useI18n();
-  const [session, setSession] = useState<UserSession | null>(null);
-
-  useEffect(() => {
-    const current = getSession();
-    if (!current) {
-      router.replace("/register");
-      return;
-    }
-    setSession(current);
-  }, [router]);
+  const { session } = useRequiredSession();
 
   if (!session) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+    return (
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto px-4 py-6">
+        <PageSkeleton rows={3} />
+      </div>
+    );
   }
 
   return (

@@ -1,31 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
-import { LoadingView } from "@/components/LoadingView";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { Calendar, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
-import { getSession } from "@/lib/session";
+import { STUDENT_ROLE, useRequiredSession } from "@/components/SessionProvider";
 
 export default function HistoryPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [ready, setReady] = useState(false);
+  const { session } = useRequiredSession(STUDENT_ROLE);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  useEffect(() => {
-    const session = getSession();
-    if (!session || session.role !== "student") {
-      router.replace(session ? "/" : "/register");
-      return;
-    }
-    setReady(true);
-  }, [router]);
-
-  if (!ready) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
+        <header className="pt-safe px-4 pb-4">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("history.title", "歷史紀錄日曆")}
+          </h1>
+        </header>
+        <main className="px-4 py-5">
+          <PageSkeleton rows={3} />
+        </main>
+      </div>
+    );
   }
 
   return (

@@ -1,14 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { HomeChunkFallback } from "@/components/home/HomeShell";
 import { useI18n } from "@/components/I18nProvider";
+import { useAppSession } from "@/components/SessionProvider";
 import { normalizeHomeSession } from "@/lib/home-session";
 import { goTo } from "@/lib/navigate";
-import { getSession } from "@/lib/session";
-import type { UserSession } from "@/lib/types";
 
 const StudentHome = dynamic(
   () =>
@@ -37,41 +36,29 @@ const AdminHome = dynamic(
 export default function HomePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [checked, setChecked] = useState(false);
+  const { session, checked } = useAppSession();
 
   useEffect(() => {
-    const parsed = getSession();
-    if (!parsed) {
-      setChecked(true);
-      goTo(router, "/register");
-      return;
-    }
+    if (!checked) return;
+    if (!session) goTo(router, "/register");
+  }, [checked, router, session]);
 
-    setSession(
-      normalizeHomeSession(parsed, {
-        trialStudent: t("home.defaults.trialStudent", "體驗學員"),
-        unboundGym: t("home.defaults.unboundGym", "未綁定分店"),
-      })
-    );
-    setChecked(true);
-  }, [router, t]);
-
-  if (!checked) {
+  if (!checked || !session) {
     return <HomeChunkFallback />;
   }
 
-  if (!session) {
-    return <HomeChunkFallback />;
+  const normalized = normalizeHomeSession(session, {
+    trialStudent: t("home.defaults.trialStudent", "體驗學員"),
+    unboundGym: t("home.defaults.unboundGym", "未綁定分店"),
+  });
+
+  if (normalized.role === "admin") {
+    return <AdminHome initialSession={normalized} />;
   }
 
-  if (session.role === "admin") {
-    return <AdminHome initialSession={session} />;
+  if (normalized.role === "coach") {
+    return <CoachHome initialSession={normalized} />;
   }
 
-  if (session.role === "coach") {
-    return <CoachHome initialSession={session} />;
-  }
-
-  return <StudentHome initialSession={session} />;
+  return <StudentHome initialSession={normalized} />;
 }

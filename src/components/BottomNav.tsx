@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { getSession } from "@/lib/session";
 import {
@@ -88,6 +88,36 @@ export function BottomNav({
   const isStudent = effectiveRole === "student";
   const isCoachOrAdmin =
     effectiveRole === "coach" || effectiveRole === "admin";
+
+  useEffect(() => {
+    const routes = isStudent
+      ? [
+          "/",
+          "/community",
+          "/profile",
+          "/settings",
+          "/add-meal",
+          "/history",
+          "/leaderboard",
+          "/suggest",
+          "/grocery",
+          "/quiz",
+        ]
+      : [
+          "/",
+          "/community",
+          "/coach",
+          "/coach/students",
+          "/leaderboard",
+          "/add-meal?from=coach",
+          "/suggest",
+          "/grocery",
+          "/quiz",
+        ];
+    for (const route of routes) {
+      router.prefetch(route);
+    }
+  }, [isStudent, router]);
 
   const communityActive =
     pathname === "/community" ||

@@ -291,21 +291,52 @@ async function fetchRegistryForStudentSession(
   return attachTenantNames(users);
 }
 
-export async function fetchUsersForSession(
+const REGISTRY_ROSTER_COLUMNS =
+  "email, name, role, gym, coach, added_by, app_title, theme_color, tenant_id, plan, avatar_url, created_at, current_streak, longest_streak, last_streak_update";
+
+async function selectRegistryRows(
+  column: string,
+  value: string,
+  columns = REGISTRY_ROSTER_COLUMNS
+): Promise<RegistryUser[]> {
+  const { data, error } = await supabase
+    .from("users_registry")
+    .select(columns)
+    .eq(column, value);
+  if (error) throw error;
+  return ((data ?? []) as unknown as UserRow[]).map((row) => mapUser(row));
+}
+
+function mergeRegistryUsers(groups: RegistryUser[][]): RegistryUser[] {
+  const byEmail = new Map<string, RegistryUser>();
+  for (const group of groups) {
+    for (const user of group) {
+      byEmail.set(user.email.trim().toLowerCase(), user);
+    }
+  }
+  return Array.from(byEmail.values());
+}
+
+export async function fetchCoachScopedUsers(
   session: UserSession
 ): Promise<RegistryUser[]> {
-  if (session.role === "student" && session.email) {
-    return fetchRegistryForStudentSession(session);
+  const coachEmail = session.email.trim().toLowerCase();
+  const coachName = session.name?.trim();
+  const queries: Promise<RegistryUser[]>[] = [
+    selectRegistryRows("email", coachEmail, REGISTRY_LIST_COLUMNS),
+    selectRegistryRows("added_by", coachEmail),
+  ];
+  if (coachName) {
+    queries.push(selectRegistryRows("coach", coachName));
+  }
+  if (session.tenantId) {
+    queries.push(selectRegistryRows("tenant_id", session.tenantId));
   }
 
-  const all = await fetchAllUsers();
-
-  if (session.role === "admin") return all;
-
-  if (session.role === "coach") {
-    const coachEmail = session.email.trim().toLowerCase();
-    const coachName = session.name?.trim();
-    return all.filter(
+  const merged = mergeRegistryUsers(await Promise.all(queries));
+  if (merged.length === 0) {
+    const { getDemoRegistry } = await import("@/lib/demo-users");
+    return getDemoRegistry().filter(
       (u) =>
         u.email === coachEmail ||
         u.addedBy === coachEmail ||
@@ -313,24 +344,25 @@ export async function fetchUsersForSession(
         (session.tenantId != null && u.tenantId === session.tenantId)
     );
   }
+  return attachTenantNames(merged);
+}
 
-  if (session.role === "student") {
-    if (session.tenantId) {
-      return all.filter(
-        (u) =>
-          u.email === session.email ||
-          u.tenantId === session.tenantId ||
-          (session.coach && u.role === "coach" && u.name === session.coach)
-      );
-    }
-    return all.filter(
-      (u) =>
-        u.email === session.email ||
-        (session.coach && u.role === "coach" && u.name === session.coach)
-    );
+export async function fetchUsersForSession(
+  session: UserSession
+): Promise<RegistryUser[]> {
+  if (session.role === "student" && session.email) {
+    return fetchRegistryForStudentSession(session);
   }
 
-  return all;
+  if (session.role === "admin") {
+    return fetchAllUsers();
+  }
+
+  if (session.role === "coach") {
+    return fetchCoachScopedUsers(session);
+  }
+
+  return [];
 }
 
 /** 教練 / 管理員可見的學員列表（與 fetchUsersForSession 範圍一致） */

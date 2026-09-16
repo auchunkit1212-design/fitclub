@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart2,
@@ -19,6 +20,17 @@ const btnClass =
 export function CoachFeatureGrid() {
   const router = useRouter();
   const { t } = useI18n();
+
+  useEffect(() => {
+    for (const route of [
+      "/coach/students",
+      "/coach",
+      "/leaderboard",
+      "/community",
+    ]) {
+      router.prefetch(route);
+    }
+  }, [router]);
 
   const items = [
     {

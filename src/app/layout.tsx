@@ -4,6 +4,7 @@ import { BrandingProvider } from "@/components/BrandingProvider";
 import { DynamicManifestLink } from "@/components/DynamicManifestLink";
 import { I18nProvider } from "@/components/I18nProvider";
 import { PwaShell } from "@/components/PwaShell";
+import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,11 +48,13 @@ export default function RootLayout({
     <html lang="zh-HK">
       <body className="antialiased bg-white min-h-screen text-gray-900">
         <I18nProvider>
-          <BrandingProvider>
-            <DynamicManifestLink />
-            {children}
-            <PwaShell />
-          </BrandingProvider>
+          <SessionProvider>
+            <BrandingProvider>
+              <DynamicManifestLink />
+              {children}
+              <PwaShell />
+            </BrandingProvider>
+          </SessionProvider>
         </I18nProvider>
       </body>
     </html>

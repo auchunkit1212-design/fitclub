@@ -31,6 +31,15 @@ export function getSession(): UserSession | null {
   return readCookieSession();
 }
 
+export const SESSION_CHANGE_EVENT = "fitclub:session";
+
+function emitSessionChange(session: UserSession | null): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<UserSession | null>(SESSION_CHANGE_EVENT, { detail: session })
+  );
+}
+
 export function saveSession(session: UserSession): void {
   const json = JSON.stringify(session);
   localStorage.setItem(SESSION_KEY, json);
@@ -39,6 +48,7 @@ export function saveSession(session: UserSession): void {
       ? ";Secure"
       : "";
   document.cookie = `${SESSION_KEY}=${encodeURIComponent(json)};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax${secure}`;
+  emitSessionChange(session);
 }
 
 /** PWA / iOS 備用：API 請求帶 session header（cookie 可能未送出） */
@@ -65,6 +75,7 @@ export function getSessionRequestHeaders(): Record<string, string> {
 export function clearSession(): void {
   localStorage.removeItem(SESSION_KEY);
   document.cookie = `${SESSION_KEY}=;path=/;max-age=0;SameSite=Lax`;
+  emitSessionChange(null);
 }
 
 export function isStandaloneDisplay(): boolean {

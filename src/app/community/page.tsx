@@ -1,26 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
 import { CommunityHubStrip } from "@/components/CommunityHubStrip";
 import { LoadingView } from "@/components/LoadingView";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { Globe, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { useRequiredSession } from "@/components/SessionProvider";
 import { fetchCommunityFeedCloud } from "@/lib/community-client";
 import type { CommunityFeedPost } from "@/lib/community";
-import { getSession } from "@/lib/session";
-import type { UserSession } from "@/lib/types";
 
 export default function CommunityPage() {
-  const router = useRouter();
   const { t } = useI18n();
-  const [session, setSession] = useState<UserSession | null>(null);
+  const { session } = useRequiredSession();
   const [posts, setPosts] = useState<CommunityFeedPost[]>([]);
-  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedSource, setFeedSource] = useState<"cloud" | "local">("cloud");
   const [loadError, setLoadError] = useState("");
@@ -48,17 +45,22 @@ export default function CommunityPage() {
   }, [t]);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current) {
-      router.replace("/register");
-      return;
-    }
-    setSession(current);
-    void refreshFeed().finally(() => setReady(true));
-  }, [router, refreshFeed]);
+    if (session) void refreshFeed();
+  }, [session, refreshFeed]);
 
-  if (!ready || !session) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
+        <header className="pt-safe px-4 pb-4">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("community.title", "探索")}
+          </h1>
+        </header>
+        <main className="px-4 py-5">
+          <PageSkeleton rows={4} />
+        </main>
+      </div>
+    );
   }
 
   return (

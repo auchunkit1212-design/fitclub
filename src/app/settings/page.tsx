@@ -7,9 +7,10 @@ import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { StudentShareAppPanel } from "@/components/StudentShareAppPanel";
-import { LoadingView } from "@/components/LoadingView";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { STUDENT_ROLE, useRequiredSession } from "@/components/SessionProvider";
 import { resetAppGuide } from "@/lib/app-guide";
 import {
   DEFAULT_PERSONAL_SETTINGS,
@@ -17,8 +18,6 @@ import {
   type PersonalSettings,
 } from "@/lib/personal-settings";
 import { loadReminderSettingsFromServer } from "@/lib/reminder-settings-client";
-import { getSession } from "@/lib/session";
-import type { UserSession } from "@/lib/types";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -26,19 +25,11 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<PersonalSettings>(
     DEFAULT_PERSONAL_SETTINGS
   );
-  const [ready, setReady] = useState(false);
   const [toast, setToast] = useState("");
   const [showAppGuide, setShowAppGuide] = useState(false);
-  const [session, setSession] = useState<UserSession | null>(null);
+  const { session } = useRequiredSession(STUDENT_ROLE);
 
   useEffect(() => {
-    const parsed = getSession();
-    if (!parsed || parsed.role !== "student") {
-      router.replace(parsed ? "/" : "/register");
-      return;
-    }
-    setSession(parsed);
-
     const raw = localStorage.getItem("student_settings");
     if (raw) {
       try {
@@ -48,17 +39,26 @@ export default function SettingsPage() {
       }
     }
 
-    void (async () => {
-      const cloud = await loadReminderSettingsFromServer();
+    void loadReminderSettingsFromServer().then((cloud) => {
       if (cloud) {
         setSettings((prev) => normalizePersonalSettings({ ...prev, ...cloud }));
       }
-      setReady(true);
-    })();
-  }, [router]);
+    });
+  }, []);
 
-  if (!ready) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
+        <header className="pt-safe px-4 pb-4">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("nav.settings", "設定")}
+          </h1>
+        </header>
+        <main className="px-4 py-5">
+          <PageSkeleton rows={3} />
+        </main>
+      </div>
+    );
   }
 
   return (

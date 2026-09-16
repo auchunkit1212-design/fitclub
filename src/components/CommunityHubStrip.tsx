@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nProvider";
 import { COMMUNITY_HUB_ITEMS } from "@/lib/community-hub";
@@ -14,6 +15,12 @@ type CommunityHubStripProps = {
 export function CommunityHubStrip({ onToast }: CommunityHubStripProps) {
   const router = useRouter();
   const { t } = useI18n();
+
+  useEffect(() => {
+    for (const item of COMMUNITY_HUB_ITEMS) {
+      if (item.href) router.prefetch(item.href);
+    }
+  }, [router]);
 
   const handleClick = (item: (typeof COMMUNITY_HUB_ITEMS)[number]) => {
     if (item.href) {

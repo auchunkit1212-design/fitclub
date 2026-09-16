@@ -17,8 +17,8 @@ import {
 import { useI18n } from "@/components/I18nProvider";
 import type { LeaderboardMonthResult } from "@/lib/leaderboard";
 import { hongKongYearMonth } from "@/lib/leaderboard";
-import { getSession, getSessionRequestHeaders } from "@/lib/session";
-import type { UserSession } from "@/lib/types";
+import { useRequiredSession } from "@/components/SessionProvider";
+import { getSessionRequestHeaders } from "@/lib/session";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -112,7 +112,7 @@ export default function LeaderboardPage() {
   const router = useRouter();
   const { t, lang } = useI18n();
   const current = hongKongYearMonth();
-  const [session, setSession] = useState<UserSession | null>(null);
+  const { session } = useRequiredSession();
   const [year, setYear] = useState(current.year);
   const [month, setMonth] = useState(current.month);
   const [data, setData] = useState<LeaderboardMonthResult | null>(null);
@@ -146,15 +146,6 @@ export default function LeaderboardPage() {
   }, [t]);
 
   useEffect(() => {
-    const currentSession = getSession();
-    if (!currentSession) {
-      router.replace("/register");
-      return;
-    }
-    setSession(currentSession);
-  }, [router]);
-
-  useEffect(() => {
     if (!session) return;
     void load(year, month);
   }, [session, year, month, load]);
@@ -174,7 +165,18 @@ export default function LeaderboardPage() {
   };
 
   if (!session) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+    return (
+      <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
+        <PageHeader
+          title={t("leaderboard.title", "減脂挑戰賽")}
+          subtitle={t("leaderboard.subtitle", "每月排行榜")}
+          onBack={() => router.push("/community")}
+        />
+        <main className="px-4 py-4">
+          <div className="h-40 rounded-[2rem] bg-zinc-100 animate-pulse" />
+        </main>
+      </div>
+    );
   }
 
   const canGoNext =

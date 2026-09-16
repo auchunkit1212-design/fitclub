@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CoachActivityWall } from "@/components/CoachActivityWall";
-import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
-import { CoachStudentDailyPanel } from "@/components/CoachStudentDailyPanel";
-import { CoachStudentManagementPanel } from "@/components/CoachStudentManagementPanel";
-import { CoachUnreviewedMealsPanel } from "@/components/CoachUnreviewedMealsPanel";
+import dynamic from "next/dynamic";
 import {
   COACH_STUDENTS_SECTION_LABELS,
   CoachStudentsSectionPicker,
@@ -14,24 +10,58 @@ import {
 } from "@/components/CoachStudentsSectionPicker";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { LoadingView } from "@/components/LoadingView";
 import { PageHeader } from "@/components/PageHeader";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
+import { COACH_ROLES, useRequiredSession } from "@/components/SessionProvider";
 import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
 import {
   defaultMealLogsFromDate,
-  fetchAllUsers,
   fetchMealLogsForSession,
   fetchUsersForSession,
   filterStudentsForSession,
 } from "@/lib/db";
 import { filterUnreviewedMeals } from "@/lib/meal-review-status";
 import { errorMessage } from "@/lib/errors";
-import { initUserRegistry } from "@/lib/registry";
-import { getSession } from "@/lib/session";
 import { withTimeout } from "@/lib/with-timeout";
-import type { MealLog, RegistryUser, UserSession } from "@/lib/types";
+import type { MealLog, RegistryUser } from "@/lib/types";
+
+const CoachActivityWall = dynamic(
+  () =>
+    import("@/components/CoachActivityWall").then((m) => ({
+      default: m.CoachActivityWall,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
+);
+const CoachMealHistoryPanel = dynamic(
+  () =>
+    import("@/components/CoachMealHistoryPanel").then((m) => ({
+      default: m.CoachMealHistoryPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
+);
+const CoachStudentDailyPanel = dynamic(
+  () =>
+    import("@/components/CoachStudentDailyPanel").then((m) => ({
+      default: m.CoachStudentDailyPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
+);
+const CoachStudentManagementPanel = dynamic(
+  () =>
+    import("@/components/CoachStudentManagementPanel").then((m) => ({
+      default: m.CoachStudentManagementPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
+);
+const CoachUnreviewedMealsPanel = dynamic(
+  () =>
+    import("@/components/CoachUnreviewedMealsPanel").then((m) => ({
+      default: m.CoachUnreviewedMealsPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
+);
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -41,7 +71,7 @@ const LOAD_TIMEOUT_MS = 12_000;
 export default function CoachStudentsPage() {
   const router = useRouter();
   const brand = useBranding();
-  const [session, setSession] = useState<UserSession | null>(null);
+  const { session } = useRequiredSession(COACH_ROLES);
   const [registry, setRegistry] = useState<RegistryUser[]>([]);
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [students, setStudents] = useState<RegistryUser[]>([]);
@@ -100,38 +130,27 @@ export default function CoachStudentsPage() {
   };
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    if (!session) return;
     if (!options?.silent) setLoading(true);
     setLoadError(null);
 
-    const current = getSession();
-    if (!current || (current.role !== "coach" && current.role !== "admin")) {
-      setLoading(false);
-      router.push("/register");
-      return;
-    }
-
-    setSession(current);
-
     try {
-      await withTimeout(initUserRegistry(), LOAD_TIMEOUT_MS, "雲端初始化逾時");
-
       const userRegistry = await withTimeout(
-        fetchUsersForSession(current),
+        fetchUsersForSession(session),
         LOAD_TIMEOUT_MS,
         "讀取用戶列表逾時"
       );
-      setRegistry(userRegistry);
-
       const mealLogs = await withTimeout(
-        fetchMealLogsForSession(current, userRegistry, {
-          from: defaultMealLogsFromDate(30),
+        fetchMealLogsForSession(session, userRegistry, {
+          from: defaultMealLogsFromDate(14),
         }),
         LOAD_TIMEOUT_MS,
         "讀取飲食記錄逾時"
       );
 
+      setRegistry(userRegistry);
       setLogs(mealLogs);
-      setStudents(filterStudentsForSession(current, userRegistry));
+      setStudents(filterStudentsForSession(session, userRegistry));
     } catch (error) {
       console.error("載入學員資料失敗:", error);
       setLoadError(errorMessage(error, "暫時載唔到學員資料，請稍後再試"));
@@ -140,18 +159,17 @@ export default function CoachStudentsPage() {
     } finally {
       if (!options?.silent) setLoading(false);
     }
-  }, [router]);
+  }, [session]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (session) void loadData();
+  }, [loadData, session]);
 
   const handleRegistryChange = async () => {
-    const updated = await fetchAllUsers();
+    if (!session) return;
+    const updated = await fetchUsersForSession(session);
     setRegistry(updated);
-    if (session) {
-      setStudents(filterStudentsForSession(session, updated));
-    }
+    setStudents(filterStudentsForSession(session, updated));
   };
 
   const handleLogUpdated = (updated: MealLog) => {
@@ -164,35 +182,9 @@ export default function CoachStudentsPage() {
     setLogs((prev) => prev.filter((l) => l.id !== id));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
-        <PageHeader
-          title="學員"
-          subtitle={brand.gymName}
-          variant="dark"
-          leftSlot={
-            <CoachStudentsSectionPicker
-              activeSection={section}
-              onSectionChange={setSection}
-              unreviewedCount={0}
-              isCoach={true}
-              onBack={() => router.push("/")}
-            />
-          }
-        />
-        <LoadingView
-          variant="section"
-          message="載入學員資料中..."
-          logoUrl={brand.logo}
-        />
-      </div>
-    );
-  }
-
   const hasStudents = students.length > 0;
   const showEmptyStudents =
-    !loadError && section !== "roster" && !hasStudents;
+    !loading && !loadError && section !== "roster" && !hasStudents;
 
   return (
     <PullToRefresh onRefresh={() => loadData({ silent: true })}>
@@ -213,7 +205,9 @@ export default function CoachStudentsPage() {
       />
 
       <main className="px-4 py-4">
-        {loadError ? (
+        {loading && !loadError ? (
+          <PageSkeleton rows={4} />
+        ) : loadError ? (
           <section className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
             <p className="font-semibold text-red-800">載入失敗</p>
             <p className="text-sm text-red-700 leading-relaxed">{loadError}</p>

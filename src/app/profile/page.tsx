@@ -9,16 +9,15 @@ import { BottomNav } from "@/components/BottomNav";
 import { MealDetailModal } from "@/components/MealDetailModal";
 import { StudentProfilePanel } from "@/components/StudentProfilePanel";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
-import { LoadingView } from "@/components/LoadingView";
 import { Calendar, CircleUser, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import {
   computeTargetProfile,
   isBodyProfileComplete,
 } from "@/lib/body-profile";
-import { fetchStudentBodyProfile } from "@/lib/db";
-import { fetchUsersForSession, initUserRegistry } from "@/lib/registry";
-import { getMealLogs, getOwnMealLogs } from "@/lib/storage";
+import { defaultMealLogsFromDate, fetchOwnMealLogsForSession, fetchStudentBodyProfile } from "@/lib/db";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { useRequiredSession } from "@/components/SessionProvider";
 import {
   DEFAULT_PERSONAL_SETTINGS,
   normalizePersonalSettings,
@@ -26,7 +25,7 @@ import {
 } from "@/lib/personal-settings";
 import { loadReminderSettingsFromServer } from "@/lib/reminder-settings-client";
 import { syncSessionPlan } from "@/lib/plan-client";
-import { getSession, getSessionRequestHeaders } from "@/lib/session";
+import { getSessionRequestHeaders } from "@/lib/session";
 import {
   fetchWeightLogsLastDays,
   upsertWeightLog,
@@ -38,7 +37,6 @@ import type {
   MealLogReaction,
   StudentBodyProfile,
   StudentNutritionTargets,
-  UserSession,
   WeightLog,
   BodyCompositionLog,
 } from "@/lib/types";
@@ -46,7 +44,7 @@ import type {
 export default function ProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [session, setSession] = useState<UserSession | null>(null);
+  const { session } = useRequiredSession();
   const [settings, setSettings] = useState<PersonalSettings>(
     DEFAULT_PERSONAL_SETTINGS
   );
@@ -82,13 +80,7 @@ export default function ProfilePage() {
   };
 
   const load = useCallback(async () => {
-    const parsed = getSession();
-    if (!parsed) {
-      router.replace("/register");
-      return;
-    }
-    const synced = (await syncSessionPlan()) ?? parsed;
-    setSession(synced);
+    if (!session) return;
 
     let personal = DEFAULT_PERSONAL_SETTINGS;
     const raw = localStorage.getItem("student_settings");
@@ -100,91 +92,87 @@ export default function ProfilePage() {
         // ignore
       }
     }
-    const cloud = await loadReminderSettingsFromServer();
-    if (cloud) {
-      personal = normalizePersonalSettings({ ...personal, ...cloud });
-      setSettings(personal);
-    }
-
-    await initUserRegistry();
-    const registry = await fetchUsersForSession(synced);
-    const mealLogs =
-      synced.role === "student"
-        ? await getMealLogs(synced, registry)
-        : await getOwnMealLogs(synced);
-    setLogs(mealLogs);
 
     try {
-      const streakRes = await fetch("/api/student/streak", {
-        credentials: "include",
-        headers: getSessionRequestHeaders(),
-      });
-      if (streakRes.ok) {
+      const [synced, mealLogs, cloud, streakRes, body, tRes, weights, composition] =
+        await Promise.all([
+          syncSessionPlan().catch(() => session),
+          fetchOwnMealLogsForSession(session, {
+            from: defaultMealLogsFromDate(30),
+          }),
+          loadReminderSettingsFromServer().catch(() => null),
+          fetch("/api/student/streak", {
+            credentials: "include",
+            headers: getSessionRequestHeaders(),
+          }).catch(() => null),
+          fetchStudentBodyProfile(session.email).catch(() => null),
+          fetch("/api/coach/student-targets", {
+            credentials: "include",
+          }).catch(() => null),
+          fetchWeightLogsLastDays(session.email, 7).catch(() => []),
+          fetchBodyCompositionLogsLastDays(session.email, 90).catch(() => []),
+        ]);
+
+      if (cloud) {
+        personal = normalizePersonalSettings({ ...personal, ...cloud });
+        setSettings(personal);
+      }
+      setLogs(mealLogs);
+      setWeightLogs(weights);
+      setBodyCompositionLogs(composition);
+
+      if (streakRes && streakRes.ok) {
         const data = (await streakRes.json()) as {
           streak?: { currentStreak?: number; longestStreak?: number };
         };
         setCurrentStreak(data.streak?.currentStreak ?? 0);
         setLongestStreak(data.streak?.longestStreak ?? 0);
       }
-    } catch {
-      // optional
-    }
 
-    const body = await fetchStudentBodyProfile(parsed.email);
-    setBodyProfile(body);
-    setBodyForm(bodyProfileToFormValues(body));
-    if (body && isBodyProfileComplete(body)) {
-      const targets = computeTargetProfile(body, {
-        job: personal.job,
-        weeklyFrequency: personal.weeklyFrequency,
-      });
-      setTargetCalories(targets.targetCalories);
-      setTargetProtein(targets.targetProtein);
-    }
+      setBodyProfile(body);
+      setBodyForm(bodyProfileToFormValues(body));
+      if (body && isBodyProfileComplete(body)) {
+        const targets = computeTargetProfile(body, {
+          job: personal.job,
+          weeklyFrequency: personal.weeklyFrequency,
+        });
+        setTargetCalories(targets.targetCalories);
+        setTargetProtein(targets.targetProtein);
+      }
 
-    const tRes = await fetch("/api/coach/student-targets", {
-      credentials: "include",
-    });
-    const tData = (await tRes.json()) as {
-      targets?: StudentNutritionTargets | null;
-    };
-    if (tData.targets?.locked) {
-      setCoachTargets(tData.targets);
-      setTargetCalories(tData.targets.targetCalories);
-      setTargetProtein(tData.targets.targetProtein);
-    }
+      if (tRes && tRes.ok) {
+        const tData = (await tRes.json()) as {
+          targets?: StudentNutritionTargets | null;
+        };
+        if (tData.targets?.locked) {
+          setCoachTargets(tData.targets);
+          setTargetCalories(tData.targets.targetCalories);
+          setTargetProtein(tData.targets.targetProtein);
+        }
+      }
 
-    setWeightLogsLoading(true);
-    setBodyCompositionLoading(true);
-    try {
-      const weights = await fetchWeightLogsLastDays(parsed.email, 7);
-      setWeightLogs(weights);
       const today = new Date().toISOString().slice(0, 10);
       const todayLog = weights.find((w) => w.logDate === today);
       setWeightInput(
-        todayLog ? String(todayLog.weightKg) : body?.weightKg ? String(body.weightKg) : ""
+        todayLog
+          ? String(todayLog.weightKg)
+          : body?.weightKg
+            ? String(body.weightKg)
+            : ""
       );
+      void synced;
     } catch {
-      setWeightLogs([]);
+      setLogs([]);
     } finally {
       setWeightLogsLoading(false);
-    }
-
-    try {
-      const composition = await fetchBodyCompositionLogsLastDays(parsed.email, 90);
-      setBodyCompositionLogs(composition);
-    } catch {
-      setBodyCompositionLogs([]);
-    } finally {
       setBodyCompositionLoading(false);
+      setReady(true);
     }
-
-    setReady(true);
-  }, [router]);
+  }, [session]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (session) void load();
+  }, [load, session]);
 
   useEffect(() => {
     if (!ready || typeof window === "undefined") return;
@@ -252,8 +240,19 @@ export default function ProfilePage() {
     }
   };
 
-  if (!ready || !session) {
-    return <LoadingView message={t("common.loading", "載入中…")} />;
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
+        <header className="pt-safe px-4 pb-4 border-b border-gray-100">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("nav.profile", "我的")}
+          </h1>
+        </header>
+        <main className="px-4 py-5">
+          <PageSkeleton rows={4} />
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -270,7 +269,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="px-4 py-5 min-w-0 space-y-6">
-        <section>
+        {!ready ? <PageSkeleton rows={5} /> : <section>
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-bold text-gray-900">
               <IconLabel icon={Calendar} size="sm" iconClassName="text-emerald-600">
@@ -286,8 +285,9 @@ export default function ProfilePage() {
             </button>
           </div>
           <HistoryCalendar embedded />
-        </section>
+        </section>}
 
+        {ready ? (
         <StudentProfilePanel
           session={session}
           settings={settings}
@@ -331,6 +331,7 @@ export default function ProfilePage() {
           onSelectMeal={setSelectedMealLog}
           onSaved={showToast}
         />
+        ) : null}
       </main>
 
       {selectedMealLog && (

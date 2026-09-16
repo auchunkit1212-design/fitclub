@@ -11,10 +11,11 @@ import { NutritionLabelOcrButton } from "@/components/NutritionLabelOcrButton";
 import { MealLogModeSelection } from "@/components/MealLogModeSelection";
 import { NutritionLabelScanOverlay } from "@/components/NutritionLabelScanOverlay";
 import { OnboardingModal } from "@/components/OnboardingModal";
-import { LoadingView } from "@/components/LoadingView";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { useRequiredSession } from "@/components/SessionProvider";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, ScanLine, Sparkles } from "@/components/icons";
 import { publishMealSharePostCloud } from "@/lib/community-client";
@@ -34,8 +35,9 @@ import {
   isBodyProfileComplete,
 } from "@/lib/body-profile";
 import {
+  defaultMealLogsFromDate,
+  fetchOwnMealLogsForSession,
   fetchStudentBodyProfile,
-  fetchUsersForSession,
 } from "@/lib/db";
 import { compressDataUrl, compressFileImage } from "@/lib/image";
 import type { OcrNutritionResult } from "@/lib/ocr-nutrition";
@@ -46,12 +48,11 @@ import {
   scaleMacros,
 } from "@/lib/portion-scale";
 import { uploadMealImageFromClient } from "@/lib/meal-image-storage";
-import { initUserRegistry } from "@/lib/registry";
-import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
+import { saveSession } from "@/lib/session";
 import { errorMessage } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 import { storePendingStreakCelebration } from "@/lib/streak";
-import { getMealLogs, getOwnMealLogs, isToday } from "@/lib/storage";
+import { isToday } from "@/lib/storage";
 import { detectMealFoodsFromPhoto } from "@/lib/meal-photo-detect-client";
 import type { DetectedMealFood } from "@/lib/meal-photo-detect";
 import { saveMealViaApi } from "@/lib/meal-save-client";
@@ -64,7 +65,6 @@ import type {
   FoodAdvancedNutrients,
   MealLog,
   StudentBodyProfile,
-  UserSession,
 } from "@/lib/types";
 
 const btnClass =
@@ -112,10 +112,24 @@ function suggestProteinPortionKey(proteinG: number): ProteinPortionKey {
   return "proteinLarge";
 }
 
+function AddMealFallback() {
+  return (
+    <div className="min-h-screen bg-white max-w-lg mx-auto pb-safe">
+      <div className="px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4">
+        <div className="h-8 w-40 rounded-xl bg-zinc-100 animate-pulse" />
+      </div>
+      <main className="px-4 py-4">
+        <PageSkeleton rows={4} />
+      </main>
+    </div>
+  );
+}
+
 function AddMealPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, lang } = useI18n();
+  const { session } = useRequiredSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fromCoach = searchParams.get("from") === "coach";
   const modeParam = searchParams.get("mode");
@@ -158,7 +172,6 @@ function AddMealPageContent() {
   const [goalCarbs, setGoalCarbs] = useState(200);
   const [goalFats, setGoalFats] = useState(65);
   const [showNutritionDash, setShowNutritionDash] = useState(false);
-  const [session, setSession] = useState<UserSession | null>(null);
   const [macrosFromSearch, setMacrosFromSearch] = useState(false);
   const [macrosLockedFromPicker, setMacrosLockedFromPicker] = useState(false);
   const [searchAdvanced, setSearchAdvanced] = useState<
@@ -297,13 +310,8 @@ function AddMealPageContent() {
   };
 
   useEffect(() => {
-    const parsed = getSession();
-    if (!parsed?.email) {
-      router.push("/register");
-      return;
-    }
-    const active: UserSession = { ...parsed, isLoggedIn: true };
-    setSession(active);
+    if (!session?.email) return;
+    const active = session;
 
     (async () => {
       const envStatus = getSupabasePublicEnvStatus();
@@ -314,25 +322,22 @@ function AddMealPageContent() {
       }
 
       try {
-        await initUserRegistry();
-        const registry = await fetchUsersForSession(active);
-        const isCoachSelf =
-          fromCoach &&
-          (active.role === "coach" || active.role === "admin");
-        const logs = isCoachSelf
-          ? await getOwnMealLogs(active)
-          : await getMealLogs(active, registry);
+        const logs = await fetchOwnMealLogsForSession(active, {
+          from: defaultMealLogsFromDate(7),
+        });
         setTodayLogs(logs.filter((l) => isToday(l.date)));
 
         if (active.role === "student") {
-          const body = await fetchStudentBodyProfile(active.email);
+          const [body, tRes] = await Promise.all([
+            fetchStudentBodyProfile(active.email),
+            fetch("/api/coach/student-targets"),
+          ]);
           setBodyProfile(body);
           if (body && isBodyProfileComplete(body)) {
             const targets = computeTargetProfile(body);
             setGoalCalories(targets.targetCalories);
             setGoalProtein(targets.targetProtein);
           }
-          const tRes = await fetch("/api/coach/student-targets");
           const tData = (await tRes.json()) as {
             targets?: {
               locked: boolean;
@@ -353,7 +358,7 @@ function AddMealPageContent() {
         setProfileChecked(true);
       }
     })();
-  }, [router, fromCoach]);
+  }, [session]);
 
   useEffect(() => {
     if (
@@ -471,11 +476,6 @@ function AddMealPageContent() {
     setFats(Math.round(total * 0.04));
   };
 
-  const readSessionEmail = (): string | null => {
-    const s = getSession();
-    return s?.email?.trim().toLowerCase() || null;
-  };
-
   const handleSave = async () => {
     if (!description.trim()) {
       alert(t("addMeal.errors.descriptionRequired", "請填寫食物描述！"));
@@ -483,7 +483,7 @@ function AddMealPageContent() {
     }
     if (saveLoading) return;
 
-    const email = readSessionEmail();
+    const email = session?.email?.trim().toLowerCase() || null;
     if (!email) {
       alert(t("addMeal.errors.loginRequired", "請先登入再記錄飲食。"));
       router.push("/register");
@@ -492,8 +492,7 @@ function AddMealPageContent() {
 
     setSaveLoading(true);
 
-    const currentSession = getSession();
-    if (currentSession) saveSession(currentSession);
+    if (session) saveSession(session);
 
     const descTrim = description.trim();
     const descForAi = multiFoodMode
@@ -569,10 +568,10 @@ function AddMealPageContent() {
       },
       imageUrl?: string
     ) => {
-      if (shareToCommunity && currentSession) {
+      if (shareToCommunity && session) {
         try {
           await publishMealSharePostCloud({
-            session: currentSession,
+            session,
             mealType: mealTypeLabel,
             description: saved.description,
             calories: saved.calories,
@@ -636,10 +635,6 @@ function AddMealPageContent() {
       setSaveLoading(false);
     }
   };
-
-  if (!profileChecked) {
-    return <LoadingView message={t("common.loading", "載入中...")} />;
-  }
 
   if (needsOnboarding && session?.email) {
     return (
@@ -1252,7 +1247,7 @@ function AddMealPageContent() {
 
 export default function AddMealPage() {
   return (
-    <Suspense fallback={<LoadingView message="載入中..." />}>
+    <Suspense fallback={<AddMealFallback />}>
       <AddMealPageContent />
     </Suspense>
   );

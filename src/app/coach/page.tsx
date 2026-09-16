@@ -1,30 +1,44 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CoachAiReportPanel } from "@/components/CoachAiReportPanel";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
 import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
+  defaultMealLogsFromDate,
   fetchOwnMealLogsForSession,
   fetchUsersForSession,
-  resolveBranding,
   updateCoachLogo,
 } from "@/lib/db";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
-import { LoadingView } from "@/components/LoadingView";
 import { PageHeader } from "@/components/PageHeader";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
-import { ProBillingPanel } from "@/components/ProBillingPanel";
-import { IconLabel } from "@/components/icons";
-import { getSession } from "@/lib/session";
+import { COACH_ROLES, useRequiredSession } from "@/components/SessionProvider";
 import { withTimeout } from "@/lib/with-timeout";
+
+const CoachAiReportPanel = dynamic(
+  () =>
+    import("@/components/CoachAiReportPanel").then((m) => ({
+      default: m.CoachAiReportPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={2} /> }
+);
+
+const ProBillingPanel = dynamic(
+  () =>
+    import("@/components/ProBillingPanel").then((m) => ({
+      default: m.ProBillingPanel,
+    })),
+  { ssr: false }
+);
 import type {
   CoachBranding,
   MealLog,
@@ -48,14 +62,14 @@ const LOAD_TIMEOUT_MS = 12_000;
 export default function CoachPage() {
   const router = useRouter();
   const brand = useBranding();
+  const { session } = useRequiredSession(COACH_ROLES);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const [session, setSession] = useState<UserSession | null>(null);
   const [appTitle, setAppTitle] = useState("");
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
   const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
   const [registry, setRegistry] = useState<RegistryUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cloudLoading, setCloudLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
@@ -69,41 +83,45 @@ export default function CoachPage() {
   };
 
   useEffect(() => {
+    if (!session) return;
+    setAppTitle((prev) => prev || session.brandName || session.gym || "");
+    setInviteCode(
+      (prev) => prev || session.tenantSlug || session.tenantId || ""
+    );
+    setLogo((prev) => prev || session.brandLogo);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
     const load = async () => {
-      const current = getSession();
-      if (!current || (current.role !== "coach" && current.role !== "admin")) {
-        setLoading(false);
-        router.push("/register");
-        return;
-      }
-
       if (!silentRefreshRef.current) {
-        setLoading(true);
+        setCloudLoading(true);
       }
-
-      setSession(current);
 
       try {
-        const userRegistry = await withTimeout(
-          fetchUsersForSession(current),
+        const [userRegistry, ownLogs] = await withTimeout(
+          Promise.all([
+            fetchUsersForSession(session),
+            fetchOwnMealLogsForSession(session, {
+              from: defaultMealLogsFromDate(14),
+            }),
+          ]),
           LOAD_TIMEOUT_MS,
-          "讀取用戶逾時"
+          "讀取教練資料逾時"
         );
+        if (cancelled) return;
         setRegistry(userRegistry);
+        setOwnMealLogs(ownLogs);
 
-        if (current.role === "coach") {
-          const [brandResolved, resolved] = await withTimeout(
-            Promise.all([
-              resolveBrandForUser(current, userRegistry),
-              resolveBranding(current, userRegistry),
-            ]),
-            LOAD_TIMEOUT_MS,
-            "讀取品牌設定逾時"
-          );
+        if (session.role === "coach") {
+          const resolved = await resolveBrandForUser(session, userRegistry);
+          if (cancelled) return;
           setInviteCode(
-            brandResolved.tenantSlug ??
-              current.tenantSlug ??
-              current.tenantId ??
+            resolved.tenantSlug ??
+              session.tenantSlug ??
+              session.tenantId ??
               ""
           );
           setAppTitle(resolved.branding.appTitle);
@@ -114,32 +132,32 @@ export default function CoachPage() {
           setAppTitle(DEFAULT_BRANDING.appTitle);
           setThemeColor(DEFAULT_BRANDING.themeColor);
         }
-
-        const ownLogs = await withTimeout(
-          fetchOwnMealLogsForSession(current),
-          LOAD_TIMEOUT_MS,
-          "讀取飲食記錄逾時"
-        );
-        setOwnMealLogs(ownLogs);
       } catch {
-        alert("暫時載唔到教練資料，請稍後再試。");
+        if (!cancelled) {
+          alert("暫時載唔到教練資料，請稍後再試。");
+        }
       } finally {
-        silentRefreshRef.current = false;
-        setLoading(false);
+        if (!cancelled) {
+          silentRefreshRef.current = false;
+          setCloudLoading(false);
+        }
       }
     };
 
-    load();
-  }, [router, refreshKey]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, refreshKey]);
 
   useEffect(() => {
-    if (loading || !window.location.hash) return;
+    if (!session || !window.location.hash) return;
     const target = document.getElementById(window.location.hash.slice(1));
     if (!target) return;
     window.requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }, [loading]);
+  }, [session, cloudLoading]);
 
   const handlePublish = async () => {
     if (!session || session.role !== "coach") {
@@ -222,9 +240,20 @@ export default function CoachPage() {
     e.target.value = "";
   };
 
-  if (loading) {
+  if (!session) {
     return (
-      <LoadingView message="載入緊..." logoUrl={brand.logo} />
+      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
+        <PageHeader
+          title="教練後台"
+          subtitle={brand.gymName}
+          variant="light"
+          backLabel="← 返回主頁"
+          onBack={() => router.push("/")}
+        />
+        <main className="px-4 py-4">
+          <PageSkeleton rows={5} />
+        </main>
+      </div>
     );
   }
 
@@ -250,7 +279,7 @@ export default function CoachPage() {
             <CoachInviteCodePanel
               inviteCode={inviteCode}
               brandName={appTitle.trim() || brand.gymName}
-              loading={loading}
+              loading={cloudLoading}
               onCopied={showToast}
             />
           </div>
