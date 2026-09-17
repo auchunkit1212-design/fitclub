@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CoachFeatureGrid } from "@/components/CoachFeatureGrid";
 import { HomeShell } from "@/components/home/HomeShell";
 import { useI18n } from "@/components/I18nProvider";
+import { prefetchCoachInbox } from "@/lib/coach-inbox-client";
 import { brandingFromSession } from "@/lib/home-session";
 import { goTo } from "@/lib/navigate";
 import { syncSessionPlan } from "@/lib/plan-client";
@@ -28,6 +29,7 @@ export function CoachHome({
     router.prefetch("/coach");
     router.prefetch("/coach/students");
     router.prefetch("/leaderboard");
+    void prefetchCoachInbox();
   }, [router]);
 
   useEffect(() => {

@@ -18,6 +18,10 @@ import { useBranding } from "@/components/BrandingProvider";
 import { COACH_ROLES, useRequiredSession } from "@/components/SessionProvider";
 import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
 import {
+  applyCoachInboxToCache,
+  fetchCoachInbox,
+} from "@/lib/coach-inbox-client";
+import {
   readStudentsCache,
   writeStudentsCache,
 } from "@/lib/coach-students-cache";
@@ -133,6 +137,17 @@ export default function CoachStudentsPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  const loadInbox = useCallback(async () => {
+    if (!session) return;
+    const data = await fetchCoachInbox();
+    applyCoachInboxToCache(session.email, data);
+    setRegistry(data.registry);
+    setLogs(data.logs);
+    setStudents(data.students);
+    setLoadError(null);
+    setLoading(false);
+  }, [session]);
+
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (!session) return;
     const hasCache = Boolean(readStudentsCache(session.email));
@@ -184,11 +199,16 @@ export default function CoachStudentsPage() {
       setLogs(hit.logs);
       setStudents(hit.students);
       setLoading(false);
-      void loadData({ silent: true });
+      void loadInbox().catch(() => {
+        void loadData({ silent: true });
+      });
       return;
     }
-    void loadData();
-  }, [loadData, session]);
+    void loadInbox().catch((error) => {
+      console.error("載入未檢閱收件箱失敗:", error);
+      void loadData();
+    });
+  }, [loadData, loadInbox, session]);
 
   const handleRegistryChange = async () => {
     if (!session) return;
@@ -219,7 +239,11 @@ export default function CoachStudentsPage() {
     !loading && !loadError && section !== "roster" && !hasStudents;
 
   return (
-    <PullToRefresh onRefresh={() => loadData({ silent: true })}>
+    <PullToRefresh
+      onRefresh={() =>
+        loadInbox().catch(() => loadData({ silent: true }))
+      }
+    >
     <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
       <PageHeader
         title="學員"
@@ -237,7 +261,7 @@ export default function CoachStudentsPage() {
       />
 
       <main className="px-4 py-4">
-        {loading && !loadError ? (
+        {loading && logs.length === 0 && !loadError ? (
           <PageSkeleton rows={4} />
         ) : loadError ? (
           <section className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
@@ -296,7 +320,7 @@ export default function CoachStudentsPage() {
                       coachEmail={session.email}
                       reactions={reviewIndex.reactions}
                       feedback={reviewIndex.feedback}
-                      loading={reviewIndex.loading && logs.length === 0}
+                      loading={false}
                       onReviewChange={handleReviewChange}
                       onToast={showToast}
                       onLogUpdated={handleLogUpdated}

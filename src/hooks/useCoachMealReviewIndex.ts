@@ -83,6 +83,16 @@ export function useCoachMealReviewIndex(
   );
   const localIdsRef = useRef<Set<string>>(new Set());
   const hasDataRef = useRef(Boolean(cached));
+  const [seedKey, setSeedKey] = useState(idsKey);
+  if (seedKey !== idsKey) {
+    setSeedKey(idsKey);
+    if (cached) {
+      setReactions(cached.reactions);
+      setFeedback(cached.feedback);
+      setLoading(false);
+      hasDataRef.current = true;
+    }
+  }
 
   const reload = useCallback(
     async (options?: ReloadOptions) => {

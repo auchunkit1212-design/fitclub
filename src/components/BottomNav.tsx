@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { prefetchCoachInbox } from "@/lib/coach-inbox-client";
 import { getSession } from "@/lib/session";
 import {
   CircleUser,
@@ -117,6 +118,7 @@ export function BottomNav({
     for (const route of routes) {
       router.prefetch(route);
     }
+    if (!isStudent) void prefetchCoachInbox();
   }, [isStudent, router]);
 
   const communityActive =

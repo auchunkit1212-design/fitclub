@@ -13,6 +13,7 @@ import {
   UtensilsCrossed,
 } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
+import { prefetchCoachInbox } from "@/lib/coach-inbox-client";
 
 const btnClass =
   "active:scale-[0.98] active:opacity-85 transition-all cursor-pointer";
@@ -30,6 +31,7 @@ export function CoachFeatureGrid() {
     ]) {
       router.prefetch(route);
     }
+    void prefetchCoachInbox();
   }, [router]);
 
   const items = [

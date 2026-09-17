@@ -1,19 +1,6 @@
+import { fetchReviewIndexForMealIds } from "@/lib/coach-review-index";
 import { NextResponse } from "next/server";
-import {
-  fetchFeedbackForMealIds,
-  fetchReactionsForMealIds,
-} from "@/lib/phase4-db";
 import { parseSessionFromRequest } from "@/lib/session-server";
-
-const CHUNK = 80;
-
-function chunkIds(ids: string[]): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    chunks.push(ids.slice(i, i + CHUNK));
-  }
-  return chunks;
-}
 
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
@@ -29,28 +16,11 @@ export async function POST(request: Request) {
   }
 
   const ids = Array.isArray(body.mealLogIds)
-    ? body.mealLogIds
-        .filter((id): id is string => typeof id === "string" && id.length > 0)
-        .slice(0, 400)
+    ? body.mealLogIds.filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      )
     : [];
 
-  if (ids.length === 0) {
-    return NextResponse.json({ reactions: [], feedback: [] });
-  }
-
-  const chunks = chunkIds(ids);
-  const batches = await Promise.all(
-    chunks.map(async (chunk) => {
-      const [reactions, feedback] = await Promise.all([
-        fetchReactionsForMealIds(chunk),
-        fetchFeedbackForMealIds(chunk),
-      ]);
-      return { reactions, feedback };
-    })
-  );
-
-  return NextResponse.json({
-    reactions: batches.flatMap((b) => b.reactions),
-    feedback: batches.flatMap((b) => b.feedback),
-  });
+  const { reactions, feedback } = await fetchReviewIndexForMealIds(ids);
+  return NextResponse.json({ reactions, feedback });
 }
