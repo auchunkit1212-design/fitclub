@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { upsertStudentBodyProfile } from "@/lib/db";
+import { isValidWeightChangePace } from "@/lib/body-profile";
 import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
-import type { StudentBodyProfile, StudentGender } from "@/lib/types";
-import type { FitnessGoal } from "@/lib/ai-solo-coach";
+import type { StudentBodyProfile, StudentGender, WeightChangeKgPerWeek } from "@/lib/types";
+import { WeightChangePaceSelector } from "@/components/WeightChangePaceSelector";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -47,17 +48,21 @@ export function OnboardingModal({
   const [targetWeightKg, setTargetWeightKg] = useState(
     initial?.targetWeightKg ? String(initial.targetWeightKg) : ""
   );
+  const [weightChangeKgPerWeek, setWeightChangeKgPerWeek] =
+    useState<WeightChangeKgPerWeek | null>(
+      initial?.weightChangeKgPerWeek ?? null
+    );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
-  const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>("cut");
 
   const buildProfile = (
     normalizedEmail: string,
     h: number,
     w: number,
     a: number,
-    tw: number
+    tw: number,
+    pace: WeightChangeKgPerWeek
   ): StudentBodyProfile => ({
     email: normalizedEmail,
     heightCm: h,
@@ -65,6 +70,7 @@ export function OnboardingModal({
     age: a,
     gender,
     targetWeightKg: tw,
+    weightChangeKgPerWeek: pace,
     exerciseCaloriesDaily: initial?.exerciseCaloriesDaily ?? 0,
     onboardingComplete: true,
   });
@@ -115,8 +121,21 @@ export function OnboardingModal({
       setError(t("onboarding.errors.invalidFields", "請填寫有效嘅身高、體重、歲數同目標體重。"));
       return;
     }
+    if (!isValidWeightChangePace(weightChangeKgPerWeek)) {
+      setError(
+        t("onboarding.errors.paceRequired", "請選擇每週體重目標（增重／維持／減重）。")
+      );
+      return;
+    }
 
-    const profilePayload = buildProfile(normalizedEmail, h, w, a, tw);
+    const profilePayload = buildProfile(
+      normalizedEmail,
+      h,
+      w,
+      a,
+      tw,
+      weightChangeKgPerWeek
+    );
     const clientSession = getSession();
 
     console.log("[onboarding] submit start", {
@@ -149,6 +168,7 @@ export function OnboardingModal({
           age: a,
           gender,
           targetWeightKg: tw,
+          weightChangeKgPerWeek,
           exerciseCaloriesDaily: initial?.exerciseCaloriesDaily ?? 0,
         }),
       });
@@ -210,7 +230,7 @@ export function OnboardingModal({
             "Content-Type": "application/json",
             ...getSessionRequestHeaders(),
           },
-          body: JSON.stringify({ fitnessGoal }),
+          body: JSON.stringify({}),
         });
         if (!aiRes.ok) {
           const aiData = (await aiRes.json()) as { error?: string };
@@ -313,29 +333,10 @@ export function OnboardingModal({
             />
           </div>
 
-          {soloMode && (
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-500">
-                {t("onboarding.fields.goal", "你的主要目標")}
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["cut", "bulk", "maintain"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setFitnessGoal(value)}
-                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${btnClass} ${
-                      fitnessGoal === value
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
-                        : "border-zinc-200 bg-white text-zinc-600"
-                    }`}
-                  >
-                    {t(`onboarding.goal.${value}`, value)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <WeightChangePaceSelector
+            value={weightChangeKgPerWeek}
+            onChange={setWeightChangeKgPerWeek}
+          />
 
           {warning && (
             <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2">

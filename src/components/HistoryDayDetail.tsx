@@ -1,0 +1,317 @@
+"use client";
+
+import Image from "next/image";
+import { Bot } from "@/components/icons";
+import { APP_LOGO_PATH } from "@/lib/brand";
+import { useI18n } from "@/components/I18nProvider";
+import { getMealImageSrc } from "@/lib/meal-display";
+import { isValidSticker } from "@/lib/meal-stickers";
+import {
+  COMPLIANCE_CLASS,
+  COMPLIANCE_LABEL,
+  MACRO_SOFT_MAX_RATIO,
+} from "@/lib/nutrition-compliance";
+import { CoachFeedbackDisplay } from "@/components/CoachFeedbackDisplay";
+import { LoadingView } from "@/components/LoadingView";
+import type { HistoryDayDetail as DayDetail } from "@/lib/history-calendar";
+import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
+
+const SOFT_CARD =
+  "rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
+
+function MacroBar({
+  label,
+  current,
+  target,
+  unit,
+  colorClass,
+  overColorClass = "bg-orange-500",
+}: {
+  label: string;
+  current: number;
+  target: number;
+  unit: string;
+  colorClass: string;
+  overColorClass?: string;
+}) {
+  const rawPct = Math.round((current / Math.max(target, 1)) * 100);
+  const softMaxPct = Math.round(MACRO_SOFT_MAX_RATIO * 100);
+  const isOver = rawPct > softMaxPct;
+  const barPct = Math.min(100, rawPct);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs">
+        <span className="font-semibold text-gray-700">{label}</span>
+        <span
+          className={`tabular-nums ${isOver ? "text-orange-700 font-semibold" : "text-gray-500"}`}
+        >
+          {Math.round(current)}
+          {unit} / {target}
+          {unit}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${isOver ? overColorClass : colorClass}`}
+          style={{ width: `${barPct}%` }}
+        />
+      </div>
+      <p
+        className={`text-[10px] text-right ${isOver ? "text-orange-600 font-semibold" : "text-gray-400"}`}
+      >
+        {rawPct}%
+      </p>
+    </div>
+  );
+}
+
+export function HistoryDayDetailPanel({
+  detail,
+  loading,
+  onSelectMeal,
+  onAddMealForDate,
+}: {
+  detail: DayDetail | null;
+  loading: boolean;
+  onSelectMeal?: (meal: MealLog) => void;
+  /** Open add-meal for this day (backfill). */
+  onAddMealForDate?: (date: string) => void;
+}) {
+  const { t } = useI18n();
+
+  if (loading) {
+    return (
+      <LoadingView
+        variant="section"
+        message={t("history.day.loading", "載入當日紀錄…")}
+        className={SOFT_CARD}
+      />
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div className={`${SOFT_CARD} p-6 text-center text-sm text-gray-400`}>
+        {t("history.day.pickDate", "點選日曆上的日期以查看詳情")}
+      </div>
+    );
+  }
+
+  const stickerReactions = detail.reactions.filter((r) =>
+    isValidSticker(r.sticker)
+  );
+  const hasContent =
+    detail.meals.length > 0 ||
+    detail.aiReviews.length > 0 ||
+    stickerReactions.length > 0;
+
+  const addMealButton = onAddMealForDate ? (
+    <button
+      type="button"
+      onClick={() => onAddMealForDate(detail.date)}
+      className="mt-4 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white active:scale-95 active:opacity-80 transition-all"
+    >
+      {t("history.day.addMeal", "補記呢日飲食")}
+    </button>
+  ) : null;
+
+  if (!hasContent) {
+    return (
+      <div className={`${SOFT_CARD} p-6 text-center`}>
+        <p className="text-sm font-medium text-gray-700">
+          {t("history.day.noLogs", "這天沒有飲食紀錄")}
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          {detail.date}
+        </p>
+        {addMealButton}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${SOFT_CARD} p-5 space-y-5`}>
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-gray-900">
+              {t("history.day.title", "{date} 詳情", { date: detail.date })}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {t("history.day.mealCount", "共 {count} 餐", {
+                count: detail.meals.length,
+              })}
+              {" · "}
+              {detail.totals.calories} kcal
+            </p>
+          </div>
+          {onAddMealForDate ? (
+            <button
+              type="button"
+              onClick={() => onAddMealForDate(detail.date)}
+              className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white active:scale-95 active:opacity-80 transition-all"
+            >
+              {t("history.day.addMeal", "補記呢日飲食")}
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.overall]}`}
+          >
+            {t("history.day.overall", "整體")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.overall]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.calories]}`}
+          >
+            {t("common.calories", "熱量")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.calories]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.protein]}`}
+          >
+            {t("common.protein", "蛋白")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.protein]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.carbs]}`}
+          >
+            {t("common.carbs", "碳水")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.carbs]}
+          </span>
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${COMPLIANCE_CLASS[detail.compliance.fats]}`}
+          >
+            {t("common.fat", "脂肪")}{" "}
+            {COMPLIANCE_LABEL[detail.compliance.fats]}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          {t("history.day.macros", "P / C / F 達成率")}
+        </p>
+        <MacroBar
+          label={t("common.protein", "蛋白")}
+          current={detail.totals.protein}
+          target={detail.targets.targetProtein}
+          unit="g"
+          colorClass="bg-sky-500"
+        />
+        <MacroBar
+          label={t("common.carbs", "碳水")}
+          current={detail.totals.carbs}
+          target={detail.targets.targetCarbs}
+          unit="g"
+          colorClass="bg-amber-500"
+        />
+        <MacroBar
+          label={t("common.fat", "脂肪")}
+          current={detail.totals.fats}
+          target={detail.targets.targetFats}
+          unit="g"
+          colorClass="bg-rose-400"
+        />
+      </div>
+
+      {detail.meals.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            {t("history.day.meals", "飲食清單")}
+          </p>
+          <ul className="space-y-2.5">
+            {detail.meals.map((meal) => {
+              const img = getMealImageSrc(meal);
+              const mealReaction = detail.reactions.find(
+                (r) => r.mealLogId === meal.id
+              );
+              const mealFeedback = detail.feedback.find(
+                (f) => f.mealLogId === meal.id
+              );
+              return (
+                <li
+                  key={meal.id}
+                  role={onSelectMeal ? "button" : undefined}
+                  tabIndex={onSelectMeal ? 0 : undefined}
+                  onClick={onSelectMeal ? () => onSelectMeal(meal) : undefined}
+                  onKeyDown={
+                    onSelectMeal
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectMeal(meal);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`flex gap-3 p-3 rounded-2xl bg-gray-50/80 ${
+                    onSelectMeal ? "cursor-pointer active:opacity-80" : ""
+                  }`}
+                >
+                  <div className="shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {img ? (
+                      <Image
+                        src={img}
+                        alt=""
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="text-[10px] text-gray-400">—</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {meal.mealType} · {meal.description}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {meal.calories} kcal · P{meal.protein} C{meal.carbs} F
+                      {meal.fats}
+                    </p>
+                    {(mealReaction || mealFeedback) && (
+                      <CoachFeedbackDisplay
+                        reaction={mealReaction}
+                        feedback={mealFeedback}
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {detail.aiReviews.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
+            <Bot size={16} className="text-emerald-600" />
+            {t("history.day.aiReviews", "大猩猩 AI 點評")}
+          </p>
+          <ul className="space-y-2.5">
+            {detail.aiReviews.map((review) => (
+              <li
+                key={`${review.mealLogId}-${review.createdAt}`}
+                className="flex gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-[#ecfdf5] to-white"
+              >
+                <img
+                  src={APP_LOGO_PATH}
+                  alt=""
+                  className="w-8 h-8 rounded-full shrink-0 object-cover"
+                />
+                <p className="text-sm leading-relaxed text-gray-700">
+                  {review.text}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

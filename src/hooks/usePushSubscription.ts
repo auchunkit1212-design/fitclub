@@ -23,6 +23,7 @@ export function usePushSubscription() {
   const [message, setMessage] = useState("");
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<string>("default");
+  const [initialized, setInitialized] = useState(false);
 
   const refresh = useCallback(async () => {
     const ok = isPushSupported();
@@ -42,7 +43,13 @@ export function usePushSubscription() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    refresh().finally(() => {
+      if (!cancelled) setInitialized(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
   const enable = useCallback(async (): Promise<
@@ -100,6 +107,7 @@ export function usePushSubscription() {
     setMessage,
     supported,
     permission,
+    initialized,
     refresh,
     enable,
     disable,

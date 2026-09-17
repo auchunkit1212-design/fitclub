@@ -1,0 +1,3 @@
+Live application screenshots captured from https://fitclub-pearl.vercel.app
+Student demo: student@gmail.com
+Coach demo: owner@gmail.com

@@ -96,8 +96,8 @@ function buildMorningReminderPayload(
     ? "今日已記錄早餐，繼續保持！"
     : "記得記錄早餐同今日飲食。";
   return {
-    title: "🌅 早晨提醒",
-    body: `💧 飲一大杯水先！🍽️ ${mealHint}`,
+    title: "早晨提醒",
+    body: `飲一大杯水先！${mealHint}`,
     url: "/add-meal",
     tag: `morning-${getHongKongDateKey()}`,
   };

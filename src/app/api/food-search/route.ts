@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { FoodSearchError } from "@/lib/food-search/shared";
 import {
+  getLocalFoodDatabaseStats,
+  searchLocalFoodDatabase,
+} from "@/lib/food-search/local-database";
+import {
+  getOpenRouterAutocompleteModel,
   getOpenRouterModel,
   isOpenRouterConfigured,
   searchFoodWithOpenRouter,
@@ -12,23 +17,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-/** OpenRouter LLM — 港台食物聯想 + 營養估算（Autocomplete） */
+/** 最優先 OpenRouter AI；AI 失敗或無結果時才 fallback 本地庫 */
 export async function POST(request: Request) {
   const session = parseSessionFromRequest(request);
   if (!session?.email) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
-  }
-
-  if (!isOpenRouterConfigured()) {
-    return NextResponse.json(
-      {
-        error: "AI 食物搜尋尚未設定，請設定 OPENROUTER_API_KEY",
-        items: [],
-        source: "openrouter" as const,
-        configured: false,
-      },
-      { status: 503 }
-    );
   }
 
   let query = "";
@@ -45,44 +38,70 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "請輸入食物名稱" }, { status: 400 });
   }
 
-  if (query.length < 2) {
-    return NextResponse.json({ error: "請至少輸入 2 個字元", items: [] }, { status: 400 });
+  if (query.length < 1) {
+    return NextResponse.json({ error: "請輸入食物名稱", items: [] }, { status: 400 });
   }
 
-  try {
-    const items = await searchFoodWithOpenRouter(query, lang);
+  const dbStats = getLocalFoodDatabaseStats();
+  const localItems = searchLocalFoodDatabase(query, 12);
 
-    if (items.length === 0) {
-      return NextResponse.json(
-        {
-          error: "搵唔到相關食物，請換個關鍵字再試",
-          items: [],
+  if (isOpenRouterConfigured()) {
+    try {
+      const items = await searchFoodWithOpenRouter(query, lang);
+
+      if (items.length > 0) {
+        return NextResponse.json({
+          items,
           source: "openrouter" as const,
-          model: getOpenRouterModel(),
+          model: getOpenRouterAutocompleteModel(),
           lang,
-        },
-        { status: 404 }
-      );
+          databaseSize: dbStats.total,
+          localMatch: false,
+        });
+      }
+    } catch (error) {
+      if (error instanceof FoodSearchError) {
+        console.warn("[food-search] AI failed, fallback local DB:", error.message);
+      } else {
+        console.warn("[food-search] AI failed, fallback local DB:", error);
+      }
     }
+  }
 
+  if (localItems.length > 0) {
     return NextResponse.json({
-      items,
+      items: localItems,
+      source: localItems[0]?.source ?? "hk_tw",
+      lang,
+      databaseSize: dbStats.total,
+      localMatch: true,
+      aiFallback: isOpenRouterConfigured(),
+    });
+  }
+
+  if (!isOpenRouterConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          "搵唔到相關食物。請設定 OPENROUTER_API_KEY 啟用 AI 聯想，或試「魚蛋」「燒賣」等關鍵字",
+        items: [],
+        source: "local" as const,
+        configured: false,
+        databaseSize: dbStats.total,
+      },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error: "搵唔到相關食物，請換個關鍵字再試",
+      items: [],
       source: "openrouter" as const,
       model: getOpenRouterModel(),
       lang,
-    });
-  } catch (error) {
-    if (error instanceof FoodSearchError) {
-      console.error("[food-search]", error.message);
-      return NextResponse.json(
-        { error: error.message, items: [], source: "openrouter" as const },
-        { status: error.statusCode }
-      );
-    }
-    console.error("[food-search]", error);
-    return NextResponse.json(
-      { error: "搜尋失敗，請稍後再試", items: [] },
-      { status: 500 }
-    );
-  }
+      databaseSize: dbStats.total,
+    },
+    { status: 404 }
+  );
 }

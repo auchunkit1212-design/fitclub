@@ -4,6 +4,7 @@ import { BrandingProvider } from "@/components/BrandingProvider";
 import { DynamicManifestLink } from "@/components/DynamicManifestLink";
 import { I18nProvider } from "@/components/I18nProvider";
 import { PwaShell } from "@/components/PwaShell";
+import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   description: "Nutrition Coach 專屬飲食打卡同教練管理 — Coach! what to eat?",
   applicationName: BRAND_NAME,
   manifest: "/api/manifest",
-    icons: {
+  icons: {
     icon: [{ url: APP_LOGO_PATH, type: "image/png" }],
     apple: [{ url: APP_LOGO_PATH, type: "image/png" }],
   },
@@ -22,6 +23,10 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  other: {
+    "privacy-policy": "/privacy",
+    "terms-of-service": "/terms",
   },
 };
 
@@ -43,11 +48,13 @@ export default function RootLayout({
     <html lang="zh-HK">
       <body className="antialiased bg-white min-h-screen text-gray-900">
         <I18nProvider>
-          <BrandingProvider>
-            <DynamicManifestLink />
-            {children}
-            <PwaShell />
-          </BrandingProvider>
+          <SessionProvider>
+            <BrandingProvider>
+              <DynamicManifestLink />
+              {children}
+              <PwaShell />
+            </BrandingProvider>
+          </SessionProvider>
         </I18nProvider>
       </body>
     </html>

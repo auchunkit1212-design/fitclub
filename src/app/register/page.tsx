@@ -2,11 +2,24 @@
 
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { RegisterInvitePrefill } from "@/components/RegisterInvitePrefill";
 import { useRouter } from "next/navigation";
 import { GorillaMascot } from "@/components/GorillaMascot";
+import {
+  Building2,
+  Cpu,
+  IconLabel,
+  Rocket,
+  Ticket,
+} from "@/components/icons";
 import { IosPwaInstallBanner } from "@/components/IosPwaInstallBanner";
+import { RegisterLegalConsent } from "@/components/RegisterLegalConsent";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import {
+  hasInviteInUrl,
+  readInviteCodeFromWindow,
+} from "@/lib/invite-url";
 import { getDemoUser } from "@/lib/demo-users";
 import { isIosSafariBrowser } from "@/lib/ios-pwa";
 import { goTo } from "@/lib/navigate";
@@ -19,6 +32,7 @@ import {
   initUserRegistry,
 } from "@/lib/registry";
 import { SUPER_ADMIN_EMAIL } from "@/lib/registry-constants";
+import { readApiJson } from "@/lib/api-client";
 import { getSession, saveSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import type { UserSession } from "@/lib/types";
@@ -42,6 +56,9 @@ export default function RegisterPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [showInviteField, setShowInviteField] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginHint, setLoginHint] = useState<"already_registered" | null>(
+    null
+  );
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIosBanner, setShowIosBanner] = useState(false);
@@ -51,6 +68,13 @@ export default function RegisterPage() {
     if (existing?.email && existing.isLoggedIn) {
       goTo(router, "/");
       return;
+    }
+    const codeFromUrl = readInviteCodeFromWindow();
+    if (codeFromUrl) {
+      setInviteCode(codeFromUrl);
+      setShowInviteField(true);
+      setSignupTrack("solo");
+      setAuthTab("signup");
     }
     initUserRegistry().catch(() => undefined);
     setShowIosBanner(isIosSafariBrowser());
@@ -70,6 +94,13 @@ export default function RegisterPage() {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
   };
+
+  const applyInviteFromUrl = useCallback((code: string) => {
+    setInviteCode(code);
+    setShowInviteField(true);
+    setSignupTrack("solo");
+    setAuthTab("signup");
+  }, []);
 
   const finishSession = (session: UserSession, welcome: string) => {
     saveSession(session);
@@ -92,7 +123,7 @@ export default function RegisterPage() {
     if (loginPassword.trim()) return false;
 
     if (normalized === SUPER_ADMIN_EMAIL) {
-      finishSession(createAdminSession(normalized), "🎉 歡迎 最高總裁");
+      finishSession(createAdminSession(normalized), "歡迎 最高總裁");
       return true;
     }
 
@@ -100,7 +131,7 @@ export default function RegisterPage() {
       const user = await fetchUserByEmail(normalized);
       if (user && !user.hasPassword) {
         const session = await buildSessionFromRegistryUser(user);
-        finishSession(session, `🎉 歡迎 ${session.name}`);
+        finishSession(session, `歡迎 ${session.name}`);
         return true;
       }
     } catch (legacyErr) {
@@ -118,7 +149,7 @@ export default function RegisterPage() {
         },
         broadcast: "",
       });
-      finishSession(session, `🎉 歡迎 ${demo.name}`);
+      finishSession(session, `歡迎 ${demo.name}`);
       return true;
     }
 
@@ -130,13 +161,16 @@ export default function RegisterPage() {
     if (loading) return;
 
     if (signupPassword.length < 6) {
-      showToast(t("auth.errors.passwordMin", "⚠️ 請設定至少 6 位密碼。"));
+      showToast(t("auth.errors.passwordMin", "請設定至少 6 位密碼。"));
       return;
     }
 
     setLoading(true);
     try {
       const isCoach = signupTrack === "coach";
+      const effectiveInvite = (
+        inviteCode.trim() || readInviteCodeFromWindow()
+      ).trim();
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,21 +181,34 @@ export default function RegisterPage() {
           password: signupPassword,
           name,
           gymName: isCoach ? gymName : undefined,
-          inviteCode:
-            !isCoach && showInviteField && inviteCode.trim()
-              ? inviteCode.trim()
-              : undefined,
-          soloStudent: !isCoach && !showInviteField,
+          inviteCode: !isCoach && effectiveInvite ? effectiveInvite : undefined,
+          soloStudent: !isCoach && !effectiveInvite,
         }),
       });
-      const data = (await res.json()) as {
+      const { data, parseError } = await readApiJson<{
         error?: string;
         session?: UserSession;
         gymName?: string;
-      };
+      }>(res);
+
+      if (parseError || !data) {
+        showToast(
+          t(
+            "auth.errors.serverResponse",
+            "伺服器回應異常，請稍後再試；如持續發生請聯絡管理員。"
+          )
+        );
+        return;
+      }
 
       if (!res.ok || !data.session) {
-        showToast(`❌ ${data.error ?? t("auth.errors.registerFailed", "註冊失敗")}`);
+        const err = data.error ?? t("auth.errors.registerFailed", "註冊失敗");
+        if (err.includes("已被註冊") || err.includes("已註冊")) {
+          setAuthTab("login");
+          setLoginError(null);
+          setLoginHint("already_registered");
+        }
+        showToast(err);
         return;
       }
 
@@ -169,12 +216,18 @@ export default function RegisterPage() {
       finishSession(
         data.session,
         isCoach
-          ? t("auth.toast.brandOpened", "🎉 品牌「{gymName}」已開通！", { gymName: data.gymName ?? gymName })
-          : t("auth.toast.soloReady", "🦍 歡迎！AI 大猩猩私教已為你準備好 onboarding。")
+          ? t("auth.toast.brandOpened", "品牌「{gymName}」已開通！", { gymName: data.gymName ?? gymName })
+          : effectiveInvite
+            ? t(
+                "auth.toast.inviteReady",
+                "帳號已啟用！歡迎加入「{gymName}」。",
+                { gymName: data.gymName ?? "" }
+              )
+            : t("auth.toast.soloReady", "歡迎！AI 大猩猩私教已為你準備好 onboarding。")
       );
     } catch (err) {
       console.error("Register failed:", err);
-      showToast(t("auth.errors.network", "❌ 連線失敗，請稍後再試。"));
+      showToast(t("auth.errors.network", "連線失敗，請稍後再試。"));
     } finally {
       setLoading(false);
     }
@@ -185,11 +238,12 @@ export default function RegisterPage() {
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
       setLoginError(t("auth.errors.emailRequired", "請先輸入 Email。"));
-      showToast(t("auth.errors.emailRequired", "⚠️ 請先輸入 Email。"));
+      showToast(t("auth.errors.emailRequired", "請先輸入 Email。"));
       return;
     }
 
     setLoginError(null);
+    setLoginHint(null);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -201,13 +255,23 @@ export default function RegisterPage() {
           password: loginPassword.trim() || undefined,
         }),
       });
-      const data = (await res.json()) as {
+      const { data, parseError } = await readApiJson<{
         error?: string;
         session?: UserSession;
-      };
+      }>(res);
+
+      if (parseError || !data) {
+        const serverMsg = t(
+          "auth.errors.serverResponse",
+          "伺服器回應異常，請稍後再試；如持續發生請聯絡管理員。"
+        );
+        setLoginError(serverMsg);
+        showToast(serverMsg);
+        return;
+      }
 
       if (res.ok && data.session) {
-        finishSession(data.session, t("auth.toast.welcome", "🎉 歡迎 {name}", { name: data.session.name }));
+        finishSession(data.session, t("auth.toast.welcome", "歡迎 {name}", { name: data.session.name }));
         return;
       }
 
@@ -219,7 +283,7 @@ export default function RegisterPage() {
       }
 
       setLoginError(apiError);
-      showToast(`❌ ${apiError}`);
+      showToast(apiError);
     } catch (err) {
       const message = err instanceof Error ? err.message : "連線失敗";
       console.error("Login failed:", message, err);
@@ -229,7 +293,7 @@ export default function RegisterPage() {
       }
 
       setLoginError(message);
-      showToast(t("auth.errors.networkRetry", "❌ 連線失敗，請檢查網絡後再試。"));
+      showToast(t("auth.errors.networkRetry", "連線失敗，請檢查網絡後再試。"));
     } finally {
       setLoading(false);
     }
@@ -246,6 +310,10 @@ export default function RegisterPage() {
           {toast}
         </div>
       )}
+
+      <Suspense fallback={null}>
+        <RegisterInvitePrefill onPrefill={applyInviteFromUrl} />
+      </Suspense>
 
       <div className="text-center mb-5">
         <div className="flex justify-center mb-3">
@@ -271,6 +339,7 @@ export default function RegisterPage() {
               onClick={() => {
                 setAuthTab(tab);
                 setLoginError(null);
+                if (tab === "signup") setLoginHint(null);
               }}
               className={`py-2.5 rounded-lg text-sm font-bold transition-all ${btnClass} ${
                 authTab === tab
@@ -287,12 +356,47 @@ export default function RegisterPage() {
           {welcomeText}
         </p>
 
+        {inviteCode.trim() && authTab === "signup" && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 text-center leading-relaxed">
+            <IconLabel icon={Ticket} size="sm" iconClassName="text-amber-800">
+              {t(
+                "auth.invite.prefilled",
+                "教練邀請已套用 · 邀請碼：{code}",
+                { code: inviteCode.trim() }
+              )}
+            </IconLabel>
+          </div>
+        )}
+
+        {authTab === "login" &&
+          hasInviteInUrl() &&
+          loginHint !== "already_registered" && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 leading-relaxed text-center">
+              {t(
+                "auth.invite.loginTabHint",
+                "你透過教練邀請連結進入。新學員請切換「註冊」；已有帳號請直接輸入密碼登入。"
+              )}
+            </div>
+          )}
+
+        {authTab === "login" && loginHint === "already_registered" && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-xs text-emerald-900 leading-relaxed text-center">
+            {t(
+              "auth.invite.alreadyRegisteredHint",
+              "此 Email 已有帳號，請輸入密碼登入。若忘記密碼請聯絡教練。"
+            )}
+          </div>
+        )}
+
         {authTab === "login" ? (
           <form onSubmit={handleLogin} className="space-y-3">
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setLoginHint(null);
+              }}
               placeholder={t("auth.placeholder.email", "Email")}
               autoComplete="email"
               className="w-full rounded-xl border border-zinc-200 px-3 py-3"
@@ -303,6 +407,7 @@ export default function RegisterPage() {
               onChange={(e) => {
                 setLoginPassword(e.target.value);
                 setLoginError(null);
+                setLoginHint(null);
               }}
               placeholder={t("auth.placeholder.password", "密碼（舊學員若未設定可留空）")}
               autoComplete="current-password"
@@ -328,7 +433,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => {
                   setSignupTrack("solo");
-                  setShowInviteField(false);
+                  if (!inviteCode.trim()) setShowInviteField(false);
                 }}
                 className={`py-2 rounded-xl text-xs font-bold border-2 ${btnClass} ${
                   signupTrack === "solo"
@@ -336,7 +441,9 @@ export default function RegisterPage() {
                     : "border-zinc-200 text-zinc-600"
                 }`}
               >
-                {t("auth.signup.trackSolo", "🦍 AI 私教散客")}
+                <IconLabel icon={Cpu} size="sm" iconClassName={signupTrack === "solo" ? "text-emerald-700" : "text-zinc-500"}>
+                  {t("auth.signup.trackSolo", "AI 私教散客")}
+                </IconLabel>
               </button>
               <button
                 type="button"
@@ -347,7 +454,9 @@ export default function RegisterPage() {
                     : "border-zinc-200 text-zinc-600"
                 }`}
               >
-                {t("auth.signup.trackCoach", "🏢 教練 / 品牌")}
+                <IconLabel icon={Building2} size="sm" iconClassName={signupTrack === "coach" ? "text-indigo-700" : "text-zinc-500"}>
+                  {t("auth.signup.trackCoach", "教練 / 品牌")}
+                </IconLabel>
               </button>
             </div>
 
@@ -429,16 +538,24 @@ export default function RegisterPage() {
                   signupTrack === "coach" ? "bg-emerald-600" : "bg-emerald-600"
                 } ${btnClass}`}
               >
-                {loading
-                  ? t("auth.signup.registering", "註冊中...")
-                  : signupTrack === "solo"
-                    ? t("auth.signup.soloCta", "🦍 立即註冊 AI 私教")
-                    : t("auth.signup.coachCta", "🚀 建立品牌空間")}
+                {loading ? (
+                  t("auth.signup.registering", "註冊中...")
+                ) : signupTrack === "solo" ? (
+                  <IconLabel icon={Cpu} size="md" className="justify-center" iconClassName="text-white">
+                    {t("auth.signup.soloCta", "立即註冊 AI 私教")}
+                  </IconLabel>
+                ) : (
+                  <IconLabel icon={Rocket} size="md" className="justify-center" iconClassName="text-white">
+                    {t("auth.signup.coachCta", "建立品牌空間")}
+                  </IconLabel>
+                )}
               </button>
             </form>
           </>
         )}
       </div>
+
+      <RegisterLegalConsent className="mt-4 px-2" />
 
       <p className="text-center text-sm text-zinc-500 mt-5">
         {t("auth.footer.ownerPrompt", "Gym 老闆？")}{" "}

@@ -1,0 +1,28 @@
+import { ImageResponse } from "next/og";
+
+export const runtime = "edge";
+export const size = { width: 192, height: 192 };
+export const contentType = "image/png";
+
+export default function Icon() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#1b4332",
+          color: "#f7f3eb",
+          fontSize: 72,
+          fontWeight: 700,
+        }}
+      >
+        食
+      </div>
+    ),
+    size
+  );
+}
