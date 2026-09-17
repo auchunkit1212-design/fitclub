@@ -12,10 +12,15 @@ import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { PageHeader } from "@/components/PageHeader";
 import { PageSkeleton } from "@/components/PageSkeleton";
+import { CoachUnreviewedMealsPanel } from "@/components/CoachUnreviewedMealsPanel";
 import { ClipboardList } from "@/components/icons";
 import { useBranding } from "@/components/BrandingProvider";
 import { COACH_ROLES, useRequiredSession } from "@/components/SessionProvider";
 import { useCoachMealReviewIndex } from "@/hooks/useCoachMealReviewIndex";
+import {
+  readStudentsCache,
+  writeStudentsCache,
+} from "@/lib/coach-students-cache";
 import {
   defaultMealLogsFromDate,
   fetchMealLogsForSession,
@@ -55,13 +60,6 @@ const CoachStudentManagementPanel = dynamic(
     })),
   { ssr: false, loading: () => <PageSkeleton rows={3} /> }
 );
-const CoachUnreviewedMealsPanel = dynamic(
-  () =>
-    import("@/components/CoachUnreviewedMealsPanel").then((m) => ({
-      default: m.CoachUnreviewedMealsPanel,
-    })),
-  { ssr: false, loading: () => <PageSkeleton rows={3} /> }
-);
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -72,14 +70,19 @@ export default function CoachStudentsPage() {
   const router = useRouter();
   const brand = useBranding();
   const { session } = useRequiredSession(COACH_ROLES);
-  const [registry, setRegistry] = useState<RegistryUser[]>([]);
-  const [logs, setLogs] = useState<MealLog[]>([]);
-  const [students, setStudents] = useState<RegistryUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = session ? readStudentsCache(session.email) : null;
+  const [registry, setRegistry] = useState<RegistryUser[]>(
+    cached?.registry ?? []
+  );
+  const [logs, setLogs] = useState<MealLog[]>(cached?.logs ?? []);
+  const [students, setStudents] = useState<RegistryUser[]>(
+    cached?.students ?? []
+  );
+  const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
-  const [section, setSection] = useState<CoachStudentsSection>("daily");
-  const sectionInitialized = useRef(false);
+  const [section, setSection] = useState<CoachStudentsSection>("review");
+  const sectionInitialized = useRef(Boolean(cached));
 
   const canReviewMeals =
     session?.role === "coach" || session?.role === "admin";
@@ -105,21 +108,22 @@ export default function CoachStudentsPage() {
   ]);
 
   useEffect(() => {
-    if (loading || reviewIndex.loading || sectionInitialized.current) return;
+    if (loading || sectionInitialized.current) return;
     sectionInitialized.current = true;
     if (canReviewMeals && unreviewedCount > 0) {
       setSection("review");
-    } else {
+    } else if (!canReviewMeals) {
       setSection("daily");
     }
-  }, [loading, reviewIndex.loading, canReviewMeals, unreviewedCount]);
+  }, [loading, canReviewMeals, unreviewedCount]);
 
   const handleReviewChange = useCallback(
-    (mealLogId?: string) => {
+    (mealLogId?: string, kind?: "sticker" | "feedback") => {
       if (mealLogId) {
-        reviewIndex.markMealReviewed(mealLogId);
+        reviewIndex.markMealReviewed(mealLogId, kind ?? "feedback");
+        return;
       }
-      void reviewIndex.reload();
+      void reviewIndex.reload({ silent: true });
     },
     [reviewIndex]
   );
@@ -131,7 +135,9 @@ export default function CoachStudentsPage() {
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (!session) return;
-    if (!options?.silent) setLoading(true);
+    const hasCache = Boolean(readStudentsCache(session.email));
+    const silent = options?.silent || hasCache;
+    if (!silent) setLoading(true);
     setLoadError(null);
 
     try {
@@ -147,29 +153,55 @@ export default function CoachStudentsPage() {
         LOAD_TIMEOUT_MS,
         "讀取飲食記錄逾時"
       );
+      const scopedStudents = filterStudentsForSession(session, userRegistry);
 
       setRegistry(userRegistry);
       setLogs(mealLogs);
-      setStudents(filterStudentsForSession(session, userRegistry));
+      setStudents(scopedStudents);
+      writeStudentsCache({
+        email: session.email,
+        registry: userRegistry,
+        logs: mealLogs,
+        students: scopedStudents,
+      });
     } catch (error) {
       console.error("載入學員資料失敗:", error);
-      setLoadError(errorMessage(error, "暫時載唔到學員資料，請稍後再試"));
-      setLogs([]);
-      setStudents([]);
+      if (!hasCache) {
+        setLoadError(errorMessage(error, "暫時載唔到學員資料，請稍後再試"));
+        setLogs([]);
+        setStudents([]);
+      }
     } finally {
-      if (!options?.silent) setLoading(false);
+      setLoading(false);
     }
   }, [session]);
 
   useEffect(() => {
-    if (session) void loadData();
+    if (!session) return;
+    const hit = readStudentsCache(session.email);
+    if (hit) {
+      setRegistry(hit.registry);
+      setLogs(hit.logs);
+      setStudents(hit.students);
+      setLoading(false);
+      void loadData({ silent: true });
+      return;
+    }
+    void loadData();
   }, [loadData, session]);
 
   const handleRegistryChange = async () => {
     if (!session) return;
     const updated = await fetchUsersForSession(session);
+    const scoped = filterStudentsForSession(session, updated);
     setRegistry(updated);
-    setStudents(filterStudentsForSession(session, updated));
+    setStudents(scoped);
+    writeStudentsCache({
+      email: session.email,
+      registry: updated,
+      logs,
+      students: scoped,
+    });
   };
 
   const handleLogUpdated = (updated: MealLog) => {
@@ -264,7 +296,7 @@ export default function CoachStudentsPage() {
                       coachEmail={session.email}
                       reactions={reviewIndex.reactions}
                       feedback={reviewIndex.feedback}
-                      loading={reviewIndex.loading}
+                      loading={reviewIndex.loading && logs.length === 0}
                       onReviewChange={handleReviewChange}
                       onToast={showToast}
                       onLogUpdated={handleLogUpdated}

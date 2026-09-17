@@ -1,14 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  readReviewCache,
+  reviewLogIdsKey,
+  writeReviewCache,
+} from "@/lib/coach-students-cache";
 import { getSessionRequestHeaders } from "@/lib/session";
 import { fetchWithTimeout } from "@/lib/with-timeout";
 import { filterRecentCoachReviewLogs } from "@/lib/meal-review-status";
 import type { MealLog, MealLogFeedback, MealLogReaction } from "@/lib/types";
 
-const CHUNK_SIZE = 80;
+type ReloadOptions = { silent?: boolean };
 
-async function fetchReviewChunk(mealLogIds: string[]): Promise<{
+function mergeById<T extends { id: string }>(
+  server: T[],
+  localKeep: T[]
+): T[] {
+  if (localKeep.length === 0) return server;
+  const ids = new Set(server.map((item) => item.id));
+  return [...server, ...localKeep.filter((item) => !ids.has(item.id))];
+}
+
+async function fetchReviewStatus(mealLogIds: string[]): Promise<{
   reactions: MealLogReaction[];
   feedback: MealLogFeedback[];
 }> {
@@ -16,31 +30,27 @@ async function fetchReviewChunk(mealLogIds: string[]): Promise<{
     return { reactions: [], feedback: [] };
   }
 
-  const qs = encodeURIComponent(mealLogIds.join(","));
-  const headers = getSessionRequestHeaders();
-  const [reactionRes, feedbackRes] = await Promise.all([
-    fetchWithTimeout(`/api/coach/reactions?mealLogIds=${qs}`, {
-      credentials: "include",
-      cache: "no-store",
-      headers,
-    }),
-    fetchWithTimeout(`/api/coach/meal-feedback?mealLogIds=${qs}`, {
-      credentials: "include",
-      cache: "no-store",
-      headers,
-    }),
-  ]);
+  const res = await fetchWithTimeout("/api/coach/review-status", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...getSessionRequestHeaders(),
+    },
+    body: JSON.stringify({ mealLogIds }),
+  });
 
-  const reactionData = reactionRes.ok
-    ? ((await reactionRes.json()) as { reactions?: MealLogReaction[] })
-    : { reactions: [] };
-  const feedbackData = feedbackRes.ok
-    ? ((await feedbackRes.json()) as { feedback?: MealLogFeedback[] })
-    : { feedback: [] };
+  if (!res.ok) {
+    return { reactions: [], feedback: [] };
+  }
 
+  const data = (await res.json()) as {
+    reactions?: MealLogReaction[];
+    feedback?: MealLogFeedback[];
+  };
   return {
-    reactions: reactionData.reactions ?? [],
-    feedback: feedbackData.feedback ?? [],
+    reactions: data.reactions ?? [],
+    feedback: data.feedback ?? [],
   };
 }
 
@@ -48,56 +58,127 @@ export function useCoachMealReviewIndex(
   logs: MealLog[],
   coachEmail?: string | null
 ) {
-  const [reactions, setReactions] = useState<MealLogReaction[]>([]);
-  const [feedback, setFeedback] = useState<MealLogFeedback[]>([]);
-  const [loading, setLoading] = useState(false);
-
   const recentLogs = useMemo(
     () => filterRecentCoachReviewLogs(logs),
     [logs]
   );
+  const idsKey = useMemo(
+    () => reviewLogIdsKey(recentLogs.map((log) => log.id)),
+    [recentLogs]
+  );
 
-  const reload = useCallback(async () => {
-    if (!coachEmail || recentLogs.length === 0) {
-      setReactions([]);
-      setFeedback([]);
-      return;
-    }
+  const cached =
+    coachEmail && idsKey
+      ? readReviewCache(coachEmail, idsKey)
+      : null;
 
-    setLoading(true);
-    try {
-      const ids = recentLogs.map((l) => l.id);
-      const allReactions: MealLogReaction[] = [];
-      const allFeedback: MealLogFeedback[] = [];
+  const [reactions, setReactions] = useState<MealLogReaction[]>(
+    cached?.reactions ?? []
+  );
+  const [feedback, setFeedback] = useState<MealLogFeedback[]>(
+    cached?.feedback ?? []
+  );
+  const [loading, setLoading] = useState(
+    Boolean(coachEmail) && recentLogs.length > 0 && !cached
+  );
+  const localIdsRef = useRef<Set<string>>(new Set());
+  const hasDataRef = useRef(Boolean(cached));
 
-      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-        const chunk = ids.slice(i, i + CHUNK_SIZE);
-        const batch = await fetchReviewChunk(chunk);
-        allReactions.push(...batch.reactions);
-        allFeedback.push(...batch.feedback);
+  const reload = useCallback(
+    async (options?: ReloadOptions) => {
+      if (!coachEmail) {
+        setReactions([]);
+        setFeedback([]);
+        setLoading(false);
+        return;
       }
 
-      setReactions(allReactions);
-      setFeedback(allFeedback);
-    } catch {
-      setReactions([]);
-      setFeedback([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [coachEmail, recentLogs]);
+      const ids = idsKey ? idsKey.split("|").filter(Boolean) : [];
+      if (ids.length === 0) {
+        setReactions([]);
+        setFeedback([]);
+        setLoading(false);
+        return;
+      }
+
+      const silent = Boolean(options?.silent);
+      if (!silent && !hasDataRef.current) setLoading(true);
+
+      try {
+        const batch = await fetchReviewStatus(ids);
+        let nextReactions: MealLogReaction[] = [];
+        let nextFeedback: MealLogFeedback[] = [];
+        setReactions((prev) => {
+          nextReactions = mergeById(
+            batch.reactions,
+            prev.filter((item) => localIdsRef.current.has(item.id))
+          );
+          return nextReactions;
+        });
+        setFeedback((prev) => {
+          nextFeedback = mergeById(
+            batch.feedback,
+            prev.filter((item) => localIdsRef.current.has(item.id))
+          );
+          return nextFeedback;
+        });
+        writeReviewCache({
+          email: coachEmail,
+          reactions: nextReactions,
+          feedback: nextFeedback,
+          logIdsKey: idsKey,
+        });
+        hasDataRef.current = true;
+      } catch {
+        if (!silent) {
+          setReactions([]);
+          setFeedback([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [coachEmail, idsKey]
+  );
 
   const markMealReviewed = useCallback(
-    (mealLogId: string) => {
+    (mealLogId: string, kind: "sticker" | "feedback" = "feedback") => {
       if (!coachEmail) return;
       const coach = coachEmail.trim().toLowerCase();
+      const localId = `local-${kind}-${mealLogId}-${coach}`;
+      localIdsRef.current.add(localId);
+
+      if (kind === "sticker") {
+        setReactions((prev) => {
+          if (
+            prev.some(
+              (item) =>
+                item.mealLogId === mealLogId &&
+                item.coachEmail.trim().toLowerCase() === coach
+            )
+          ) {
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              id: localId,
+              mealLogId,
+              coachEmail,
+              sticker: "local",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+        });
+        return;
+      }
 
       setFeedback((prev) => {
         if (
           prev.some(
-            (f) =>
-              f.mealLogId === mealLogId &&
-              f.coachEmail.trim().toLowerCase() === coach
+            (item) =>
+              item.mealLogId === mealLogId &&
+              item.coachEmail.trim().toLowerCase() === coach
           )
         ) {
           return prev;
@@ -105,7 +186,7 @@ export function useCoachMealReviewIndex(
         return [
           ...prev,
           {
-            id: `local-${mealLogId}-${coach}`,
+            id: localId,
             mealLogId,
             coachEmail,
             presetKey: "local",
@@ -119,8 +200,31 @@ export function useCoachMealReviewIndex(
   );
 
   useEffect(() => {
+    if (!coachEmail) return;
+    if (cached && cached.logIdsKey === idsKey) {
+      setReactions(cached.reactions);
+      setFeedback(cached.feedback);
+      setLoading(false);
+      void reload({ silent: true });
+      return;
+    }
     void reload();
-  }, [reload]);
+    // Intentionally only refetch when the meal id set or coach changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coachEmail, idsKey]);
 
-  return { reactions, feedback, loading, reload, markMealReviewed };
+  useEffect(() => {
+    if (!coachEmail || !idsKey || !hasDataRef.current) return;
+    writeReviewCache({
+      email: coachEmail,
+      reactions,
+      feedback,
+      logIdsKey: idsKey,
+    });
+  }, [coachEmail, idsKey, reactions, feedback]);
+
+  return useMemo(
+    () => ({ reactions, feedback, loading, reload, markMealReviewed }),
+    [reactions, feedback, loading, reload, markMealReviewed]
+  );
 }

@@ -24,7 +24,10 @@ type Props = {
   reactions: MealLogReaction[];
   feedback: MealLogFeedback[];
   loading?: boolean;
-  onReviewChange?: (mealLogId?: string) => void;
+  onReviewChange?: (
+    mealLogId?: string,
+    kind?: "sticker" | "feedback"
+  ) => void;
   onToast: (message: string) => void;
   onLogUpdated?: (log: MealLog) => void;
   onLogDeleted?: (id: string) => void;
@@ -52,8 +55,11 @@ export function CoachUnreviewedMealsPanel({
 
   const visible = showAll ? unreviewed : unreviewed.slice(0, 8);
 
-  const handleReviewed = (mealLogId: string) => {
-    onReviewChange?.(mealLogId);
+  const handleReviewed = (
+    mealLogId: string,
+    kind: "sticker" | "feedback" = "feedback"
+  ) => {
+    onReviewChange?.(mealLogId, kind);
     onToast("已標記檢閱");
   };
 
@@ -73,11 +79,11 @@ export function CoachUnreviewedMealsPanel({
             </p>
           </div>
           <span className="shrink-0 min-w-[2rem] text-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold">
-            {loading ? "…" : unreviewed.length}
+            {unreviewed.length}
           </span>
         </div>
 
-        {loading ? (
+        {loading && unreviewed.length === 0 ? (
           <LoadingView variant="section" message="載入檢閱狀態…" />
         ) : unreviewed.length === 0 ? (
           <p className="text-sm text-emerald-700 bg-emerald-50 rounded-xl px-3 py-4 text-center">
@@ -131,7 +137,7 @@ export function CoachUnreviewedMealsPanel({
                       <CoachMealReviewActions
                         log={log}
                         compact
-                        onSent={() => handleReviewed(log.id)}
+                        onSent={(kind) => handleReviewed(log.id, kind)}
                         onError={(msg) => onToast(msg)}
                       />
                     </div>
@@ -175,7 +181,7 @@ export function CoachUnreviewedMealsPanel({
             onToast("已刪除學員飲食記錄");
           }}
           onCoachFeedbackSent={() => {
-            onReviewChange?.(selectedLog.id);
+            onReviewChange?.(selectedLog.id, "feedback");
             onToast("已送出評語，學員會收到 App 通知");
           }}
         />
