@@ -4,10 +4,9 @@
 
 Next.js 14 App Router · Tailwind CSS · Supabase · PWA · Web Push · AI（OpenRouter）
 
-**正式站：** https://fitclub-pearl.vercel.app  
-（`fitclub.hk` 目前無 DNS／NXDOMAIN，請用上面 Vercel 網址）
+**正式站：** https://fitclub.hk  
 
-> **部分 Wi‑Fi 開唔到 `*.vercel.app`？** 關 Wi‑Fi 用流動數據通常得。長遠請綁定自訂域名（例如 `fitclub.hk`），見 [docs/CUSTOM_DOMAIN.md](docs/CUSTOM_DOMAIN.md)。
+> 公開連結、PWA、Capacitor 殼都用 `fitclub.hk`（可用 `NEXT_PUBLIC_SITE_URL` / `CAPACITOR_SERVER_URL` 覆寫），唔需要 `*.vercel.app`。域名／DNS 見 [docs/CUSTOM_DOMAIN.md](docs/CUSTOM_DOMAIN.md)。
 
 ## 功能概覽
 
@@ -101,6 +100,8 @@ npx web-push generate-vapid-keys
 
 | 變數 | 用途 |
 |------|------|
+| `NEXT_PUBLIC_SITE_URL` / `NEXT_PUBLIC_APP_URL` | 公開站 URL（預設 `https://fitclub.hk`） |
+| `CAPACITOR_SERVER_URL` | 原生殼載入 URL（預設同上） |
 | `OPENAI_API_KEY` | OCR / Vision 後備 |
 | `EDAMAM_APP_ID` / `EDAMAM_APP_KEY` | Edamam 食物 API（備用） |
 
