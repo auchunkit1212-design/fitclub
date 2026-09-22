@@ -1,5 +1,5 @@
+import { toPublicBrandLogoUrl } from "@/lib/brand-logo";
 import { fetchCoachByName, fetchCoachByTenantId } from "@/lib/db-coach-lookup";
-import { safeBrandLogo } from "@/lib/session-sanitize";
 import { fetchTenantById } from "@/lib/tenant";
 import type {
   CoachBranding,
@@ -17,13 +17,11 @@ export interface ResolvedBrand {
 }
 
 function resolveBrandingLogo(
-  ...candidates: (string | null | undefined)[]
+  logo: string | null | undefined,
+  tenantSlug?: string | null,
+  email?: string | null
 ): string | undefined {
-  for (const raw of candidates) {
-    const safe = safeBrandLogo(raw);
-    if (safe) return safe;
-  }
-  return undefined;
+  return toPublicBrandLogoUrl({ logo, tenantSlug, email });
 }
 
 export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
@@ -34,7 +32,7 @@ export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
     branding: {
       appTitle: tenant.gymName,
       themeColor: "emerald",
-      logo: resolveBrandingLogo(tenant.logoUrl),
+      logo: resolveBrandingLogo(tenant.logoUrl, tenant.slug),
     },
   };
 }
@@ -46,7 +44,7 @@ export function brandingFromCoach(coach: RegistryUser): ResolvedBrand {
     branding: {
       appTitle: coach.appTitle ?? coach.gym ?? DEFAULT_BRANDING.appTitle,
       themeColor: coach.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: resolveBrandingLogo(coach.logo),
+      logo: resolveBrandingLogo(coach.logo, undefined, coach.email),
     },
   };
 }
@@ -63,7 +61,11 @@ export async function resolveBrandForUser(
       );
       const base = brandingFromTenant(tenant);
       if (coach?.logo) {
-        base.branding.logo = coach.logo;
+        base.branding.logo = resolveBrandingLogo(
+          coach.logo,
+          tenant.slug,
+          coach.email
+        );
       }
       if (coach?.themeColor) {
         base.branding.themeColor = coach.themeColor;
@@ -107,7 +109,13 @@ export async function resolveBrandForLogin(
     if (tenant) {
       const base = brandingFromTenant(tenant);
       const coach = await fetchCoachByTenantId(user.tenantId);
-      if (coach?.logo) base.branding.logo = coach.logo;
+      if (coach?.logo) {
+        base.branding.logo = resolveBrandingLogo(
+          coach.logo,
+          tenant.slug,
+          coach.email
+        );
+      }
       if (coach?.themeColor) base.branding.themeColor = coach.themeColor;
       if (coach?.broadcast) base.broadcast = coach.broadcast;
       return base;
@@ -129,7 +137,7 @@ export async function resolveBrandForLogin(
     branding: {
       appTitle: user.appTitle ?? user.gym ?? DEFAULT_BRANDING.appTitle,
       themeColor: user.themeColor ?? DEFAULT_BRANDING.themeColor,
-      logo: resolveBrandingLogo(user.logo),
+      logo: resolveBrandingLogo(user.logo, session.tenantSlug, user.email),
     },
   };
 }
@@ -138,11 +146,16 @@ export function applyBrandToSession(
   session: UserSession,
   brand: ResolvedBrand
 ): UserSession {
+  const tenantSlug = brand.tenantSlug ?? session.tenantSlug;
   return {
     ...session,
     brandName: brand.gymName,
-    brandLogo: brand.branding.logo,
-    tenantSlug: brand.tenantSlug ?? session.tenantSlug,
+    brandLogo: toPublicBrandLogoUrl({
+      logo: brand.branding.logo,
+      tenantSlug,
+      email: session.email,
+    }),
+    tenantSlug,
     gym: brand.gymName,
   };
 }

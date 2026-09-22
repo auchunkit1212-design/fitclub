@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useBranding } from "@/components/BrandingProvider";
 import { GorillaMascot } from "@/components/GorillaMascot";
 
 type LoadingViewProps = {
@@ -35,6 +36,9 @@ export function LoadingView({
   className = "",
   children,
 }: LoadingViewProps) {
+  const brand = useBranding();
+  const resolvedLogo = logoUrl || brand.logo;
+
   if (variant === "inline") {
     return (
       <span
@@ -50,7 +54,7 @@ export function LoadingView({
 
   const shellClass =
     variant === "fullscreen"
-      ? "min-h-screen flex flex-col items-center justify-center gap-5 px-6 text-center"
+      ? "min-h-screen flex flex-col items-center justify-center gap-5 px-6 text-center bg-white"
       : "flex flex-col items-center justify-center gap-4 py-12 px-6 text-center w-full";
 
   return (
@@ -66,7 +70,7 @@ export function LoadingView({
           aria-hidden
         />
         <div className="relative animate-gorilla-bounce">
-          <GorillaMascot size="xl" logoUrl={logoUrl} />
+          <GorillaMascot size="xl" logoUrl={resolvedLogo} />
         </div>
         <div className="relative w-28 h-1 rounded-full bg-emerald-100 overflow-hidden">
           <div className="h-full w-1/3 rounded-full bg-emerald-500 animate-loading-bar" />
@@ -74,6 +78,9 @@ export function LoadingView({
       </div>
 
       <div className="space-y-2 max-w-xs">
+        {brand.logo && brand.gymName ? (
+          <p className="text-sm font-semibold text-gray-900">{brand.gymName}</p>
+        ) : null}
         <LoadingDots />
         {message ? (
           <p className="text-sm text-zinc-500 leading-relaxed">{message}</p>

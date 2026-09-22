@@ -1,3 +1,4 @@
+import { resolveDisplayBrandLogo } from "@/lib/brand-logo";
 import type { CoachBranding, UserSession } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
 
@@ -23,6 +24,6 @@ export function brandingFromSession(session: UserSession): CoachBranding {
   return {
     appTitle: session.brandName ?? session.gym ?? DEFAULT_BRANDING.appTitle,
     themeColor: "emerald",
-    logo: session.brandLogo,
+    logo: resolveDisplayBrandLogo(session) ?? session.brandLogo,
   };
 }

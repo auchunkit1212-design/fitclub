@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { APP_LOGO_PATH, resolveTenantLogoUrl } from "@/lib/brand";
 
 interface GorillaMascotProps {
@@ -37,9 +38,14 @@ export function GorillaMascot({
 }: GorillaMascotProps) {
   const dim = SIZE_CLASS[size];
   const pad = PAD_CLASS[size];
-  const tenantLogo = resolveTenantLogoUrl(logoUrl);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const tenantLogo = !logoFailed ? resolveTenantLogoUrl(logoUrl) : undefined;
   const src = tenantLogo ?? APP_LOGO_PATH;
   const alt = tenantLogo ? "Brand logo" : "Nutrition Coach";
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUrl]);
 
   return (
     <div
@@ -50,6 +56,9 @@ export function GorillaMascot({
       <img
         src={src}
         alt={alt}
+        onError={() => {
+          if (tenantLogo) setLogoFailed(true);
+        }}
         className={`w-full h-full ${
           tenantLogo ? "object-cover rounded-full" : "object-contain"
         }`}

@@ -6,8 +6,8 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeedCard } from "@/components/CommunityFeedCard";
 import { CommunityHubStrip } from "@/components/CommunityHubStrip";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { LoadingView } from "@/components/LoadingView";
-import { PageSkeleton } from "@/components/PageSkeleton";
 import { Globe, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { useRequiredSession } from "@/components/SessionProvider";
@@ -49,18 +49,7 @@ export default function CommunityPage() {
   }, [session, refreshFeed]);
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
-        <header className="pt-safe px-4 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {t("community.title", "探索")}
-          </h1>
-        </header>
-        <main className="px-4 py-5">
-          <PageSkeleton rows={4} />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

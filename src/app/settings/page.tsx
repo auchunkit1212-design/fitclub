@@ -7,7 +7,7 @@ import { StudentAppGuide } from "@/components/StudentAppGuide";
 import { StudentAppSettingsPanel } from "@/components/StudentAppSettingsPanel";
 import { ProBillingPanel } from "@/components/ProBillingPanel";
 import { StudentShareAppPanel } from "@/components/StudentShareAppPanel";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { Settings, IconLabel } from "@/components/icons";
 import { useI18n } from "@/components/I18nProvider";
 import { STUDENT_ROLE, useRequiredSession } from "@/components/SessionProvider";
@@ -47,18 +47,7 @@ export default function SettingsPage() {
   }, []);
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
-        <header className="pt-safe px-4 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {t("nav.settings", "設定")}
-          </h1>
-        </header>
-        <main className="px-4 py-5">
-          <PageSkeleton rows={3} />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

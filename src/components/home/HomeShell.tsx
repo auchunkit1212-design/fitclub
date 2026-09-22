@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -17,22 +18,7 @@ export const HOME_SOFT_CARD =
 export const HOME_BRAND_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
 
 export function HomeChunkFallback() {
-  return (
-    <div className="min-h-screen bg-white pb-32">
-      <div className="w-full max-w-md mx-auto px-4 py-6 pt-safe space-y-4">
-        <div className="h-20 rounded-3xl bg-zinc-100 animate-pulse" />
-        <div className="h-24 rounded-3xl bg-zinc-100 animate-pulse" />
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="min-h-[9.25rem] rounded-[1.75rem] bg-zinc-100 animate-pulse"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return <AppLoadingScreen />;
 }
 
 export function HomeShell({

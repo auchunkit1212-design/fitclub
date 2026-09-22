@@ -1,14 +1,39 @@
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { cookies } from "next/headers";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
+import {
+  LAST_BRAND_COOKIE,
+  parseLastBrandJson,
+  resolveDisplayBrandLogo,
+} from "@/lib/brand-logo";
+import type { UserSession } from "@/lib/types";
+
+function readCookieSession(raw?: string): UserSession | null {
+  if (!raw) return null;
+  for (const candidate of [raw, decodeURIComponentSafe(raw)]) {
+    if (!candidate) continue;
+    try {
+      const session = JSON.parse(candidate) as UserSession;
+      if (session?.email) return session;
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
+function decodeURIComponentSafe(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
 
 export default function AppLoading() {
-  return (
-    <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
-      <div className="pt-[max(1.25rem,env(safe-area-inset-top))] px-4 pb-4">
-        <div className="h-8 w-28 rounded-xl bg-zinc-100 animate-pulse" />
-      </div>
-      <main className="px-4 py-5">
-        <PageSkeleton rows={4} />
-      </main>
-    </div>
-  );
+  const jar = cookies();
+  const last = parseLastBrandJson(jar.get(LAST_BRAND_COOKIE)?.value);
+  const session = readCookieSession(jar.get("current_session")?.value);
+  const logoUrl = resolveDisplayBrandLogo(session) ?? last?.logo;
+
+  return <AppLoadingScreen logoUrl={logoUrl} />;
 }

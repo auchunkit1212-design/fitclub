@@ -17,6 +17,7 @@ import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
 import { saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { BottomNav } from "@/components/BottomNav";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -241,20 +242,7 @@ export default function CoachPage() {
   };
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
-        <PageHeader
-          title="教練後台"
-          subtitle={brand.gymName}
-          variant="light"
-          backLabel="← 返回主頁"
-          onBack={() => router.push("/")}
-        />
-        <main className="px-4 py-4">
-          <PageSkeleton rows={5} />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

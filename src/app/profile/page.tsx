@@ -16,6 +16,7 @@ import {
   isBodyProfileComplete,
 } from "@/lib/body-profile";
 import { defaultMealLogsFromDate, fetchOwnMealLogsForSession, fetchStudentBodyProfile } from "@/lib/db";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { useRequiredSession } from "@/components/SessionProvider";
 import {
@@ -241,18 +242,7 @@ export default function ProfilePage() {
   };
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto w-full">
-        <header className="pt-safe px-4 pb-4 border-b border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {t("nav.profile", "我的")}
-          </h1>
-        </header>
-        <main className="px-4 py-5">
-          <PageSkeleton rows={4} />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

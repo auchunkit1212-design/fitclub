@@ -14,7 +14,7 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { NutritionDashboard } from "@/components/NutritionDashboard";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { useRequiredSession } from "@/components/SessionProvider";
 import { SnackLabelScanner } from "@/components/SnackLabelScanner";
 import { BarChart2, Camera, Cookie, Globe, IconLabel, Loader2, ScanLine, Sparkles } from "@/components/icons";
@@ -113,16 +113,7 @@ function suggestProteinPortionKey(proteinG: number): ProteinPortionKey {
 }
 
 function AddMealFallback() {
-  return (
-    <div className="min-h-screen bg-white max-w-lg mx-auto pb-safe">
-      <div className="px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4">
-        <div className="h-8 w-40 rounded-xl bg-zinc-100 animate-pulse" />
-      </div>
-      <main className="px-4 py-4">
-        <PageSkeleton rows={4} />
-      </main>
-    </div>
-  );
+  return <AppLoadingScreen />;
 }
 
 function AddMealPageContent() {

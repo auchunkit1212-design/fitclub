@@ -1,7 +1,7 @@
 "use client";
 
 import { ComingSoonFeature } from "@/components/ComingSoonFeature";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { useI18n } from "@/components/I18nProvider";
 import { useRequiredSession } from "@/components/SessionProvider";
 
@@ -10,11 +10,7 @@ export default function GroceryPage() {
   const { session } = useRequiredSession();
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto px-4 py-6">
-        <PageSkeleton rows={3} />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

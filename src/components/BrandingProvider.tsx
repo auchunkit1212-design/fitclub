@@ -8,13 +8,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getSession } from "@/lib/session";
+import {
+  readLastBrand,
+  resolveDisplayBrandLogo,
+  writeLastBrand,
+} from "@/lib/brand-logo";
+import { SESSION_CHANGE_EVENT, getSession } from "@/lib/session";
 import { DEFAULT_BRANDING, DEFAULT_GYM_NAME } from "@/lib/types";
 
 interface BrandingState {
   gymName: string;
   appTitle: string;
   logo?: string;
+  tenantSlug?: string;
 }
 
 const BrandingContext = createContext<BrandingState>({
@@ -24,6 +30,16 @@ const BrandingContext = createContext<BrandingState>({
 
 export function useBranding() {
   return useContext(BrandingContext);
+}
+
+function brandFromLastKnown(): BrandingState {
+  const last = readLastBrand();
+  return {
+    gymName: last?.gymName ?? DEFAULT_GYM_NAME,
+    appTitle: last?.gymName ?? DEFAULT_BRANDING.appTitle,
+    logo: last?.logo,
+    tenantSlug: last?.tenantSlug,
+  };
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
@@ -36,22 +52,32 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     const sync = () => {
       const session = getSession();
       if (session?.isLoggedIn) {
-        setBrand({
+        const next: BrandingState = {
           gymName: session.brandName ?? session.gym ?? DEFAULT_GYM_NAME,
-          appTitle: session.brandName ?? session.gym ?? DEFAULT_BRANDING.appTitle,
-          logo: session.brandLogo,
+          appTitle:
+            session.brandName ?? session.gym ?? DEFAULT_BRANDING.appTitle,
+          logo: resolveDisplayBrandLogo(session),
+          tenantSlug: session.tenantSlug,
+        };
+        setBrand(next);
+        writeLastBrand({
+          gymName: next.gymName,
+          logo: next.logo,
+          tenantSlug: next.tenantSlug,
         });
-      } else {
-        setBrand({
-          gymName: DEFAULT_GYM_NAME,
-          appTitle: DEFAULT_BRANDING.appTitle,
-        });
+        return;
       }
+
+      setBrand(brandFromLastKnown());
     };
 
     sync();
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    window.addEventListener(SESSION_CHANGE_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(SESSION_CHANGE_EVENT, sync);
+    };
   }, []);
 
   const value = useMemo(() => brand, [brand]);

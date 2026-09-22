@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { LoadingView } from "@/components/LoadingView";
 import { PageHeader } from "@/components/PageHeader";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -165,18 +166,7 @@ export default function LeaderboardPage() {
   };
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
-        <PageHeader
-          title={t("leaderboard.title", "減脂挑戰賽")}
-          subtitle={t("leaderboard.subtitle", "每月排行榜")}
-          onBack={() => router.push("/community")}
-        />
-        <main className="px-4 py-4">
-          <div className="h-40 rounded-[2rem] bg-zinc-100 animate-pulse" />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   const canGoNext =

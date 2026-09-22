@@ -5,6 +5,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { RegisterInvitePrefill } from "@/components/RegisterInvitePrefill";
 import { useRouter } from "next/navigation";
+import { useBranding } from "@/components/BrandingProvider";
 import { GorillaMascot } from "@/components/GorillaMascot";
 import {
   Building2,
@@ -15,6 +16,7 @@ import {
 } from "@/components/icons";
 import { IosPwaInstallBanner } from "@/components/IosPwaInstallBanner";
 import { RegisterLegalConsent } from "@/components/RegisterLegalConsent";
+import { tenantLogoProxyUrl, writeLastBrand } from "@/lib/brand-logo";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import {
   hasInviteInUrl,
@@ -46,6 +48,11 @@ type SignupTrack = "solo" | "coach";
 export default function RegisterPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const brand = useBranding();
+  const [inviteBrand, setInviteBrand] = useState<{
+    gymName?: string;
+    logo?: string;
+  } | null>(null);
   const [authTab, setAuthTab] = useState<AuthTab>("login");
   const [signupTrack, setSignupTrack] = useState<SignupTrack>("solo");
   const [email, setEmail] = useState("");
@@ -79,6 +86,47 @@ export default function RegisterPage() {
     initUserRegistry().catch(() => undefined);
     setShowIosBanner(isIosSafariBrowser());
   }, [router]);
+
+  useEffect(() => {
+    const code = inviteCode.trim();
+    if (!code) {
+      setInviteBrand(null);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+    fetch(`/api/tenant/branding?slug=${encodeURIComponent(code)}`, {
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as {
+          gymName?: string;
+          slug?: string;
+          logo?: string;
+        };
+      })
+      .then((data) => {
+        if (cancelled || !data?.gymName) return;
+        const next = {
+          gymName: data.gymName,
+          logo: data.logo ?? tenantLogoProxyUrl({ slug: data.slug ?? code }),
+        };
+        setInviteBrand(next);
+        writeLastBrand({
+          gymName: next.gymName,
+          logo: next.logo,
+          tenantSlug: data.slug ?? code,
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [inviteCode]);
 
   const welcomeText = useMemo(() => {
     if (authTab === "login") {
@@ -317,12 +365,18 @@ export default function RegisterPage() {
 
       <div className="text-center mb-5">
         <div className="flex justify-center mb-3">
-          <GorillaMascot size="lg" />
+          <GorillaMascot
+            size="lg"
+            logoUrl={inviteBrand?.logo ?? brand.logo}
+          />
         </div>
         <p className="text-emerald-300/90 text-xs font-semibold tracking-wide">
           {BRAND_TAGLINE}
         </p>
-        <h1 className="text-2xl font-black text-gray-900 mt-2">{BRAND_NAME}</h1>
+        <h1 className="text-2xl font-black text-gray-900 mt-2">
+          {inviteBrand?.gymName ||
+            (brand.logo ? brand.gymName : BRAND_NAME)}
+        </h1>
       </div>
 
       <div className="bg-white rounded-3xl p-5 shadow-2xl border border-zinc-100 space-y-4">

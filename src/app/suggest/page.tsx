@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { CoachSuggestCard } from "@/components/CoachSuggestCard";
 import { PageHeader } from "@/components/PageHeader";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 import { ProFeatureGate } from "@/components/ProFeatureGate";
 import { useI18n } from "@/components/I18nProvider";
 import { useRequiredSession } from "@/components/SessionProvider";
@@ -57,18 +57,7 @@ export default function SuggestPage() {
   const todayFats = todayLogs.reduce((s, l) => s + (l.fats || 0), 0);
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-zinc-50 pb-32 max-w-lg mx-auto">
-        <PageHeader
-          title={t("community.hub.coach-suggest.title", "教練！食咩好？")}
-          subtitle={t("community.hub.coach-suggest.subtitle", "按剩餘宏量配餐")}
-          onBack={() => router.push("/community")}
-        />
-        <main className="px-4 py-4">
-          <PageSkeleton rows={3} />
-        </main>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (
