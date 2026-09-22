@@ -41,13 +41,24 @@ const ProBillingPanel = dynamic(
   { ssr: false }
 );
 import type {
-  CoachBranding,
   MealLog,
   RegistryUser,
   ThemeColor,
-  UserSession,
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
+import { GorillaMascot } from "@/components/GorillaMascot";
+import { SOFT_CARD } from "@/lib/ui-tokens";
+
+type CoachTab = "invite" | "brand" | "more";
+
+const TAB_FROM_HASH: Record<string, CoachTab> = {
+  "coach-invite": "invite",
+  "coach-branding": "brand",
+  "coach-notifications": "more",
+  "coach-meals": "more",
+  "coach-plan": "more",
+  "coach-report": "more",
+};
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -76,6 +87,7 @@ export default function CoachPage() {
   const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
   const [toast, setToast] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState<CoachTab>("invite");
   const silentRefreshRef = useRef(false);
 
   const showToast = (message: string) => {
@@ -152,8 +164,13 @@ export default function CoachPage() {
   }, [session, refreshKey]);
 
   useEffect(() => {
-    if (!session || !window.location.hash) return;
-    const target = document.getElementById(window.location.hash.slice(1));
+    if (!session) return;
+    const hash = window.location.hash.slice(1);
+    if (hash && TAB_FROM_HASH[hash]) {
+      setTab(TAB_FROM_HASH[hash]);
+    }
+    if (!hash) return;
+    const target = document.getElementById(hash);
     if (!target) return;
     window.requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -254,15 +271,56 @@ export default function CoachPage() {
     >
     <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
       <PageHeader
-        title={`${appTitle.trim() || brand.gymName} · 教練後台`}
-        subtitle={`${appTitle.trim() || brand.appTitle || brand.gymName} · 品牌設定`}
+        title="教練後台"
+        subtitle={appTitle.trim() || brand.gymName}
         variant="light"
-        backLabel="← 返回主頁"
+        backLabel="← 返回"
         onBack={() => router.push("/")}
       />
 
-      <main className="px-4 py-4 space-y-4">
-        {session?.role === "coach" && (
+      <main className="px-4 py-5 space-y-5">
+        <section className={`${SOFT_CARD} p-5 flex items-center gap-4`}>
+          <GorillaMascot
+            size="md"
+            logoUrl={logo || brand.logo || session.brandLogo}
+          />
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500">健身室</p>
+            <p className="text-lg font-semibold text-gray-900 truncate">
+              {appTitle.trim() || brand.gymName}
+            </p>
+            {inviteCode ? (
+              <p className="text-xs text-gray-400 mt-0.5 truncate">
+                邀請碼 {inviteCode}
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        {session.role === "coach" ? (
+        <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-100 rounded-2xl">
+          {(
+            [
+              ["invite", "邀請"],
+              ["brand", "品牌"],
+              ["more", "更多"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`py-2.5 rounded-xl text-sm font-semibold ${btnClass} ${
+                tab === id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        ) : null}
+
+        {tab === "invite" && session.role === "coach" ? (
           <div id="coach-invite" className="scroll-mt-24">
             <CoachInviteCodePanel
               inviteCode={inviteCode}
@@ -271,60 +329,23 @@ export default function CoachPage() {
               onCopied={showToast}
             />
           </div>
-        )}
+        ) : null}
 
-        {(session?.role === "coach" || session?.role === "admin") && (
-          <div id="coach-notifications" className="scroll-mt-24">
-            <CoachPushSubscribe />
-          </div>
-        )}
-
-        {(session?.role === "coach" || session?.role === "admin") && (
-          <div id="coach-meals" className="scroll-mt-24">
-            <CoachSelfMealPanel logs={ownMealLogs} />
-          </div>
-        )}
-
-        {(session?.role === "coach" || session?.role === "admin") && (
-          <div id="coach-plan" className="scroll-mt-24">
-            <ProBillingPanel />
-          </div>
-        )}
-
-        {session && (
-          <div id="coach-report" className="scroll-mt-24">
-            <CoachAiReportPanel
-              session={session}
-              registry={registry}
-              gymName={appTitle.trim() || brand.gymName}
-              onToast={showToast}
-              variant="light"
-            />
-          </div>
-        )}
-
-        {session?.role === "coach" && (
+        {tab === "brand" && session.role === "coach" ? (
           <section
             id="coach-branding"
-            className="scroll-mt-24 bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm"
+            className={`scroll-mt-24 ${SOFT_CARD} p-5 space-y-5`}
           >
-            <h2 className="font-semibold text-emerald-800">品牌設定</h2>
-
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                App 標題
-              </label>
-              <input
-                type="text"
-                value={appTitle}
-                onChange={(e) => setAppTitle(e.target.value)}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-              />
+              <h2 className="font-semibold text-gray-900">品牌設定</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                學員開 App 同載入畫面都會見到呢個標誌。
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                健身房 Logo
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                健身室 Logo
               </label>
               <input
                 ref={logoInputRef}
@@ -333,52 +354,79 @@ export default function CoachPage() {
                 className="hidden"
                 onChange={handleLogoChange}
               />
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={handleLogoPick}
-                onKeyDown={(e) => e.key === "Enter" && handleLogoPick()}
-                className={`flex items-center gap-3 border-2 border-dashed border-zinc-300 rounded-xl p-3 ${btnClass}`}
+                className={`flex w-full items-center gap-4 rounded-2xl bg-zinc-50 px-4 py-3 text-left ${btnClass}`}
               >
-                <div className="w-12 h-12 rounded-full bg-zinc-100 overflow-hidden shrink-0">
-                  {logo ? (
-                    <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[10px] text-zinc-400 flex items-center justify-center h-full">
-                      無
-                    </span>
-                  )}
+                <GorillaMascot size="md" logoUrl={logo} />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {logo ? "更換 Logo" : "上傳 Logo"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    方形圖片最清楚
+                  </p>
                 </div>
-                <p className="text-sm text-zinc-600">撳一下上傳 Logo</p>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                健身室名稱
+              </label>
+              <input
+                type="text"
+                value={appTitle}
+                onChange={(e) => setAppTitle(e.target.value)}
+                className="w-full rounded-2xl bg-zinc-50 px-4 py-3 text-gray-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                主題色
+              </label>
+              <div className="flex gap-3">
+                {THEME_OPTIONS.map((option) => {
+                  const selected = themeColor === option.value;
+                  const swatch =
+                    option.value === "blue"
+                      ? "bg-blue-600"
+                      : option.value === "black"
+                        ? "bg-zinc-900"
+                        : "bg-emerald-600";
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setThemeColor(option.value)}
+                      className={`flex-1 rounded-2xl px-3 py-3 text-xs font-medium ${btnClass} ${
+                        selected
+                          ? "bg-white ring-2 ring-emerald-600 text-gray-900"
+                          : "bg-zinc-50 text-gray-500"
+                      }`}
+                    >
+                      <span
+                        className={`mx-auto mb-2 block h-6 w-6 rounded-full ${swatch}`}
+                      />
+                      {option.label.split(" ")[0]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                主題色
-              </label>
-              <select
-                value={themeColor}
-                onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-              >
-                {THEME_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                緊急廣播訊息
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                學員廣播
               </label>
               <textarea
                 value={broadcast}
                 onChange={(e) => setBroadcast(e.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
+                placeholder="可選：通知全部學員"
+                className="w-full rounded-2xl bg-zinc-50 px-4 py-3 resize-none text-gray-900"
               />
             </div>
 
@@ -386,15 +434,46 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-2xl disabled:opacity-60 ${btnClass}`}
             >
-              {publishing ? "儲存緊..." : "儲存品牌設定"}
+              {publishing ? "儲存緊..." : "儲存"}
             </button>
           </section>
-        )}
+        ) : null}
+
+        {tab === "more" || session.role !== "coach" ? (
+          <div className="space-y-4">
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-notifications" className="scroll-mt-24">
+                <CoachPushSubscribe />
+              </div>
+            )}
+
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-meals" className="scroll-mt-24">
+                <CoachSelfMealPanel logs={ownMealLogs} />
+              </div>
+            )}
+
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-plan" className="scroll-mt-24">
+                <ProBillingPanel />
+              </div>
+            )}
+
+            <div id="coach-report" className="scroll-mt-24">
+              <CoachAiReportPanel
+                session={session}
+                registry={registry}
+                gymName={appTitle.trim() || brand.gymName}
+                onToast={showToast}
+                variant="light"
+              />
+            </div>
+          </div>
+        ) : null}
 
         <LegalFooterLinks className="py-2" />
-
       </main>
 
       <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
