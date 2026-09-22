@@ -34,6 +34,7 @@ export function HomeShell({
   extraHeader,
   welcomeExtra,
   onFabClick,
+  showWelcome = true,
   children,
 }: {
   session: UserSession;
@@ -48,6 +49,7 @@ export function HomeShell({
   extraHeader?: ReactNode;
   welcomeExtra?: ReactNode;
   onFabClick?: () => void;
+  showWelcome?: boolean;
   children: ReactNode;
 }) {
   const { t } = useI18n();
@@ -89,9 +91,11 @@ export function HomeShell({
                   <p className="text-gray-500 text-sm mt-0.5 truncate">
                     {session.gym} · {t("home.healthMgmt", "健康管理")}
                   </p>
-                  <p className="text-emerald-600 text-xs font-semibold mt-1 truncate">
-                    {title}
-                  </p>
+                  {title ? (
+                    <p className="text-emerald-600 text-xs font-semibold mt-1 truncate">
+                      {title}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -115,6 +119,7 @@ export function HomeShell({
           </header>
 
           <main className="flex flex-col gap-5 w-full">
+            {showWelcome ? (
             <section className={`${HOME_SOFT_CARD} p-5 text-sm`}>
               <div className="flex justify-between items-center gap-2 flex-wrap">
                 <p className="font-semibold text-gray-900 text-base min-w-0">
@@ -142,6 +147,7 @@ export function HomeShell({
                 {session.gym}
               </p>
             </section>
+            ) : null}
             {children}
           </main>
         </div>

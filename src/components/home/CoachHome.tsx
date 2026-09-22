@@ -56,9 +56,10 @@ export function CoachHome({
     <HomeShell
       session={session}
       brandingLogo={branding.logo}
-      title={title}
+      title={title === session.gym ? "" : title}
       displayName={displayName}
       homeLabel={t("home.coachHome", "教練主頁")}
+      showWelcome={false}
       onRefresh={async () => {
         const synced = await syncSessionPlan().catch(() => null);
         if (!synced) return;

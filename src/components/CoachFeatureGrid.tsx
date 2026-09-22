@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   BarChart2,
   Bell,
+  ChevronRight,
   Flame,
   Palette,
   Sparkles,
@@ -96,22 +97,20 @@ export function CoachFeatureGrid() {
 
   return (
     <section className="min-w-0">
-      <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {t("coachFeatures.title", "教練工具")}
-          </h2>
-        </div>
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
+        <h2 className="text-base font-semibold text-gray-900">
+          {t("coachFeatures.title", "教練工具")}
+        </h2>
         <button
           type="button"
           onClick={() => router.push("/community")}
-          className="text-xs font-bold text-emerald-700 active:opacity-70"
+          className="text-xs font-medium text-gray-500 active:opacity-70"
         >
-          {t("coachFeatures.explore", "探索更多 →")}
+          {t("coachFeatures.explore", "探索")}
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="overflow-hidden rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] divide-y divide-zinc-100">
         {items.map((item) => {
           const Icon = item.icon;
           return (
@@ -119,29 +118,36 @@ export function CoachFeatureGrid() {
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className={`relative min-h-[8.5rem] overflow-hidden rounded-3xl bg-white p-4 text-left shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${btnClass}`}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left ${btnClass}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50">
-                  <Icon
-                    size={20}
-                    strokeWidth={2}
-                    className="text-emerald-700"
-                    aria-hidden
-                  />
-                </span>
-                {item.badge ? (
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                    {item.badge}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+                <Icon
+                  size={18}
+                  strokeWidth={2}
+                  className="text-emerald-700"
+                  aria-hidden
+                />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold text-gray-900">
+                    {item.title}
                   </span>
-                ) : null}
-              </div>
-              <p className="mt-4 text-[15px] font-semibold leading-snug text-gray-900">
-                {item.title}
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
-                {item.subtitle}
-              </p>
+                  {item.badge ? (
+                    <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-gray-500">
+                  {item.subtitle}
+                </span>
+              </span>
+              <ChevronRight
+                size={16}
+                className="shrink-0 text-gray-300"
+                aria-hidden
+              />
             </button>
           );
         })}
