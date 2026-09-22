@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -30,7 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
   const [checked, setChecked] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const current = getSession();
     setSession(current);
     setChecked(true);

@@ -1,8 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 import { useBranding } from "@/components/BrandingProvider";
 import { GorillaMascot } from "@/components/GorillaMascot";
+import {
+  readLastBrand,
+  resolveDisplayBrandLogo,
+} from "@/lib/brand-logo";
+import { getSession } from "@/lib/session";
 
 type LoadingViewProps = {
   message?: string;
@@ -37,7 +42,26 @@ export function LoadingView({
   children,
 }: LoadingViewProps) {
   const brand = useBranding();
-  const resolvedLogo = logoUrl || brand.logo;
+  const [storedLogo, setStoredLogo] = useState<string | undefined>();
+  const [storedName, setStoredName] = useState<string | undefined>();
+
+  useLayoutEffect(() => {
+    if (logoUrl || brand.logo) {
+      setStoredLogo(undefined);
+      setStoredName(undefined);
+      return;
+    }
+    const session = getSession();
+    setStoredLogo(
+      resolveDisplayBrandLogo(session) ?? readLastBrand()?.logo
+    );
+    setStoredName(
+      session?.brandName ?? session?.gym ?? readLastBrand()?.gymName
+    );
+  }, [brand.logo, logoUrl]);
+
+  const resolvedLogo = logoUrl || brand.logo || storedLogo;
+  const gymName = brand.logo ? brand.gymName : storedName;
 
   if (variant === "inline") {
     return (
@@ -78,8 +102,8 @@ export function LoadingView({
       </div>
 
       <div className="space-y-2 max-w-xs">
-        {brand.logo && brand.gymName ? (
-          <p className="text-sm font-semibold text-gray-900">{brand.gymName}</p>
+        {resolvedLogo && gymName ? (
+          <p className="text-sm font-semibold text-gray-900">{gymName}</p>
         ) : null}
         <LoadingDots />
         {message ? (

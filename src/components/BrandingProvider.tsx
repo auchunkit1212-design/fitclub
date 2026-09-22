@@ -3,7 +3,7 @@
 import {
   createContext,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -48,7 +48,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     appTitle: DEFAULT_BRANDING.appTitle,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const sync = () => {
       const session = getSession();
       if (session?.isLoggedIn) {
