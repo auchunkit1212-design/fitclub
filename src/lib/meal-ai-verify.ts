@@ -13,6 +13,7 @@ import {
   getOpenRouterVisionModelCandidates,
   normalizeImageBase64,
 } from "@/lib/ocr-nutrition";
+import { hasStudentServingAdjustment } from "@/lib/portion-scale";
 import { getAppUrl } from "@/lib/site-url";
 import type { FoodAdvancedNutrients } from "@/lib/types";
 
@@ -404,6 +405,22 @@ export async function estimateMealNutritionWithAi(
   const description = input.description.trim();
   if (!description) {
     throw new MealAiEstimateError("請填寫食物描述", 400);
+  }
+
+  // 學員揀過半份／克數：一定保存調整後數字，唔好再俾 AI 覆寫返全份
+  if (
+    hasStudentServingAdjustment(description) &&
+    input.baseline &&
+    input.baseline.calories > 0
+  ) {
+    return {
+      macros: input.baseline,
+      advanced: input.advanced,
+      description,
+      source: "baseline",
+      note: undefined,
+      adjusted: false,
+    };
   }
 
   // 學員已手動／OCR 確認且公式合理：直接採用，唔再俾 Vision 改成白飯

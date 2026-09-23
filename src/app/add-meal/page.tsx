@@ -70,9 +70,15 @@ import type {
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-/** Clean food name only — no fist/palm tags unless user opts into correction. */
+/** Strip fist/palm hint tags only. Keep 「半份／食咗 80g」so the saved log shows the portion. */
 function mealDescriptionBase(description: string): string {
-  return parsePortionHintsFromDescription(description).foodBase.trim() || description.trim();
+  const parsed = parsePortionHintsFromDescription(description);
+  const hasFistPalm =
+    parsed.carbsPortion != null ||
+    parsed.proteinPortion != null ||
+    parsed.hasVeggies != null;
+  if (!hasFistPalm) return description.trim();
+  return parsed.foodBase.trim() || description.trim();
 }
 
 /**
@@ -220,7 +226,8 @@ function AddMealPageContent() {
     setCarbs(totals.carbs);
     setFats(totals.fats);
     setMacrosFromSearch(true);
-    setNutritionSource("openrouter");
+    setNutritionSource(totals.portionAdjusted ? "manual" : "openrouter");
+    setMacrosLockedFromPicker(totals.portionAdjusted);
     setOcrPortionBase(null);
     setSearchAdvanced(undefined);
     setProNutrition(false);
@@ -487,7 +494,7 @@ function AddMealPageContent() {
 
     const descTrim = description.trim();
     const descForAi = multiFoodMode
-      ? mealDescriptionBase(descTrim)
+      ? descTrim
       : buildMealDescriptionWithPortions(
           descTrim,
           carbsPortionKey,

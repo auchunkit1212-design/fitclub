@@ -9,13 +9,35 @@ export type MacroValues = {
 
 export type PortionPreset = "full" | "half" | "third" | "quarter" | "custom";
 
+/** Allow eating more than the labelled serving, but not an unbounded multiplier. */
+const MAX_PORTION_RATIO = 4;
+
+export function clampPortionRatio(ratio: number): number {
+  if (!Number.isFinite(ratio) || ratio < 0) return 0;
+  return Math.min(MAX_PORTION_RATIO, ratio);
+}
+
+export function portionRatioIsAdjusted(ratio: number): boolean {
+  return Math.abs(ratio - 1) > 0.02;
+}
+
+/**
+ * True when the description records a student serving choice
+ * (half / third / grams), not a fist-palm hint block.
+ */
+export function hasStudentServingAdjustment(description: string): boolean {
+  return /（[^）]*(?:半份|⅓|¼|½|1\/2|1\/3|1\/4|half|食咗|\d+\s*g\s+of\s+\d+\s*g)[^）]*）/i.test(
+    description
+  );
+}
+
 export function scaleMacroValue(value: number, ratio: number): number {
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.max(0, Math.round(value * ratio));
 }
 
 export function scaleMacros(macros: MacroValues, ratio: number): MacroValues {
-  const r = Math.max(0, Math.min(1, ratio));
+  const r = clampPortionRatio(ratio);
   return {
     calories: scaleMacroValue(macros.calories, r),
     protein: scaleMacroValue(macros.protein, r),
@@ -29,7 +51,7 @@ export function scaleAdvancedNutrients(
   ratio: number
 ): FoodAdvancedNutrients | undefined {
   if (!advanced) return undefined;
-  const r = Math.max(0, Math.min(1, ratio));
+  const r = clampPortionRatio(ratio);
   const scale = (n?: number) =>
     n != null && n > 0 ? scaleMacroValue(n, r) : undefined;
   return {
@@ -59,7 +81,7 @@ export function ratioFromPreset(preset: PortionPreset): number {
 export function ratioFromGrams(grams: number, baseGrams: number): number {
   if (!Number.isFinite(grams) || grams <= 0) return 1;
   if (!Number.isFinite(baseGrams) || baseGrams <= 0) return 1;
-  return Math.max(0, Math.min(1, grams / baseGrams));
+  return clampPortionRatio(grams / baseGrams);
 }
 
 /** Parse "約 250g" / "40g" from serving labels */

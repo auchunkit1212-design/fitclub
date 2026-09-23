@@ -13,6 +13,7 @@ import type { MealBaselineSource } from "@/lib/meal-ai-verify";
 import {
   parseGramsFromLabel,
   scaleAdvancedNutrients,
+  portionRatioIsAdjusted,
   scaleMacros,
   type MacroValues,
 } from "@/lib/portion-scale";
@@ -243,7 +244,9 @@ export function FoodSearchEngine({
           proNutrition: base.proNutrition,
           nutritionSource: base.nutritionSource,
         },
-        nutritionSource: base.nutritionSource,
+        nutritionSource: portionRatioIsAdjusted(ratio)
+          ? "manual"
+          : base.nutritionSource,
       });
       // OCR 結果唔寫入搜尋框，避免 AI 聯想蓋過標籤數值
       if (base.nutritionSource !== "ocr") {

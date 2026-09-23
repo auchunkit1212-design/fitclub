@@ -106,7 +106,7 @@ export function ServingPortionPicker({
           <input
             type="number"
             min={1}
-            max={baseWeightG}
+            max={Math.max(baseWeightG * 4, baseWeightG)}
             value={customGrams}
             onChange={(e) => {
               setPreset("custom");

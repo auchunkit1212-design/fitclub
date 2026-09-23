@@ -5,7 +5,11 @@ import { useI18n } from "@/components/I18nProvider";
 import { ServingPortionPicker } from "@/components/ServingPortionPicker";
 import { formatCompositeBreakdown } from "@/lib/composite-meal";
 import type { DetectedMealFood } from "@/lib/meal-photo-detect";
-import { scaleMacros, type MacroValues } from "@/lib/portion-scale";
+import {
+  portionRatioIsAdjusted,
+  scaleMacros,
+  type MacroValues,
+} from "@/lib/portion-scale";
 
 type ItemPortionState = {
   ratio: number;
@@ -20,6 +24,8 @@ export type MultiFoodTotals = {
   protein: number;
   carbs: number;
   fats: number;
+  /** Student changed at least one item away from the AI full serving. */
+  portionAdjusted: boolean;
   parts: { name: string; macros: MacroValues }[];
 };
 
@@ -89,6 +95,9 @@ export function MultiFoodPortionPanel({
       protein: sum.protein,
       carbs: sum.carbs,
       fats: sum.fats,
+      portionAdjusted: foods.some((_, index) =>
+        portionRatioIsAdjusted(portions[index]?.ratio ?? 1)
+      ),
       parts,
     } satisfies MultiFoodTotals;
   }, [foods, portions]);
