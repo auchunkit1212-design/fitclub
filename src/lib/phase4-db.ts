@@ -6,6 +6,7 @@ import { fetchTenantById } from "@/lib/tenant";
 import type {
   FavoriteFood,
   MealLog,
+  MealLogFeedback,
   MealLogReaction,
   RegistryUser,
   StudentNutritionTargets,
@@ -96,6 +97,28 @@ export async function fetchStudentNutritionTargets(
 
   if (error || !data) return null;
   return mapTargets(data);
+}
+
+export async function fetchNutritionTargetsForEmails(
+  emails: string[]
+): Promise<Map<string, StudentNutritionTargets>> {
+  const normalized = Array.from(
+    new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+  const map = new Map<string, StudentNutritionTargets>();
+  if (normalized.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("student_nutrition_targets")
+    .select("*")
+    .in("student_email", normalized);
+
+  if (error || !data) return map;
+  for (const row of data) {
+    const t = mapTargets(row as Record<string, unknown>);
+    map.set(t.studentEmail.trim().toLowerCase(), t);
+  }
+  return map;
 }
 
 export async function upsertStudentNutritionTargets(
@@ -198,6 +221,66 @@ function mapReaction(row: Record<string, unknown>): MealLogReaction {
     mealLogId: String(row.meal_log_id),
     coachEmail: String(row.coach_email),
     sticker: String(row.sticker),
+    createdAt: String(row.created_at),
+  };
+}
+
+export async function insertMealFeedback(
+  input: {
+    mealLogId: string;
+    coachEmail: string;
+    presetKey: string;
+    messageText: string;
+    sticker?: string;
+  },
+  options?: { useServiceRole?: boolean }
+): Promise<MealLogFeedback> {
+  const client = options?.useServiceRole ? getSupabaseAdmin() : supabase;
+
+  const row: Record<string, unknown> = {
+    meal_log_id: input.mealLogId,
+    coach_email: input.coachEmail.trim().toLowerCase(),
+    preset_key: input.presetKey,
+    message_text: input.messageText.trim(),
+    sticker: input.sticker?.trim() || null,
+  };
+
+  const { data, error } = await client
+    .from("meal_log_feedback")
+    .upsert(row, { onConflict: "meal_log_id,coach_email" })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw toReadableError(
+      error,
+      "meal_log_feedback 寫入失敗（請執行 supabase/meal-log-feedback.sql）"
+    );
+  }
+  return mapFeedback(data);
+}
+
+export async function fetchFeedbackForMealIds(
+  mealLogIds: string[]
+): Promise<MealLogFeedback[]> {
+  if (mealLogIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("meal_log_feedback")
+    .select("*")
+    .in("meal_log_id", mealLogIds);
+
+  if (error) return [];
+  return (data ?? []).map(mapFeedback);
+}
+
+function mapFeedback(row: Record<string, unknown>): MealLogFeedback {
+  return {
+    id: String(row.id),
+    mealLogId: String(row.meal_log_id),
+    coachEmail: String(row.coach_email),
+    presetKey: String(row.preset_key),
+    messageText: String(row.message_text),
+    sticker: row.sticker ? String(row.sticker) : undefined,
     createdAt: String(row.created_at),
   };
 }

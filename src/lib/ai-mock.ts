@@ -1,9 +1,17 @@
-export interface MacroEstimate {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-}
+import {
+  formatCompositeBreakdown,
+  splitMealDescription,
+  sumMacros,
+} from "@/lib/composite-meal";
+import { searchHkFoodDatabase } from "@/lib/food-search/hk-fallback";
+import {
+  estimateMilkMacros,
+  isMilkLikeDescription,
+  parseVolumeMl,
+  type MacroEstimate,
+} from "@/lib/macro-scale";
+
+export type { MacroEstimate } from "@/lib/macro-scale";
 
 export const PORTION_NONE = "無 / 冇食 (0)";
 
@@ -19,7 +27,8 @@ export const AI_CALORIE_SYSTEM_PROMPT = `你是香港飲食卡路里估算專家
 4. 嚴禁過低估算：寧可偏高 10% 亦不可低於外食實際常識下限。
 5. 你是一位嚴謹營養師，輸出必須符合現實常理與生物學。水果類（蘋果、橙、香蕉、莓果等）必須以碳水為主，脂肪通常接近 0。
 6. 必須檢查熱量公式：(碳水g * 4) + (蛋白質g * 4) + (脂肪g * 9) 要與總熱量大致一致（容許約 ±15% 誤差）。
-7. 輸出：calories, protein_g, carbs_g, fats_g 整數，並附一句隱形熱量說明。`;
+7. 學員份量標記（最高優先）：描述括號內「澱粉細拳/中拳/大拳」「蛋白細掌/小掌/中掌/大掌」代表實際進食量。細掌肉類蛋白約 12–22g、中掌約 20–32g、大掌約 30–45g；細拳碳水約 25–45g、中拳約 40–60g、大拳約 55–85g。有標記時不可按整碗拉麵/整碟餸的默認肉量估算蛋白質。
+8. 輸出：calories, protein_g, carbs_g, fats_g 整數，並附一句隱形熱量說明。`;
 
 const HIGH_CAL_KEYWORDS = ["炒飯", "牛河", "乾炒", "焗飯", "公仔麵", "即食麵", "炸"];
 const OUTDOOR_HIDDEN_CAL = [
@@ -143,24 +152,72 @@ function enforceMacroCalorieConsistency(estimate: MacroEstimate): MacroEstimate 
   };
 }
 
-export function estimateMacros(
-  description: string,
-  carbsPortion: string,
-  proteinPortion: string,
-  hasVeggies: string
-): MacroEstimate {
-  const desc = description.toLowerCase();
+/** 單一食物片段估算（不含拳頭/掌份量調整） */
+export function estimateSingleItemCore(description: string): MacroEstimate {
+  const desc = description.toLowerCase().trim();
 
-  let calories = 450;
-  let protein = 18;
-  let carbs = 55;
-  let fats = 16;
+  if (isMilkLikeDescription(desc)) {
+    const ml = parseVolumeMl(description) ?? 250;
+    return enforceMacroCalorieConsistency(estimateMilkMacros(ml));
+  }
+
+  const hkHits = searchHkFoodDatabase(description);
+  if (hkHits.length > 0) {
+    const best = hkHits[0];
+    return enforceMacroCalorieConsistency({
+      calories: best.calories,
+      protein: best.protein,
+      carbs: best.carbs,
+      fats: best.fats,
+    });
+  }
+
+  let calories = 280;
+  let protein = 12;
+  let carbs = 28;
+  let fats = 12;
 
   if (matchesAny(desc, FRUIT_KEYWORDS)) {
     calories = 95;
     protein = 1;
     carbs = 24;
     fats = 0;
+  } else if (
+    desc.includes("漢堡餐") ||
+    desc.includes("超值餐") ||
+    (desc.includes("餐") && (desc.includes("堡") || desc.includes("麥")))
+  ) {
+    calories = 520;
+    protein = 22;
+    carbs = 48;
+    fats = 26;
+  } else if (
+    desc.includes("豬柳蛋") ||
+    desc.includes("麥香雞") ||
+    desc.includes("巨無霸") ||
+    desc.includes("漢堡") ||
+    desc.includes("burger")
+  ) {
+    calories = 380;
+    protein = 18;
+    carbs = 32;
+    fats = 20;
+  } else if (
+    desc.includes("雞腿") ||
+    desc.includes("炸雞") ||
+    desc.includes("雞髀") ||
+    desc.includes("thigh") ||
+    desc.includes("crispy")
+  ) {
+    calories = 300;
+    protein = 22;
+    carbs = 12;
+    fats = 18;
+  } else if (desc.includes("薯條") || desc.includes("fries")) {
+    calories = 320;
+    protein = 4;
+    carbs = 42;
+    fats = 15;
   } else if (matchesAny(desc, HIGH_CAL_KEYWORDS)) {
     calories = 920;
     protein = 32;
@@ -181,7 +238,7 @@ export function estimateMacros(
     desc.includes("cappuccino") ||
     desc.includes("mocha")
   ) {
-    calories = 135;
+    calories = desc.includes("冰") || desc.includes("ice") ? 150 : 135;
     protein = 9;
     carbs = 12;
     fats = 6;
@@ -218,6 +275,76 @@ export function estimateMacros(
     fats -= 6;
   }
 
+  return enforceMacroCalorieConsistency(
+    applyHiddenCalorieFloor(desc, {
+      calories: Math.max(0, Math.round(calories)),
+      protein: Math.max(0, Math.round(protein)),
+      carbs: Math.max(0, Math.round(carbs)),
+      fats: Math.max(0, Math.round(fats)),
+    })
+  );
+}
+
+export type MacroEstimateResult = {
+  macros: MacroEstimate;
+  isComposite: boolean;
+  parts: { name: string; macros: MacroEstimate }[];
+};
+
+export function estimateMacrosWithBreakdown(
+  description: string,
+  carbsPortion: string,
+  proteinPortion: string,
+  hasVeggies: string
+): MacroEstimateResult {
+  const parts = splitMealDescription(description);
+  if (parts.length > 1) {
+    const breakdown = parts.map((name) => ({
+      name,
+      macros: estimateSingleItemCore(name),
+    }));
+    const total = enforceMacroCalorieConsistency(
+      applyHiddenCalorieFloor(
+        description.toLowerCase(),
+        sumMacros(breakdown.map((p) => p.macros))
+      )
+    );
+    return { macros: total, isComposite: true, parts: breakdown };
+  }
+
+  return {
+    macros: estimateMacros(description, carbsPortion, proteinPortion, hasVeggies),
+    isComposite: false,
+    parts: [],
+  };
+}
+
+export function estimateMacros(
+  description: string,
+  carbsPortion: string,
+  proteinPortion: string,
+  hasVeggies: string
+): MacroEstimate {
+  const parts = splitMealDescription(description);
+  if (parts.length > 1) {
+    return estimateMacrosWithBreakdown(
+      description,
+      carbsPortion,
+      proteinPortion,
+      hasVeggies
+    ).macros;
+  }
+
+  const desc = description.toLowerCase();
+
+  if (isMilkLikeDescription(desc)) {
+    const ml = parseVolumeMl(description) ?? 250;
+    return enforceMacroCalorieConsistency(estimateMilkMacros(ml));
+  }
+
+  let base = estimateSingleItemCore(description);
+  let { calories, protein, carbs, fats } = base;
+
   const isFruitMeal = matchesAny(desc, FRUIT_KEYWORDS);
 
   if (!isFruitMeal) {
@@ -242,21 +369,19 @@ export function estimateMacros(
     }
   }
 
-  if (hasVeggies === PORTION_NONE) {
-    // no veggie adjustment
-  } else if (hasVeggies === "有") {
+  if (hasVeggies === "有") {
     calories -= 20;
     carbs -= 5;
   }
 
-  const base = {
-    calories: Math.max(0, Math.round(calories)),
-    protein: Math.max(0, Math.round(protein)),
-    carbs: Math.max(0, Math.round(carbs)),
-    fats: Math.max(0, Math.round(fats)),
-  };
-
-  return enforceMacroCalorieConsistency(applyHiddenCalorieFloor(desc, base));
+  return enforceMacroCalorieConsistency(
+    applyHiddenCalorieFloor(desc, {
+      calories: Math.max(0, Math.round(calories)),
+      protein: Math.max(0, Math.round(protein)),
+      carbs: Math.max(0, Math.round(carbs)),
+      fats: Math.max(0, Math.round(fats)),
+    })
+  );
 }
 
 const LEAN_PROTEIN_KEYWORDS = [
@@ -332,58 +457,153 @@ export function estimateFoodSearchMacros(description: string): MacroEstimate {
 }
 
 import { t, type AppLanguage } from "./i18n";
+import type { MealLog } from "./types";
+
+type RoastMealInput = Pick<
+  MealLog,
+  "mealType" | "description" | "calories" | "protein"
+>;
+
+function topMealByCalories(meals: RoastMealInput[]): RoastMealInput | null {
+  if (meals.length === 0) return null;
+  return meals.reduce((best, meal) =>
+    meal.calories > best.calories ? meal : best
+  );
+}
+
+function topMealByProtein(meals: RoastMealInput[]): RoastMealInput | null {
+  if (meals.length === 0) return null;
+  return meals.reduce((best, meal) =>
+    meal.protein > best.protein ? meal : best
+  );
+}
+
+function mealLabel(meal: RoastMealInput): string {
+  const name = meal.description.trim() || meal.mealType;
+  return `${name}（${meal.calories} kcal）`;
+}
 
 export function generateRoast(
   todayCalories: number,
   targetCalories: number,
   todayProtein: number,
   targetProtein: number,
-  lang: AppLanguage = "zh-HK"
+  lang: AppLanguage = "zh-HK",
+  todayMeals: RoastMealInput[] = []
 ): string {
-  const calRatio = todayCalories / targetCalories;
-  const proRatio = todayProtein / targetProtein;
+  const calRatio = targetCalories > 0 ? todayCalories / targetCalories : 0;
+  const proRatio = targetProtein > 0 ? todayProtein / targetProtein : 0;
+  const heaviest = topMealByCalories(todayMeals);
+  const bestProtein = topMealByProtein(todayMeals);
 
-  if (todayCalories === 0) {
+  if (todayCalories === 0 || todayMeals.length === 0) {
     return t(lang, "ai.roast.empty", "仲未食嘢？唔好餓壞個胃呀，記得記低你食咗咩！");
   }
+
   if (calRatio > 1.25) {
-    return t(lang, "ai.roast.overCalHigh", "食咁多乾炒牛河唔怪之得減唔到肥啦！");
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.overCalHighNamed",
+        "今日熱量超標啦！最大鑊係 {meal}，聽日要收一收。",
+        { meal: mealLabel(heaviest) }
+      );
+    }
+    return t(
+      lang,
+      "ai.roast.overCalHighGeneric",
+      "今日熱量超標啦，聽日要收一收份量。"
+    );
   }
+
   if (calRatio > 1.05) {
-    return t(lang, "ai.roast.overCalMild", "今日有啲放縱喎，茶餐廳陷阱要小心！");
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.overCalMildNamed",
+        "今日有啲放縱喎，{meal} 係主要熱量來源，留意下。",
+        { meal: mealLabel(heaviest) }
+      );
+    }
+    return t(
+      lang,
+      "ai.roast.overCalMildGeneric",
+      "今日熱量有啲超前，留意下份量同醬料。"
+    );
   }
+
   if (calRatio < 0.6) {
-    return t(lang, "ai.roast.underCal", "食咁少？記得食夠蛋白質呀！");
+    const logged = todayMeals.map((m) => m.description.trim()).filter(Boolean).join("、");
+    return t(
+      lang,
+      "ai.roast.underCalNamed",
+      "今日食得偏少（{logged}），記得食夠蛋白質支撐訓練。",
+      { logged: logged || t(lang, "ai.roast.loggedMealsFallback", "已記錄餐食") }
+    );
   }
+
   if (proRatio < 0.7) {
+    if (heaviest) {
+      return t(
+        lang,
+        "ai.roast.lowProteinNamed",
+        "蛋白質唔夠喎，{meal} 蛋白偏低，加啲雞胸或者蛋啦！",
+        { meal: mealLabel(heaviest) }
+      );
+    }
     return t(lang, "ai.roast.lowProtein", "蛋白質唔夠喎，加啲雞胸或者蛋啦！");
   }
+
   if (calRatio >= 0.85 && calRatio <= 1.05 && proRatio >= 0.9) {
+    if (bestProtein) {
+      return t(
+        lang,
+        "ai.roast.excellentNamed",
+        "今日食得好靚仔！{meal} 係亮點，繼續保持！",
+        { meal: mealLabel(bestProtein) }
+      );
+    }
     return t(lang, "ai.roast.excellent", "今日食得好靚仔！繼續保持！");
   }
+
+  if (heaviest) {
+    return t(
+      lang,
+      "ai.roast.goodNamed",
+      "表現唔錯，{meal} 要留意脂肪同鈉，其餘維持住。",
+      { meal: mealLabel(heaviest) }
+    );
+  }
+
   return t(lang, "ai.roast.good", "表現唔錯，再留意下脂肪同鈉就完美啦！");
 }
 
-import type { MealLog } from "./types";
-
 export function getMealAiComment(log: MealLog): string {
+  const name = log.description.trim() || log.mealType;
+
   if (log.calories >= 700) {
-    return "熱量偏高（已含湯底/用油估算），建議減少油炸同澱粉，下一餐增加蔬菜比例。";
+    return `「${name}」熱量偏高（${log.calories} kcal），建議減少油炸同澱粉，下一餐增加蔬菜比例。`;
   }
   if (log.calories <= 500 && log.protein >= 20) {
-    return "表現優良，蛋白質充足，可維持而家嘅飲食節奏。";
+    return `「${name}」表現優良（蛋白 ${log.protein}g），可維持而家嘅飲食節奏。`;
   }
   if (log.protein < 15) {
-    return "蛋白質偏低，建議加雞胸、魚或蛋補充。";
+    return `「${name}」蛋白質偏低（${log.protein}g），建議加雞胸、魚或蛋補充。`;
   }
   if (log.calories < 250) {
-    return "熱量偏低，注意唔好過度節食影響訓練恢復。";
+    return `「${name}」熱量偏低（${log.calories} kcal），注意唔好過度節食影響訓練恢復。`;
   }
-  return "整體尚可，建議控制醬料同飲品糖分。";
+  return `「${name}」整體尚可，建議控制醬料同飲品糖分。`;
 }
 
-export function generateCoachReport(logs: MealLog[]): string {
+export function generateCoachReport(
+  logs: MealLog[],
+  studentName?: string
+): string {
   if (logs.length === 0) {
+    if (studentName?.trim()) {
+      return `「${studentName.trim()}」暫時未有飲食打卡。等佢記低第一餐，AI 先可以出整合報告。`;
+    }
     return "暫時未有學員飲食打卡。等學員記低第一餐，AI 先可以出整合報告。";
   }
 
@@ -414,19 +634,23 @@ export function generateCoachReport(logs: MealLog[]): string {
           .join("\n")
       : "- 暫時未見明顯優秀餐單，建議提醒學員增加優質蛋白。";
 
-  return `🤖 【AI 學員整合報告】
+  const title = studentName?.trim()
+    ? `【AI 學員整合報告 · ${studentName.trim()}】`
+    : "【AI 學員整合報告】";
 
-📊 數據概覽：
+  return `${title}
+
+數據概覽：
 - 打卡總數：${logs.length} 餐
 - 平均熱量：${avgCalories} kcal / 餐
 
-🚨 高風險飲食：
+高風險飲食：
 ${riskLines}
 
-✅ 表現良好：
+表現良好：
 ${goodLines}
 
-💡 教練建議：
+教練建議：
 今個星期優先處理高熱量打卡學員，配合飲水提醒同蛋白質目標，進度會穩定好多。`;
 }
 

@@ -1,60 +1,89 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { generateCoachReport } from "@/lib/ai-mock";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
-import { CoachActivityWall } from "@/components/CoachActivityWall";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
-import { CoachMealHistoryPanel } from "@/components/CoachMealHistoryPanel";
+import { CoachSelfMealPanel } from "@/components/CoachSelfMealPanel";
 import { useBranding } from "@/components/BrandingProvider";
 import {
-  fetchMealLogsForSession,
+  defaultMealLogsFromDate,
+  fetchOwnMealLogsForSession,
   fetchUsersForSession,
-  filterStudentsForSession,
-  resolveBranding,
   updateCoachLogo,
 } from "@/lib/db";
+import { applyDocumentTheme, normalizeThemeColor, THEME_PALETTE } from "@/lib/brand";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
-import { saveSession, getSessionRequestHeaders } from "@/lib/session";
+import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
-import { getSession } from "@/lib/session";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { BottomNav } from "@/components/BottomNav";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
+import { COACH_ROLES, useRequiredSession } from "@/components/SessionProvider";
+import { withTimeout } from "@/lib/with-timeout";
+
+const CoachAiReportPanel = dynamic(
+  () =>
+    import("@/components/CoachAiReportPanel").then((m) => ({
+      default: m.CoachAiReportPanel,
+    })),
+  { ssr: false, loading: () => <PageSkeleton rows={2} /> }
+);
+
+const ProBillingPanel = dynamic(
+  () =>
+    import("@/components/ProBillingPanel").then((m) => ({
+      default: m.ProBillingPanel,
+    })),
+  { ssr: false }
+);
 import type {
-  CoachBranding,
   MealLog,
   RegistryUser,
   ThemeColor,
-  UserSession,
 } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
+import { GorillaMascot } from "@/components/GorillaMascot";
+import { SOFT_CARD } from "@/lib/ui-tokens";
+
+type CoachTab = "invite" | "brand" | "more";
+
+const TAB_FROM_HASH: Record<string, CoachTab> = {
+  "coach-invite": "invite",
+  "coach-branding": "brand",
+  "coach-notifications": "more",
+  "coach-meals": "more",
+  "coach-plan": "more",
+  "coach-report": "more",
+};
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-const THEME_OPTIONS: { value: ThemeColor; label: string }[] = [
-  { value: "emerald", label: "翠綠 (Emerald)" },
-  { value: "blue", label: "藍色 (Blue)" },
-  { value: "black", label: "黑色 (Black)" },
-];
+const LOAD_TIMEOUT_MS = 12_000;
 
 export default function CoachPage() {
   const router = useRouter();
   const brand = useBranding();
+  const { session } = useRequiredSession(COACH_ROLES);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const [session, setSession] = useState<UserSession | null>(null);
   const [appTitle, setAppTitle] = useState("");
   const [themeColor, setThemeColor] = useState<ThemeColor>("emerald");
   const [logo, setLogo] = useState<string | undefined>();
   const [broadcast, setBroadcast] = useState("");
-  const [logs, setLogs] = useState<MealLog[]>([]);
-  const [students, setStudents] = useState<RegistryUser[]>([]);
-  const [aiReport, setAiReport] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [registry, setRegistry] = useState<RegistryUser[]>([]);
+  const [cloudLoading, setCloudLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
+  const [ownMealLogs, setOwnMealLogs] = useState<MealLog[]>([]);
   const [toast, setToast] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState<CoachTab>("invite");
+  const silentRefreshRef = useRef(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -62,48 +91,102 @@ export default function CoachPage() {
   };
 
   useEffect(() => {
+    if (!session) return;
+    setAppTitle((prev) => prev || session.brandName || session.gym || "");
+    setInviteCode(
+      (prev) => prev || session.tenantSlug || session.tenantId || ""
+    );
+    setLogo((prev) => prev || session.brandLogo);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
     const load = async () => {
-      const current = getSession();
-      if (!current || (current.role !== "coach" && current.role !== "admin")) {
-        setLoading(false);
-        router.push("/register");
-        return;
+      if (!silentRefreshRef.current) {
+        setCloudLoading(true);
       }
 
-      setSession(current);
-
       try {
-        const registry = await fetchUsersForSession(current);
-        const mealLogs = await fetchMealLogsForSession(current, registry);
-        setLogs(mealLogs);
-        setStudents(filterStudentsForSession(current, registry));
+        const [userRegistry, ownLogs] = await withTimeout(
+          Promise.all([
+            fetchUsersForSession(session),
+            fetchOwnMealLogsForSession(session, {
+              from: defaultMealLogsFromDate(14),
+            }),
+          ]),
+          LOAD_TIMEOUT_MS,
+          "讀取教練資料逾時"
+        );
+        if (cancelled) return;
+        setRegistry(userRegistry);
+        setOwnMealLogs(ownLogs);
 
-        if (current.role === "coach") {
-          const brandResolved = await resolveBrandForUser(current, registry);
-          const resolved = await resolveBranding(current, registry);
+        if (session.role === "coach") {
+          const resolved = await resolveBrandForUser(session, userRegistry);
+          if (cancelled) return;
           setInviteCode(
-            brandResolved.tenantSlug ??
-              current.tenantSlug ??
-              current.tenantId ??
+            resolved.tenantSlug ??
+              session.tenantSlug ??
+              session.tenantId ??
               ""
           );
           setAppTitle(resolved.branding.appTitle);
-          setThemeColor(resolved.branding.themeColor);
+          const savedTheme = normalizeThemeColor(resolved.branding.themeColor);
+          setThemeColor(savedTheme);
           setLogo(resolved.branding.logo);
           setBroadcast(resolved.broadcast);
+          if (normalizeThemeColor(session.themeColor) !== savedTheme) {
+            saveSession(
+              applyBrandToSession(session, {
+                ...resolved,
+                branding: { ...resolved.branding, themeColor: savedTheme },
+              })
+            );
+          }
         } else {
           setAppTitle(DEFAULT_BRANDING.appTitle);
           setThemeColor(DEFAULT_BRANDING.themeColor);
         }
       } catch {
-        alert("無法從 Supabase 載入教練數據。");
+        if (!cancelled) {
+          alert("暫時載唔到教練資料，請稍後再試。");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          silentRefreshRef.current = false;
+          setCloudLoading(false);
+        }
       }
     };
 
-    load();
-  }, [router]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, refreshKey]);
+
+  useLayoutEffect(() => {
+    applyDocumentTheme(themeColor);
+    return () => {
+      applyDocumentTheme(getSession()?.themeColor);
+    };
+  }, [themeColor]);
+
+  useEffect(() => {
+    if (!session) return;
+    const hash = window.location.hash.slice(1);
+    if (hash && TAB_FROM_HASH[hash]) {
+      setTab(TAB_FROM_HASH[hash]);
+    }
+    if (!hash) return;
+    const target = document.getElementById(hash);
+    if (!target) return;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [session, cloudLoading]);
 
   const handlePublish = async () => {
     if (!session || session.role !== "coach") {
@@ -128,27 +211,42 @@ export default function CoachPage() {
           tenantId: session.tenantId,
         }),
       });
-      const data = (await res.json()) as { error?: string; hint?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        hint?: string;
+        tenantId?: string;
+        tenantSlug?: string;
+      };
       if (!res.ok) {
         console.error("[coach] branding publish failed:", data);
         alert(
           data.hint
-            ? `${data.error ?? "雲端發布失敗"}\n\n${data.hint}`
-            : data.error ?? "雲端發布失敗，請稍後再試。"
+            ? `${data.error ?? "儲存失敗"}\n\n${data.hint}`
+            : data.error ?? "儲存失敗，請稍後再試。"
         );
         return;
       }
+      const slug = data.tenantSlug?.trim() ?? "";
+      if (slug) setInviteCode(slug);
       const updated = applyBrandToSession(session, {
         gymName: appTitle.trim(),
         branding: { appTitle: appTitle.trim(), themeColor, logo },
         broadcast: broadcast.trim(),
-        tenantSlug: session.tenantSlug,
+        tenantSlug: slug || session.tenantSlug,
       });
-      saveSession(updated);
-      alert("品牌已同步到雲端！");
+      saveSession({
+        ...updated,
+        tenantId: data.tenantId ?? updated.tenantId ?? session.tenantId,
+        tenantSlug: slug || updated.tenantSlug,
+      });
+      alert(
+        slug
+          ? `品牌已儲存！你的學員邀請碼：${slug}`
+          : "品牌設定已儲存！"
+      );
     } catch (err) {
       console.error("[coach] branding publish error:", err);
-      alert("雲端發布失敗，請稍後再試。");
+      alert("儲存失敗，請稍後再試。");
     } finally {
       setPublishing(false);
     }
@@ -164,97 +262,101 @@ export default function CoachPage() {
       const compressed = await compressFileImage(file);
       setLogo(compressed);
       await updateCoachLogo(session.email, compressed, session.tenantId);
-      alert("Logo 已上傳到 Supabase 雲端！");
+      alert("Logo 已上載成功！");
     } catch {
       alert("Logo 處理或上傳失敗。");
     }
     e.target.value = "";
   };
 
-  const generateAIReport = async () => {
-    if (!session) return;
-    setIsGenerating(true);
-    setAiReport(null);
-    try {
-      const registry = await fetchUsersForSession(session);
-      const freshLogs = await fetchMealLogsForSession(session, registry);
-      setLogs(freshLogs);
-      setAiReport(generateCoachReport(freshLogs));
-    } catch {
-      alert("無法從 Supabase 拉取學員飲食記錄。");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        從雲端載入緊...
-      </div>
-    );
+  if (!session) {
+    return <AppLoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-white pb-safe max-w-lg mx-auto">
+    <PullToRefresh
+      onRefresh={() => {
+        silentRefreshRef.current = true;
+        setRefreshKey((key) => key + 1);
+      }}
+    >
+    <div className="min-h-screen bg-white pb-32 max-w-lg mx-auto">
       <PageHeader
-        title={`${brand.gymName} · 教練後台`}
-        subtitle="白標品牌 · 雲端同步"
+        title="教練後台"
+        subtitle={appTitle.trim() || brand.gymName}
         variant="light"
-        backLabel="← 返回主頁"
+        backLabel="← 返回"
         onBack={() => router.push("/")}
       />
 
-      <main className="px-4 py-4 space-y-4">
-        {(session?.role === "coach" || session?.role === "admin") && (
-          <CoachPushSubscribe />
-        )}
-
-        <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-md space-y-3">
-          <h2 className="text-sm font-bold text-emerald-700">
-            🤖 AI 數據智能整合中心
-          </h2>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={generateAIReport}
-            className={`w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl disabled:opacity-60 ${btnClass}`}
-          >
-            {isGenerating ? "⏳ 從 Supabase 整合緊..." : "📊 一鍵 AI 整合學員飲食記錄"}
-          </button>
-          {aiReport && (
-            <pre className="bg-white/10 p-3 rounded-xl text-xs leading-relaxed whitespace-pre-wrap border border-white/10">
-              {aiReport}
-            </pre>
-          )}
+      <main className="px-4 py-5 space-y-5">
+        <section className={`${SOFT_CARD} p-5 flex items-center gap-4`}>
+          <GorillaMascot
+            size="md"
+            logoUrl={logo || brand.logo || session.brandLogo}
+          />
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500">健身室</p>
+            <p className="text-lg font-semibold text-gray-900 truncate">
+              {appTitle.trim() || brand.gymName}
+            </p>
+            {inviteCode ? (
+              <p className="text-xs text-gray-400 mt-0.5 truncate">
+                邀請碼 {inviteCode}
+              </p>
+            ) : null}
+          </div>
         </section>
 
-        {session?.role === "coach" && (
-          <CoachInviteCodePanel
-            inviteCode={inviteCode}
-            onCopied={showToast}
-          />
-        )}
+        {session.role === "coach" ? (
+        <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-100 rounded-2xl">
+          {(
+            [
+              ["invite", "邀請"],
+              ["brand", "品牌"],
+              ["more", "更多"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`py-2.5 rounded-xl text-sm font-semibold ${btnClass} ${
+                tab === id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        ) : null}
 
-        {session?.role === "coach" && (
-          <section className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-4 shadow-sm">
-            <h2 className="font-semibold text-zinc-800">品牌中心（雲端）</h2>
+        {tab === "invite" && session.role === "coach" ? (
+          <div id="coach-invite" className="scroll-mt-24">
+            <CoachInviteCodePanel
+              inviteCode={inviteCode}
+              brandName={appTitle.trim() || brand.gymName}
+              loading={cloudLoading}
+              onCopied={showToast}
+            />
+          </div>
+        ) : null}
 
+        {tab === "brand" && session.role === "coach" ? (
+          <section
+            id="coach-branding"
+            className={`scroll-mt-24 ${SOFT_CARD} p-5 space-y-5`}
+          >
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                App 標題
-              </label>
-              <input
-                type="text"
-                value={appTitle}
-                onChange={(e) => setAppTitle(e.target.value)}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-              />
+              <h2 className="font-semibold text-gray-900">品牌設定</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                學員開 App 同載入畫面都會見到呢個標誌。
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                健身房 Logo
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                健身室 Logo
               </label>
               <input
                 ref={logoInputRef}
@@ -263,52 +365,80 @@ export default function CoachPage() {
                 className="hidden"
                 onChange={handleLogoChange}
               />
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={handleLogoPick}
-                onKeyDown={(e) => e.key === "Enter" && handleLogoPick()}
-                className={`flex items-center gap-3 border-2 border-dashed border-zinc-300 rounded-xl p-3 ${btnClass}`}
+                className={`flex w-full items-center gap-4 rounded-2xl bg-zinc-50 px-4 py-3 text-left ${btnClass}`}
               >
-                <div className="w-12 h-12 rounded-full bg-zinc-100 overflow-hidden shrink-0">
-                  {logo ? (
-                    <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[10px] text-zinc-400 flex items-center justify-center h-full">
-                      無
-                    </span>
-                  )}
+                <GorillaMascot size="md" logoUrl={logo} />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {logo ? "更換 Logo" : "上傳 Logo"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    方形圖片最清楚
+                  </p>
                 </div>
-                <p className="text-sm text-zinc-600">撳一下上傳（即時寫入雲端）</p>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                健身室名稱
+              </label>
+              <input
+                type="text"
+                value={appTitle}
+                onChange={(e) => setAppTitle(e.target.value)}
+                className="w-full rounded-2xl bg-zinc-50 px-4 py-3 text-gray-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                主題色
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {THEME_PALETTE.map((option) => {
+                  const selected = themeColor === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setThemeColor(option.id)}
+                      aria-pressed={selected}
+                      className={`rounded-2xl px-2 py-3 text-xs font-medium ${btnClass} ${
+                        selected
+                          ? "bg-white text-gray-900"
+                          : "bg-zinc-50 text-gray-500"
+                      }`}
+                      style={
+                        selected
+                          ? { boxShadow: `0 0 0 2px ${option.hex}` }
+                          : undefined
+                      }
+                    >
+                      <span
+                        className="mx-auto mb-2 block h-6 w-6 rounded-full"
+                        style={{ backgroundColor: option.hex }}
+                      />
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                主題色
-              </label>
-              <select
-                value={themeColor}
-                onChange={(e) => setThemeColor(e.target.value as ThemeColor)}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3"
-              >
-                {THEME_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                緊急廣播訊息
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                學員廣播
               </label>
               <textarea
                 value={broadcast}
                 onChange={(e) => setBroadcast(e.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-3 resize-none"
+                placeholder="可選：通知全部學員"
+                className="w-full rounded-2xl bg-zinc-50 px-4 py-3 resize-none text-gray-900"
               />
             </div>
 
@@ -316,27 +446,49 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-brand hover-brand text-white font-semibold py-3.5 rounded-2xl disabled:opacity-60 ${btnClass}`}
             >
-              {publishing ? "發布緊..." : "發布到雲端"}
+              {publishing ? "儲存緊..." : "儲存"}
             </button>
           </section>
-        )}
+        ) : null}
 
-        {session?.role === "coach" && students.length > 0 && (
-          <CoachActivityWall
-            logs={logs}
-            students={students}
-            onToast={showToast}
-          />
-        )}
+        {tab === "more" || session.role !== "coach" ? (
+          <div className="space-y-4">
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-notifications" className="scroll-mt-24">
+                <CoachPushSubscribe />
+              </div>
+            )}
 
-        <CoachMealHistoryPanel
-          logs={logs}
-          students={students}
-          gymName={brand.gymName}
-        />
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-meals" className="scroll-mt-24">
+                <CoachSelfMealPanel logs={ownMealLogs} />
+              </div>
+            )}
+
+            {(session.role === "coach" || session.role === "admin") && (
+              <div id="coach-plan" className="scroll-mt-24">
+                <ProBillingPanel />
+              </div>
+            )}
+
+            <div id="coach-report" className="scroll-mt-24">
+              <CoachAiReportPanel
+                session={session}
+                registry={registry}
+                gymName={appTitle.trim() || brand.gymName}
+                onToast={showToast}
+                variant="light"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <LegalFooterLinks className="py-2" />
       </main>
+
+      <BottomNav role={session?.role === "admin" ? "admin" : "coach"} />
 
       {toast && (
         <div className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto bg-white border border-gray-200 text-gray-900 text-sm text-center py-3 rounded-xl z-50 shadow-md">
@@ -344,5 +496,6 @@ export default function CoachPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useI18n } from "@/components/I18nProvider";
+import { Bell, IconLabel, Smartphone } from "@/components/icons";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 const btnClass =
@@ -32,11 +33,11 @@ export function CoachPushSubscribe() {
       setMessage(
         t(
           "coachPush.enabled",
-          "✅ 已開啟推播！學員打卡時你會收到系統通知。"
+          "已開啟推播！學員打卡時你會收到系統通知。"
         )
       );
     } else {
-      setMessage(`❌ ${result.error}`);
+      setMessage(result.error);
     }
   };
 
@@ -46,7 +47,7 @@ export function CoachPushSubscribe() {
       setMessage(
         t(
           "coachPush.testOk",
-          "📲 已發送本機測試通知（關閉 App 後可由伺服器推播測試）。"
+          "已發送本機測試通知（關閉 App 後可由伺服器推播測試）。"
         )
       );
     }
@@ -56,7 +57,9 @@ export function CoachPushSubscribe() {
     return (
       <div className="w-full rounded-3xl bg-amber-50 p-4 text-xs text-amber-900 leading-relaxed shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <p className="font-semibold">
-          {t("coachPush.unsupportedTitle", "📲 學員打卡推播")}
+          <IconLabel icon={Smartphone} size="sm" iconClassName="text-amber-900">
+            {t("coachPush.unsupportedTitle", "學員打卡推播")}
+          </IconLabel>
         </p>
         <p className="mt-1">
           {t(
@@ -72,7 +75,9 @@ export function CoachPushSubscribe() {
     <div className="w-full rounded-3xl bg-white p-4 space-y-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div>
         <p className="font-semibold text-gray-900">
-          {t("coachPush.title", "📲 學員打卡即時推播")}
+          <IconLabel icon={Smartphone} iconClassName="text-gray-600">
+            {t("coachPush.title", "學員打卡即時推播")}
+          </IconLabel>
         </p>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">
           {t(
@@ -97,7 +102,11 @@ export function CoachPushSubscribe() {
         >
           {status === "loading"
             ? t("coachPush.processing", "處理中...")
-            : t("coachPush.enable", "🔔 開啟推播通知")}
+            : (
+              <IconLabel icon={Bell} size="sm" className="justify-center" iconClassName="text-white">
+                {t("coachPush.enable", "開啟推播通知")}
+              </IconLabel>
+            )}
         </button>
       ) : (
         <div className="flex gap-2">

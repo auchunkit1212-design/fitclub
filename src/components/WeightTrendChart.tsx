@@ -64,8 +64,8 @@ export function WeightTrendChart({ logs, loading }: WeightTrendChartProps) {
   }
 
   return (
-    <div>
-      <div className="h-36 w-full">
+    <div className="min-w-0 w-full overflow-hidden">
+      <div className="h-36 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}

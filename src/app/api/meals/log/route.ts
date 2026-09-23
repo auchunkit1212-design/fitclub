@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { insertMealLog } from "@/lib/db";
+import { applyMealLogStreak, insertMealLog } from "@/lib/db";
 import { resolveMealLogEmail } from "@/lib/meal-log-auth";
 import { MEAL_IMAGES_BUCKET } from "@/lib/meal-image-storage";
 import { notifyCoachOfNewMealLog } from "@/lib/meal-notifications";
@@ -13,11 +13,18 @@ import {
 } from "@/lib/phase4-db";
 import { fetchTenantById } from "@/lib/tenant";
 import { isAiSoloTenantSlug } from "@/lib/ai-solo-coach";
+import {
+  MealAiEstimateError,
+  verifyMealNutrition,
+  type MealBaselineSource,
+} from "@/lib/meal-ai-verify";
+import { validateMealLogDate } from "@/lib/meal-log-date";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
 import { getSupabasePublicEnvStatus } from "@/lib/supabase-env";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const env = getSupabasePublicEnvStatus();
@@ -39,10 +46,21 @@ export async function POST(request: Request) {
     mealType: string;
     description: string;
     imageUrl?: string;
+    imageBase64?: string;
+    nutritionSource?: MealBaselineSource;
+    /** Optional YYYY-MM-DD — backfill a past day */
+    date?: string;
     calories: number;
     protein: number;
     carbs: number;
     fats: number;
+    advanced?: {
+      fiberG?: number;
+      sugarG?: number;
+      saturatedFatG?: number;
+      sodiumMg?: number;
+      cholesterolMg?: number;
+    };
   };
 
   const email = await resolveMealLogEmail(session, body.email);
@@ -54,17 +72,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "請填寫食物描述" }, { status: 400 });
   }
 
+  const dateCheck = validateMealLogDate(body.date);
+  if (!dateCheck.ok) {
+    return NextResponse.json({ error: dateCheck.error }, { status: 400 });
+  }
+
   try {
+    const baseline = {
+      calories: Number(body.calories) || 0,
+      protein: Number(body.protein) || 0,
+      carbs: Number(body.carbs) || 0,
+      fats: Number(body.fats) || 0,
+    };
+
+    const verified = await verifyMealNutrition({
+      description: body.description.trim(),
+      baseline,
+      advanced: body.advanced,
+      imageBase64: body.imageBase64?.trim() || undefined,
+      baselineSource: body.nutritionSource,
+    });
+
     const log = await insertMealLog(
       {
         email,
         mealType: body.mealType,
-        description: body.description.trim(),
+        description: verified.description.trim(),
         imageUrl: body.imageUrl?.trim() || undefined,
-        calories: Number(body.calories) || 0,
-        protein: Number(body.protein) || 0,
-        carbs: Number(body.carbs) || 0,
-        fats: Number(body.fats) || 0,
+        calories: verified.macros.calories,
+        protein: verified.macros.protein,
+        carbs: verified.macros.carbs,
+        fats: verified.macros.fats,
+        createdAt: dateCheck.isToday ? undefined : dateCheck.createdAt,
       },
       { useServiceRole: true }
     );
@@ -104,11 +143,49 @@ export async function POST(request: Request) {
       }
     })();
 
+    let streak = {
+      currentStreak: 0,
+      longestStreak: 0,
+      celebrationTriggered: false as boolean,
+      celebrationDays: undefined as number | undefined,
+      isSpecialMilestone: false as boolean,
+      milestoneTriggered: false as boolean,
+      milestoneDays: undefined as number | undefined,
+    };
+    // 補記舊日唔郁 streak（streak 只計香港「今日」）
+    if (dateCheck.isToday) {
+      try {
+        const streakResult = await applyMealLogStreak(email);
+        streak = {
+          currentStreak: streakResult.currentStreak,
+          longestStreak: streakResult.longestStreak,
+          celebrationTriggered: streakResult.celebrationTriggered,
+          celebrationDays: streakResult.celebrationDays,
+          isSpecialMilestone: streakResult.isSpecialMilestone,
+          milestoneTriggered: streakResult.milestoneTriggered,
+          milestoneDays: streakResult.milestoneDays,
+        };
+      } catch (streakErr) {
+        console.warn("[meals/log] streak update failed:", streakErr);
+      }
+    }
+
     return NextResponse.json({
       log,
+      streak,
       imageStorage: body.imageUrl ? MEAL_IMAGES_BUCKET : undefined,
+      nutritionVerified: {
+        source: verified.source,
+        adjusted: verified.adjusted,
+        note: verified.note,
+      },
+      logDate: dateCheck.dateKey,
+      backdated: !dateCheck.isToday,
     });
   } catch (error) {
+    if (error instanceof MealAiEstimateError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const readable = toReadableError(error, "儲存失敗");
     const code =
       error && typeof error === "object" && "code" in error

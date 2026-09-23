@@ -1,6 +1,7 @@
 import {
   fetchMealLogs,
   fetchMealLogsForSession,
+  fetchOwnMealLogsForSession,
   insertMealLog,
   resolveBranding,
   updateCoachBranding,
@@ -51,6 +52,13 @@ export async function getMealLogs(
   registry: RegistryUser[]
 ): Promise<MealLog[]> {
   return fetchMealLogsForSession(session, registry);
+}
+
+export async function getOwnMealLogs(
+  session: UserSession,
+  filters?: { from?: string; to?: string }
+): Promise<MealLog[]> {
+  return fetchOwnMealLogsForSession(session, filters);
 }
 
 export async function notifyCoachAfterMealLog(log: MealLog): Promise<void> {
@@ -107,34 +115,16 @@ export function isToday(isoDate: string): boolean {
   );
 }
 
-export function getThemeClasses(theme: ThemeColor) {
-  const map = {
-    emerald: {
-      header: "",
-      accent: "text-emerald-600",
-      btn: "bg-emerald-600 hover:bg-emerald-700",
-      text: "text-emerald-700",
-      ring: "ring-emerald-600",
-      bar: "bg-emerald-600",
-    },
-    blue: {
-      header: "",
-      accent: "text-emerald-600",
-      btn: "bg-emerald-600 hover:bg-emerald-700",
-      text: "text-emerald-700",
-      ring: "ring-emerald-600",
-      bar: "bg-emerald-600",
-    },
-    black: {
-      header: "",
-      accent: "text-emerald-600",
-      btn: "bg-emerald-600 hover:bg-emerald-700",
-      text: "text-emerald-700",
-      ring: "ring-emerald-600",
-      bar: "bg-emerald-600",
-    },
-  } as const;
-  return map[theme] ?? map.emerald;
+/** 顏色由 document 上的 --brand-* 決定，呢度只回傳跟主題的 class。 */
+export function getThemeClasses(_theme?: ThemeColor) {
+  return {
+    header: "",
+    accent: "text-brand",
+    btn: "bg-brand hover-brand",
+    text: "text-brand",
+    ring: "ring-brand",
+    bar: "bg-brand",
+  };
 }
 
 export { DEFAULT_BRANDING };

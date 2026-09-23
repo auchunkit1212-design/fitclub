@@ -96,23 +96,13 @@ export async function authorizeStudentProfileUpdate(
   const effectiveRole = await resolveEffectiveRole(session);
   debug.effectiveRole = effectiveRole;
 
-  if (effectiveRole !== "student") {
-    return {
-      ok: false,
-      status: 403,
-      error: "僅學員可更新身體檔案。",
-      code: "NOT_STUDENT",
-      debug,
-    };
-  }
-
   return {
     ok: true,
     email,
     session: {
       ...session,
       email,
-      role: "student",
+      role: effectiveRole,
       isLoggedIn: true,
     },
     debug,

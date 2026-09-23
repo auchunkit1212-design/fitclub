@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { updateCoachBrandingAdmin } from "@/lib/db";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { toReadableError } from "@/lib/errors";
+import { normalizeThemeColor } from "@/lib/brand";
 import type { ThemeColor } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -19,14 +20,15 @@ export async function POST(request: Request) {
   };
 
   try {
-    await updateCoachBrandingAdmin(session.email, {
+    const result = await updateCoachBrandingAdmin(session.email, {
       appTitle: body.appTitle?.trim() || "Nutrition Coach",
-      themeColor: body.themeColor ?? "emerald",
+      themeColor: normalizeThemeColor(body.themeColor),
       logo: body.logo,
       broadcast: body.broadcast?.trim() ?? "",
       tenantId: body.tenantId ?? session.tenantId,
+      coachName: session.name,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const readable = toReadableError(error, "雲端發布失敗");
     const hint =

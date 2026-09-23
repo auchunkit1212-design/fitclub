@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { IconLabel, Rocket } from "@/components/icons";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -34,14 +35,14 @@ export default function SasRegisterPage() {
       const data = (await res.json()) as { error?: string; gymName?: string };
 
       if (!res.ok) {
-        showToast(`❌ ${data.error ?? "註冊失敗"}`);
+        showToast(data.error ?? "註冊失敗");
         return;
       }
 
-      showToast(`🎉 ${data.gymName ?? gymName} 已開通免費體驗！`);
+      showToast(`${data.gymName ?? gymName} 已開通免費體驗！`);
       setTimeout(() => router.push("/register"), 1500);
     } catch {
-      showToast("❌ 連線失敗，請稍後再試。");
+      showToast("連線失敗，請稍後再試。");
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,13 @@ export default function SasRegisterPage() {
             disabled={loading}
             className={`w-full py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg disabled:opacity-60 ${btnClass}`}
           >
-            {loading ? "開通緊..." : "🚀 一鍵免費開通"}
+            {loading ? (
+              "開通緊..."
+            ) : (
+              <IconLabel icon={Rocket} size="md" className="justify-center" iconClassName="text-white">
+                一鍵免費開通
+              </IconLabel>
+            )}
           </button>
         </form>
 

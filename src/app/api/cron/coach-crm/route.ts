@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const names = inactive.map((s) => s.name).join("、");
     const { sent } = await sendPushToEmails([coach.email], {
       title: "CRM 偷懶警報",
-      body: `⚠️ ${names} 已連續 2 日無飲食打卡，請盡快跟進！`,
+      body: `${names} 已連續 2 日無飲食打卡，請盡快跟進！`,
       url: "/coach",
       tag: "coach-crm-inactive",
     });

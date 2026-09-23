@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FoodSearchEngine } from "@/components/FoodSearchEngine";
 import { useI18n } from "@/components/I18nProvider";
+import { Camera, IconLabel } from "@/components/icons";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
@@ -18,6 +19,8 @@ interface MealSearchSheetProps {
     carbs: number;
     fats: number;
     fromSearch: boolean;
+    nutritionSource?: import("@/lib/meal-ai-verify").MealBaselineSource;
+    advanced?: import("@/lib/types").FoodAdvancedNutrients;
   }) => void;
 }
 
@@ -82,7 +85,9 @@ export function MealSearchSheet({
           onClick={goToFullLog}
           className={`w-full mt-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-gray-800 text-sm font-semibold ${btnClass}`}
         >
-          {t("foodSearch.fullLogCta", "📷 完整記錄（含相片）")}
+          <IconLabel icon={Camera} iconClassName="text-gray-600">
+            {t("foodSearch.fullLogCta", "完整記錄（含相片）")}
+          </IconLabel>
         </button>
         <p className="text-xs text-gray-500 text-center mt-3">
           {t(
