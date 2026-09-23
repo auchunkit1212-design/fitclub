@@ -15,6 +15,7 @@ import {
 import { AI_SOLO_TENANT_SLUG } from "@/lib/registry-constants";
 import { getSessionRequestHeaders } from "@/lib/session";
 import type { AdminUserProfileDetail } from "@/lib/admin-users";
+import { THEME_PALETTE } from "@/lib/brand";
 import type { RegistryUser, Tenant, ThemeColor, UserPlan } from "@/lib/types";
 
 type AccountEditForm = {
@@ -899,9 +900,11 @@ export function AdminAccountsConsole({
                           }
                           className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm bg-white"
                         >
-                          <option value="emerald">Emerald</option>
-                          <option value="blue">Blue</option>
-                          <option value="black">Black</option>
+                          {THEME_PALETTE.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
                         </select>
                       </label>
                       <label className="block text-xs text-zinc-600">

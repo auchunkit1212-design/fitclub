@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CoachPushSubscribe } from "@/components/CoachPushSubscribe";
 import { CoachInviteCodePanel } from "@/components/CoachInviteCodePanel";
@@ -13,8 +13,9 @@ import {
   fetchUsersForSession,
   updateCoachLogo,
 } from "@/lib/db";
+import { applyDocumentTheme, normalizeThemeColor, THEME_PALETTE } from "@/lib/brand";
 import { applyBrandToSession, resolveBrandForUser } from "@/lib/branding";
-import { saveSession, getSessionRequestHeaders } from "@/lib/session";
+import { getSession, saveSession, getSessionRequestHeaders } from "@/lib/session";
 import { compressFileImage } from "@/lib/image";
 import { PageHeader } from "@/components/PageHeader";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
@@ -62,12 +63,6 @@ const TAB_FROM_HASH: Record<string, CoachTab> = {
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
-
-const THEME_OPTIONS: { value: ThemeColor; label: string }[] = [
-  { value: "emerald", label: "翠綠 (Emerald)" },
-  { value: "blue", label: "藍色 (Blue)" },
-  { value: "black", label: "黑色 (Black)" },
-];
 
 const LOAD_TIMEOUT_MS = 12_000;
 
@@ -138,9 +133,18 @@ export default function CoachPage() {
               ""
           );
           setAppTitle(resolved.branding.appTitle);
-          setThemeColor(resolved.branding.themeColor);
+          const savedTheme = normalizeThemeColor(resolved.branding.themeColor);
+          setThemeColor(savedTheme);
           setLogo(resolved.branding.logo);
           setBroadcast(resolved.broadcast);
+          if (normalizeThemeColor(session.themeColor) !== savedTheme) {
+            saveSession(
+              applyBrandToSession(session, {
+                ...resolved,
+                branding: { ...resolved.branding, themeColor: savedTheme },
+              })
+            );
+          }
         } else {
           setAppTitle(DEFAULT_BRANDING.appTitle);
           setThemeColor(DEFAULT_BRANDING.themeColor);
@@ -162,6 +166,13 @@ export default function CoachPage() {
       cancelled = true;
     };
   }, [session, refreshKey]);
+
+  useLayoutEffect(() => {
+    applyDocumentTheme(themeColor);
+    return () => {
+      applyDocumentTheme(getSession()?.themeColor);
+    };
+  }, [themeColor]);
 
   useEffect(() => {
     if (!session) return;
@@ -387,30 +398,31 @@ export default function CoachPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 主題色
               </label>
-              <div className="flex gap-3">
-                {THEME_OPTIONS.map((option) => {
-                  const selected = themeColor === option.value;
-                  const swatch =
-                    option.value === "blue"
-                      ? "bg-blue-600"
-                      : option.value === "black"
-                        ? "bg-zinc-900"
-                        : "bg-emerald-600";
+              <div className="grid grid-cols-4 gap-2">
+                {THEME_PALETTE.map((option) => {
+                  const selected = themeColor === option.id;
                   return (
                     <button
-                      key={option.value}
+                      key={option.id}
                       type="button"
-                      onClick={() => setThemeColor(option.value)}
-                      className={`flex-1 rounded-2xl px-3 py-3 text-xs font-medium ${btnClass} ${
+                      onClick={() => setThemeColor(option.id)}
+                      aria-pressed={selected}
+                      className={`rounded-2xl px-2 py-3 text-xs font-medium ${btnClass} ${
                         selected
-                          ? "bg-white ring-2 ring-emerald-600 text-gray-900"
+                          ? "bg-white text-gray-900"
                           : "bg-zinc-50 text-gray-500"
                       }`}
+                      style={
+                        selected
+                          ? { boxShadow: `0 0 0 2px ${option.hex}` }
+                          : undefined
+                      }
                     >
                       <span
-                        className={`mx-auto mb-2 block h-6 w-6 rounded-full ${swatch}`}
+                        className="mx-auto mb-2 block h-6 w-6 rounded-full"
+                        style={{ backgroundColor: option.hex }}
                       />
-                      {option.label.split(" ")[0]}
+                      {option.label}
                     </button>
                   );
                 })}
@@ -434,7 +446,7 @@ export default function CoachPage() {
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className={`w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-2xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full bg-brand hover-brand text-white font-semibold py-3.5 rounded-2xl disabled:opacity-60 ${btnClass}`}
             >
               {publishing ? "儲存緊..." : "儲存"}
             </button>

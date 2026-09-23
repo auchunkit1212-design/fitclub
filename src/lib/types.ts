@@ -1,4 +1,12 @@
-export type ThemeColor = "emerald" | "blue" | "black";
+export type ThemeColor =
+  | "emerald"
+  | "blue"
+  | "sky"
+  | "violet"
+  | "rose"
+  | "orange"
+  | "amber"
+  | "black";
 
 export type StudentGender = "male" | "female" | "other";
 
@@ -62,6 +70,7 @@ export interface Tenant {
   slug: string;
   gymName: string;
   logoUrl?: string;
+  themeColor?: ThemeColor;
   ownerEmail: string;
   plan: string;
 }
@@ -110,6 +119,8 @@ export interface UserSession {
   tenantSlug?: string;
   brandName?: string;
   brandLogo?: string;
+  /** 健身室主題色；教練揀色後寫入 session，全 App 跟住變 */
+  themeColor?: ThemeColor;
   /** 無真人教練的 B2C 散客 */
   isSoloStudent?: boolean;
   /** 訂閱方案；Pro 功能門控用 */

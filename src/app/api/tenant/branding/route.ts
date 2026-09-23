@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isCustomBrandLogo } from "@/lib/brand";
+import { isCustomBrandLogo, normalizeThemeColor } from "@/lib/brand";
 import { tenantLogoProxyUrl } from "@/lib/brand-logo";
 import { fetchTenantByInviteCode } from "@/lib/tenant";
 
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       gymName: tenant.gymName,
       slug: tenant.slug,
       logo: hasLogo ? tenantLogoProxyUrl({ slug: tenant.slug }) : undefined,
+      themeColor: normalizeThemeColor(tenant.themeColor),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "查詢失敗";

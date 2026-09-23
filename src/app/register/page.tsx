@@ -105,6 +105,7 @@ export default function RegisterPage() {
           gymName?: string;
           slug?: string;
           logo?: string;
+          themeColor?: string;
         };
       })
       .then((data) => {
@@ -118,6 +119,7 @@ export default function RegisterPage() {
           gymName: next.gymName,
           logo: next.logo,
           tenantSlug: data.slug ?? code,
+          themeColor: data.themeColor,
         });
       })
       .catch(() => undefined);
@@ -475,7 +477,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
+              className={`w-full py-3.5 bg-brand hover-brand text-white font-bold rounded-xl disabled:opacity-60 ${btnClass}`}
             >
               {loading ? t("auth.verifying", "驗證緊...") : t("auth.login", "登入")}
             </button>
@@ -588,9 +590,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3.5 rounded-xl font-bold text-white disabled:opacity-60 ${
-                  signupTrack === "coach" ? "bg-emerald-600" : "bg-emerald-600"
-                } ${btnClass}`}
+                className={`w-full py-3.5 rounded-xl font-bold text-white disabled:opacity-60 bg-brand hover-brand ${btnClass}`}
               >
                 {loading ? (
                   t("auth.signup.registering", "註冊中...")

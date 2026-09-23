@@ -1,3 +1,4 @@
+import { normalizeThemeColor } from "@/lib/brand";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   AI_GORILLA_COACH_EMAIL,
@@ -11,6 +12,7 @@ type TenantRow = {
   slug: string;
   gym_name: string;
   logo_url: string | null;
+  theme_color?: string | null;
   owner_email: string;
   plan: string;
   created_at: string;
@@ -22,6 +24,9 @@ function mapTenant(row: TenantRow): Tenant {
     slug: row.slug,
     gymName: row.gym_name,
     logoUrl: row.logo_url ?? undefined,
+    themeColor: row.theme_color
+      ? normalizeThemeColor(row.theme_color)
+      : undefined,
     ownerEmail: row.owner_email,
     plan: row.plan,
   };

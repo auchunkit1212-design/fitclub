@@ -1,3 +1,4 @@
+import { normalizeThemeColor } from "@/lib/brand";
 import { toPublicBrandLogoUrl } from "@/lib/brand-logo";
 import { fetchCoachByName, fetchCoachByTenantId } from "@/lib/db-coach-lookup";
 import { fetchTenantById } from "@/lib/tenant";
@@ -31,7 +32,7 @@ export function brandingFromTenant(tenant: Tenant): ResolvedBrand {
     broadcast: "",
     branding: {
       appTitle: tenant.gymName,
-      themeColor: "emerald",
+      themeColor: normalizeThemeColor(tenant.themeColor),
       logo: resolveBrandingLogo(tenant.logoUrl, tenant.slug),
     },
   };
@@ -43,7 +44,9 @@ export function brandingFromCoach(coach: RegistryUser): ResolvedBrand {
     broadcast: coach.broadcast ?? "",
     branding: {
       appTitle: coach.appTitle ?? coach.gym ?? DEFAULT_BRANDING.appTitle,
-      themeColor: coach.themeColor ?? DEFAULT_BRANDING.themeColor,
+      themeColor: normalizeThemeColor(
+        coach.themeColor ?? DEFAULT_BRANDING.themeColor
+      ),
       logo: resolveBrandingLogo(coach.logo, undefined, coach.email),
     },
   };
@@ -68,7 +71,7 @@ export async function resolveBrandForUser(
         );
       }
       if (coach?.themeColor) {
-        base.branding.themeColor = coach.themeColor;
+        base.branding.themeColor = normalizeThemeColor(coach.themeColor);
       }
       if (coach?.broadcast) {
         base.broadcast = coach.broadcast;
@@ -116,7 +119,9 @@ export async function resolveBrandForLogin(
           coach.email
         );
       }
-      if (coach?.themeColor) base.branding.themeColor = coach.themeColor;
+      if (coach?.themeColor) {
+        base.branding.themeColor = normalizeThemeColor(coach.themeColor);
+      }
       if (coach?.broadcast) base.broadcast = coach.broadcast;
       return base;
     }
@@ -136,7 +141,9 @@ export async function resolveBrandForLogin(
     broadcast: user.broadcast ?? "",
     branding: {
       appTitle: user.appTitle ?? user.gym ?? DEFAULT_BRANDING.appTitle,
-      themeColor: user.themeColor ?? DEFAULT_BRANDING.themeColor,
+      themeColor: normalizeThemeColor(
+        user.themeColor ?? DEFAULT_BRANDING.themeColor
+      ),
       logo: resolveBrandingLogo(user.logo, session.tenantSlug, user.email),
     },
   };
@@ -155,6 +162,7 @@ export function applyBrandToSession(
       tenantSlug,
       email: session.email,
     }),
+    themeColor: normalizeThemeColor(brand.branding.themeColor),
     tenantSlug,
     gym: brand.gymName,
   };

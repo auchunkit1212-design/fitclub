@@ -15,7 +15,7 @@ export const HOME_BTN_CLASS =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 export const HOME_SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]";
-export const HOME_BRAND_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+export const HOME_BRAND_BTN = "bg-brand hover-brand text-white";
 
 export function HomeChunkFallback() {
   return <AppLoadingScreen />;
@@ -92,7 +92,7 @@ export function HomeShell({
                     {session.gym} · {t("home.healthMgmt", "健康管理")}
                   </p>
                   {title ? (
-                    <p className="text-emerald-600 text-xs font-semibold mt-1 truncate">
+                    <p className="text-brand text-xs font-semibold mt-1 truncate">
                       {title}
                     </p>
                   ) : null}

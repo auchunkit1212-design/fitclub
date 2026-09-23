@@ -157,7 +157,7 @@ const StudentPushPrompt = dynamic(
   { ssr: false }
 );
 
-const BRAND_BAR = "bg-emerald-600";
+const BRAND_BAR = "bg-brand";
 
 function mealTypeByTimeOfDay(): string {
   const h = new Date().getHours();

@@ -58,7 +58,7 @@ import type {
 const SOFT_CARD =
   "w-full rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100";
 
-const BRAND_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+const BRAND_BTN = "bg-brand hover-brand text-white";
 
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";

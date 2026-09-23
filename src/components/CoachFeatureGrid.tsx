@@ -120,11 +120,11 @@ export function CoachFeatureGrid() {
               onClick={item.onClick}
               className={`flex w-full items-center gap-3 px-4 py-3.5 text-left ${btnClass}`}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-soft">
                 <Icon
                   size={18}
                   strokeWidth={2}
-                  className="text-emerald-700"
+                  className="text-brand-dark"
                   aria-hidden
                 />
               </span>

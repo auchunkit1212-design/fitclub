@@ -53,17 +53,17 @@ function NavTabButton({
         <Icon
           size={24}
           strokeWidth={active ? 2.25 : 2}
-          className={`shrink-0 ${active ? "text-emerald-600" : "text-zinc-400"}`}
+          className={`shrink-0 ${active ? "text-brand" : "text-zinc-400"}`}
         />
         {showBadge && (
-          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none inline-flex items-center justify-center">
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand text-white text-[9px] font-bold leading-none inline-flex items-center justify-center">
             {badgeLabel}
           </span>
         )}
       </span>
       <span
         className={`text-[10px] leading-tight font-semibold text-center ${
-          active ? "text-emerald-600" : "text-zinc-400"
+          active ? "text-brand" : "text-zinc-400"
         }`}
       >
         {label}
@@ -219,7 +219,7 @@ export function BottomNav({
               ? t("nav.addMeal", "記錄飲食")
               : t("nav.students", "學員")
           }
-          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1.5 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-lg ${btnClass}`}
+          className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1.5 bg-brand hover-brand text-white p-4 rounded-full shadow-lg ${btnClass}`}
         >
           <Plus size={26} strokeWidth={2.5} aria-hidden />
         </button>

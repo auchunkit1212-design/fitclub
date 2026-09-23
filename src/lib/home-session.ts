@@ -1,3 +1,4 @@
+import { normalizeThemeColor } from "@/lib/brand";
 import { resolveDisplayBrandLogo } from "@/lib/brand-logo";
 import type { CoachBranding, UserSession } from "@/lib/types";
 import { DEFAULT_BRANDING } from "@/lib/types";
@@ -23,7 +24,7 @@ export function normalizeHomeSession(
 export function brandingFromSession(session: UserSession): CoachBranding {
   return {
     appTitle: session.brandName ?? session.gym ?? DEFAULT_BRANDING.appTitle,
-    themeColor: "emerald",
+    themeColor: normalizeThemeColor(session.themeColor),
     logo: resolveDisplayBrandLogo(session) ?? session.brandLogo,
   };
 }

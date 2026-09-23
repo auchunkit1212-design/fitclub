@@ -9,6 +9,7 @@ export type LastBrandSnapshot = {
   gymName?: string;
   logo?: string;
   tenantSlug?: string;
+  themeColor?: string;
 };
 
 export function tenantLogoProxyUrl(params: {
@@ -84,6 +85,8 @@ export function parseLastBrandJson(
         logo: typeof parsed.logo === "string" ? parsed.logo : undefined,
         tenantSlug:
           typeof parsed.tenantSlug === "string" ? parsed.tenantSlug : undefined,
+        themeColor:
+          typeof parsed.themeColor === "string" ? parsed.themeColor : undefined,
       };
     } catch {
       // try next
@@ -111,6 +114,7 @@ export function writeLastBrand(brand: LastBrandSnapshot): void {
     gymName: brand.gymName?.trim() || undefined,
     logo: brand.logo?.trim() || undefined,
     tenantSlug: brand.tenantSlug?.trim() || undefined,
+    themeColor: brand.themeColor?.trim() || undefined,
   };
   if (!snapshot.gymName && !snapshot.logo && !snapshot.tenantSlug) return;
 

@@ -3,7 +3,7 @@ import { resolveBrandForUser } from "@/lib/branding";
 import { fetchUsersForSession } from "@/lib/db";
 import { parseSessionFromRequest } from "@/lib/session-server";
 import { DEFAULT_BRANDING } from "@/lib/types";
-import { BRAND_NAME, APP_LOGO_PATH } from "@/lib/brand";
+import { BRAND_NAME, APP_LOGO_PATH, themeColorToHex } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,12 +21,7 @@ export async function GET(request: NextRequest) {
       const registry = await fetchUsersForSession(session);
       const brand = await resolveBrandForUser(session, registry);
       name = brand.gymName || brand.branding.appTitle;
-      themeColor =
-        brand.branding.themeColor === "blue"
-          ? "#2563eb"
-          : brand.branding.themeColor === "black"
-            ? "#18181b"
-            : "#059669";
+      themeColor = themeColorToHex(brand.branding.themeColor);
 
       if (session.tenantSlug) {
         iconUrl = `${origin}/api/tenant/logo?slug=${encodeURIComponent(session.tenantSlug)}`;

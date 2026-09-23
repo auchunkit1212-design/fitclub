@@ -17,7 +17,7 @@ import { upsertWeightLog } from "@/lib/weight-logs";
 const btnClass =
   "active:scale-95 active:opacity-80 transition-all cursor-pointer";
 
-const BRAND_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+const BRAND_BTN = "bg-brand hover-brand text-white";
 
 type DraftFields = {
   weightKg: string;

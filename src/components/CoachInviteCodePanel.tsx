@@ -79,7 +79,7 @@ export function CoachInviteCodePanel({
     <section className={`${SOFT_CARD} p-5 space-y-4`}>
       <div>
         <h2 className="font-semibold text-gray-900 text-base">
-          <IconLabel icon={Link} iconClassName="text-emerald-600">
+          <IconLabel icon={Link} iconClassName="text-brand">
             {t("invite.coach.title", "邀請學員")}
           </IconLabel>
         </h2>
@@ -119,7 +119,7 @@ export function CoachInviteCodePanel({
                 onClick={() =>
                   handleCopy(code, t("invite.coach.copiedCode", "已複製邀請碼"))
                 }
-                className={`shrink-0 px-4 rounded-2xl bg-emerald-600 text-white text-sm font-semibold ${btnClass}`}
+                className={`shrink-0 px-4 rounded-2xl bg-brand hover-brand text-white text-sm font-semibold ${btnClass}`}
               >
                 {t("invite.coach.copyCode", "複製")}
               </button>
