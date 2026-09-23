@@ -1,5 +1,5 @@
-/** 目前可用嘅正式公開網址（fitclub.hk DNS 未設定時用呢個） */
-export const DEFAULT_PUBLIC_SITE_URL = "https://fitclub-pearl.vercel.app";
+/** 正式公開網址；可用 NEXT_PUBLIC_SITE_URL / NEXT_PUBLIC_APP_URL 覆寫 */
+export const DEFAULT_PUBLIC_SITE_URL = "https://fitclub.hk";
 
 function normalizeSiteUrl(value: string): string {
   const trimmed = value.trim().replace(/\/$/, "");
